@@ -182,8 +182,10 @@ async def on_startup() -> None:
 # Routers
 # ---------------------------------------------------------------------------
 
+from app.routers.admin_router import router as admin_router  # noqa: E402
 from app.routers.auth_router import router as auth_router  # noqa: E402
 from app.routers.credentials_router import router as credentials_router  # noqa: E402
 
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(credentials_router, prefix="/api/credentials", tags=["credentials"])
+app.include_router(admin_router, prefix="/api/admin", tags=["admin"])

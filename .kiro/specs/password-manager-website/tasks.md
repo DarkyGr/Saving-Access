@@ -130,16 +130,16 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - _Requirements: 4.1–4.13, 5.1–5.14, 6.1–6.9, 7.1–7.7, 8.1–8.3_
 
 
-- [ ] 12. Admin router
+- [x] 12. Admin router
   - Create `backend/app/routers/admin_router.py` with:
     - `GET /api/admin/users` — requires `require_permission("admin.users")` (Admin only); returns list of all users with their assigned profile
     - `PUT /api/admin/users/{user_id}/profile` — requires Admin; calls `ProfileService.assign_profile`; returns `{user_id, profile_id}`
   - Wire admin router into `main.py`
   - _Requirements: 3.2, 3.3, 3.5, 3.7_
 
-- [ ] 13. Email validation utility
+- [~] 13. Email validation utility
   - Create `backend/app/utils/email_validator.py` with `validate_email(email: str) -> bool` that checks RFC 5321 format using a regex and rejects domains from a bundled `disposable_domains.txt` blocklist file; integrate into `AuthService.register` and the credentials router email field
-  - [ ] 13.1 Write property test for email validation (Property 16)
+  - [-] 13.1 Write property test for email validation (Property 16)
     - **Property 16: Email Validation Rejects Invalid Formats and Disposable Domains** — validator accepts iff RFC 5321 format is valid AND domain is not on blocklist
     - **Validates: Requirements 4.13**
     - Minimum 200 Hypothesis iterations using `st.emails()` and manually constructed invalid strings

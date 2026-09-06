@@ -1,0 +1,1095 @@
+{
+  "pbtResults": {
+    "5.2 Write property test for credential encryption invariant (Property 9)": {
+      "status": "passed",
+      "lastRunTimestamp": 1785723572005
+    },
+    "6.2 Write property test for password confirmation match (Property 1)": {
+      "status": "passed",
+      "lastRunTimestamp": 1785724469098
+    },
+    "6.3 Write property test for password strength validation (Property 2)": {
+      "status": "passed",
+      "lastRunTimestamp": 1785724554116
+    },
+    "6.4 Write property test for account password hashing (Property 3)": {
+      "status": "passed",
+      "lastRunTimestamp": 1785724242140
+    },
+    "6.5 Write property test for JWT issued on successful login (Property 6)": {
+      "status": "passed",
+      "lastRunTimestamp": 1785724246702
+    },
+    "6.6 Write property test for generic error on invalid login (Property 5)": {
+      "status": "passed",
+      "lastRunTimestamp": 1785724255172
+    }
+  },
+  "executionHistory": {
+    "1. Project scaffolding and monorepo structure": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720838298
+      },
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720850586
+      },
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785721192750
+      }
+    ],
+    "2.1 Write `backend/db/schema.sql` with all five CREATE TABLE statements (`users`, `profiles`, `user_profiles`, `credentials`, `audit_log`) including audit columns, CHECK constraints, and FK references exactly as specified in the design": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720838837
+      },
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720851573
+      },
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785721193907
+      }
+    ],
+    "2.2 Add all six indexes (`idx_credentials_user_id`, `idx_credentials_website_name`, `idx_credentials_email_username`, `idx_audit_log_user_id`) and the `app_user` role with minimal GRANT statements to `schema.sql`": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720838906
+      },
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785721197414
+      }
+    ],
+    "3.1 Create `backend/app/models.py` defining `Base = declarative_base()` and mapped classes `User`, `Profile`, `UserProfile`, `Credential`, `AuditLog` matching every column and relationship in the ERD; include `__table_args__` for indexes": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720838951
+      },
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785721198505
+      },
+      {
+        "executionId": "8d60da6f-177c-4b51-b7c4-77d59c48d164",
+        "chatSessionId": "sess_9bfcd2fb-713f-4325-b91a-cc1d0878264b",
+        "timestamp": 1785722285735
+      },
+      {
+        "executionId": "8d60da6f-177c-4b51-b7c4-77d59c48d164",
+        "chatSessionId": "sess_9bfcd2fb-713f-4325-b91a-cc1d0878264b",
+        "timestamp": 1785722409907
+      }
+    ],
+    "3.2 Create `backend/app/database.py` with `engine`, `SessionLocal`, and `get_db` dependency function reading `DATABASE_URL` from env": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839024
+      }
+    ],
+    "4. Backend application setup (FastAPI entry point, CORS, exception handlers)": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839065
+      },
+      {
+        "executionId": "fcb95c63-371c-49e6-8919-3ea9e98d4808",
+        "chatSessionId": "sess_d2bef907-d5d8-42c4-9583-2980a22a50be",
+        "timestamp": 1785722436820
+      },
+      {
+        "executionId": "fcb95c63-371c-49e6-8919-3ea9e98d4808",
+        "chatSessionId": "sess_d2bef907-d5d8-42c4-9583-2980a22a50be",
+        "timestamp": 1785722564539
+      }
+    ],
+    "5.1 Create `backend/app/services/encryptor_service.py` implementing `EncryptorService` with `encrypt(plaintext: str) -> bytes` using `Fernet(FERNET_KEY)` and `decrypt(ciphertext: bytes) -> str`; load key from env var at instantiation; raise `ValueError` if key is absent": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839110
+      },
+      {
+        "executionId": "91186bc0-facf-408d-a588-074dee2ae16c",
+        "chatSessionId": "sess_64f7a2e5-cd90-4efc-b272-e55c388406ea",
+        "timestamp": 1785723413814
+      },
+      {
+        "executionId": "91186bc0-facf-408d-a588-074dee2ae16c",
+        "chatSessionId": "sess_64f7a2e5-cd90-4efc-b272-e55c388406ea",
+        "timestamp": 1785723453136
+      }
+    ],
+    "5.2 Write property test for credential encryption invariant (Property 9)": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839156
+      },
+      {
+        "executionId": "b3ad5b18-822b-44c6-9761-b9649d419f85",
+        "chatSessionId": "sess_906ff09a-6c36-4634-a4eb-f15c3fdcf091",
+        "timestamp": 1785723499774
+      },
+      {
+        "executionId": "b3ad5b18-822b-44c6-9761-b9649d419f85",
+        "chatSessionId": "sess_906ff09a-6c36-4634-a4eb-f15c3fdcf091",
+        "timestamp": 1785723583099
+      }
+    ],
+    "6.1 Create `backend/app/services/auth_service.py` implementing `AuthService` with:": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839199
+      },
+      {
+        "executionId": "c640bd48-e693-4bbb-90f5-31be9de4988e",
+        "chatSessionId": "sess_a044cc03-fdec-4376-a5e2-61e2b04f1c98",
+        "timestamp": 1785724325393
+      },
+      {
+        "executionId": "c640bd48-e693-4bbb-90f5-31be9de4988e",
+        "chatSessionId": "sess_a044cc03-fdec-4376-a5e2-61e2b04f1c98",
+        "timestamp": 1785724376309
+      }
+    ],
+    "6.2 Write property test for password confirmation match (Property 1)": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839242
+      },
+      {
+        "executionId": "bf78cab2-91e2-479a-9409-0481166a5af5",
+        "chatSessionId": "sess_9e4347ff-2058-42cb-9d4b-c23be99aa198",
+        "timestamp": 1785724438985
+      },
+      {
+        "executionId": "bf78cab2-91e2-479a-9409-0481166a5af5",
+        "chatSessionId": "sess_9e4347ff-2058-42cb-9d4b-c23be99aa198",
+        "timestamp": 1785724477927
+      }
+    ],
+    "6.3 Write property test for password strength validation (Property 2)": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839290
+      },
+      {
+        "executionId": "7fa0334b-0b7c-4b67-836f-6917797612e7",
+        "chatSessionId": "sess_6b8ee2d4-df0d-433a-9e16-06145b0caced",
+        "timestamp": 1785724516090
+      },
+      {
+        "executionId": "7fa0334b-0b7c-4b67-836f-6917797612e7",
+        "chatSessionId": "sess_6b8ee2d4-df0d-433a-9e16-06145b0caced",
+        "timestamp": 1785724563970
+      }
+    ],
+    "6.4 Write property test for account password hashing (Property 3)": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839343
+      },
+      {
+        "executionId": "dd9270a8-2730-4abb-bd4b-12f15fb799c0",
+        "chatSessionId": "sess_3155181d-346d-418e-a17f-91dbb4e94857",
+        "timestamp": 1788713679905
+      },
+      {
+        "executionId": "dd9270a8-2730-4abb-bd4b-12f15fb799c0",
+        "chatSessionId": "sess_3155181d-346d-418e-a17f-91dbb4e94857",
+        "timestamp": 1788713787921
+      }
+    ],
+    "6.5 Write property test for JWT issued on successful login (Property 6)": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839385
+      },
+      {
+        "executionId": "966efd1b-df4d-42a5-bb31-339204dfc31a",
+        "chatSessionId": "sess_a965a8f4-961f-49a5-bef7-03fa5ae3e123",
+        "timestamp": 1788713825483
+      },
+      {
+        "executionId": "966efd1b-df4d-42a5-bb31-339204dfc31a",
+        "chatSessionId": "sess_a965a8f4-961f-49a5-bef7-03fa5ae3e123",
+        "timestamp": 1788713918271
+      }
+    ],
+    "6.6 Write property test for generic error on invalid login (Property 5)": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839424
+      },
+      {
+        "executionId": "fbd2e372-f6a2-4784-a7bb-653e13caf7c2",
+        "chatSessionId": "sess_195d36b1-6597-43da-bfc2-ebc620f9707c",
+        "timestamp": 1788714140353
+      },
+      {
+        "executionId": "fbd2e372-f6a2-4784-a7bb-653e13caf7c2",
+        "chatSessionId": "sess_195d36b1-6597-43da-bfc2-ebc620f9707c",
+        "timestamp": 1788714186168
+      }
+    ],
+    "7.1 Create `backend/app/services/audit_service.py` implementing `AuditService.log(user_id, operation, affected_record_id)` that writes a row to `audit_log` and commits synchronously; `operation` must be one of `SELECT|INSERT|UPDATE|DELETE`": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839470
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714302537
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714362165
+      }
+    ],
+    "7.2 Create `backend/app/utils/audit_columns.py` with `set_creation_audit(record, user_id)` and `set_modification_audit(record, user_id)` helper functions that populate the six audit column fields with `date.today()` and `datetime.utcnow().time()`": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839514
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714305180
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714365680
+      }
+    ],
+    "7.3 Write property test for audit columns on creation (Property 4)": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839562
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714379089
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714392742
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714650548
+      }
+    ],
+    "7.4 Write property test for audit log entry on every mutation and reveal (Property 13)": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839604
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714379169
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714395574
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714653205
+      }
+    ],
+    "8.1 Create `backend/app/services/profile_service.py` implementing:": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839658
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714379243
+      },
+      {
+        "executionId": "485e4787-5adb-46f4-bc72-489fb76185a8",
+        "chatSessionId": "sess_3329f48a-24f2-4a1b-ba0a-181022efbef8",
+        "timestamp": 1788715105172
+      }
+    ],
+    "8.2 Write property test for non-admin denied access to admin endpoints (Property 7)": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839709
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714379305
+      },
+      {
+        "executionId": "485e4787-5adb-46f4-bc72-489fb76185a8",
+        "chatSessionId": "sess_3329f48a-24f2-4a1b-ba0a-181022efbef8",
+        "timestamp": 1788715107867
+      }
+    ],
+    "8.3 Write property test for profile assignment updates audit columns (Property 8)": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839759
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714379367
+      },
+      {
+        "executionId": "485e4787-5adb-46f4-bc72-489fb76185a8",
+        "chatSessionId": "sess_3329f48a-24f2-4a1b-ba0a-181022efbef8",
+        "timestamp": 1788715110690
+      }
+    ],
+    "9. Permission middleware": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839818
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714379433
+      },
+      {
+        "executionId": "40ca346c-ffa6-4b6e-ba3d-9f8d2b954ac9",
+        "chatSessionId": "sess_5b334f83-5290-4476-8852-e84aed406966",
+        "timestamp": 1788715279343
+      },
+      {
+        "executionId": "40ca346c-ffa6-4b6e-ba3d-9f8d2b954ac9",
+        "chatSessionId": "sess_5b334f83-5290-4476-8852-e84aed406966",
+        "timestamp": 1788715510894
+      }
+    ],
+    "10. Auth router": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839865
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714379513
+      },
+      {
+        "executionId": "18221f19-f8c4-43b5-9a82-256adf33689b",
+        "chatSessionId": "sess_1c044c95-c8be-44e3-9a73-e2459e2e496c",
+        "timestamp": 1788715819357
+      },
+      {
+        "executionId": "18221f19-f8c4-43b5-9a82-256adf33689b",
+        "chatSessionId": "sess_1c044c95-c8be-44e3-9a73-e2459e2e496c",
+        "timestamp": 1788715919023
+      }
+    ],
+    "11.1 Create `backend/app/routers/credentials_router.py` with:": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839909
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714379577
+      },
+      {
+        "executionId": "b3e6583f-fe74-4687-af90-25f7fa1b2766",
+        "chatSessionId": "sess_8cf24dee-2e33-4e78-9d1b-408405a9db60",
+        "timestamp": 1788715959758
+      },
+      {
+        "executionId": "b3e6583f-fe74-4687-af90-25f7fa1b2766",
+        "chatSessionId": "sess_8cf24dee-2e33-4e78-9d1b-408405a9db60",
+        "timestamp": 1788716062315
+      }
+    ],
+    "11.2 Wire credentials router into `main.py`": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839959
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714379643
+      },
+      {
+        "executionId": "b3e6583f-fe74-4687-af90-25f7fa1b2766",
+        "chatSessionId": "sess_8cf24dee-2e33-4e78-9d1b-408405a9db60",
+        "timestamp": 1788716064920
+      },
+      {
+        "executionId": "b3e6583f-fe74-4687-af90-25f7fa1b2766",
+        "chatSessionId": "sess_8cf24dee-2e33-4e78-9d1b-408405a9db60",
+        "timestamp": 1788716069222
+      }
+    ],
+    "11.3 Write property test for credential ownership isolation (Property 10)": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720839999
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714379707
+      },
+      {
+        "executionId": "b3e6583f-fe74-4687-af90-25f7fa1b2766",
+        "chatSessionId": "sess_8cf24dee-2e33-4e78-9d1b-408405a9db60",
+        "timestamp": 1788716072090
+      },
+      {
+        "executionId": "b3e6583f-fe74-4687-af90-25f7fa1b2766",
+        "chatSessionId": "sess_8cf24dee-2e33-4e78-9d1b-408405a9db60",
+        "timestamp": 1788718556863
+      }
+    ],
+    "11.4 Write property test for search filter correctness (Property 11)": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720840045
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714379769
+      },
+      {
+        "executionId": "b3e6583f-fe74-4687-af90-25f7fa1b2766",
+        "chatSessionId": "sess_8cf24dee-2e33-4e78-9d1b-408405a9db60",
+        "timestamp": 1788716073643
+      },
+      {
+        "executionId": "b3e6583f-fe74-4687-af90-25f7fa1b2766",
+        "chatSessionId": "sess_8cf24dee-2e33-4e78-9d1b-408405a9db60",
+        "timestamp": 1788718557263
+      }
+    ],
+    "11.5 Write property test for wrong account password rejects sensitive operations (Property 14)": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720840092
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714379822
+      },
+      {
+        "executionId": "b3e6583f-fe74-4687-af90-25f7fa1b2766",
+        "chatSessionId": "sess_8cf24dee-2e33-4e78-9d1b-408405a9db60",
+        "timestamp": 1788716073728
+      },
+      {
+        "executionId": "b3e6583f-fe74-4687-af90-25f7fa1b2766",
+        "chatSessionId": "sess_8cf24dee-2e33-4e78-9d1b-408405a9db60",
+        "timestamp": 1788718557571
+      }
+    ],
+    "12. Admin router": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720840138
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714379881
+      }
+    ],
+    "13.1 Write property test for email validation (Property 16)": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720840186
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714379940
+      }
+    ],
+    "14. Backend checkpoint — ensure all backend tests pass": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720840233
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714379999
+      }
+    ],
+    "15.1 Create `frontend/src/i18n/i18n.ts` initializing `i18next` with `react-i18next`, language detection from browser, fallback to `\"en\"`, and `sessionStorage` persistence": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720840272
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714380061
+      }
+    ],
+    "15.2 Create `frontend/src/i18n/en.json` with all English string keys covering: login, signup, navigation, credential form labels, modal text, error messages, table headers, admin page labels, password rules, and timer text": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720840319
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714380118
+      }
+    ],
+    "15.3 Create `frontend/src/i18n/es.json` with equivalent Spanish translations for every key in `en.json`": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720840363
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714380179
+      }
+    ],
+    "16.1 Create `frontend/src/components/PasswordInput.tsx` — masked text input with an Eye_Toggle `<button>` that toggles `type=\"password\"` / `type=\"text\"`; uses `t()` for aria-label; min touch target 44×44 px on mobile": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720840408
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714380234
+      }
+    ],
+    "16.2 Create `frontend/src/components/PasswordConfirmModal.tsx` — modal dialog with a `PasswordInput` and confirm/cancel buttons; accepts `onConfirm(password: string)` and `onCancel()` callbacks; uses `t()` for all text": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720840456
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714380294
+      }
+    ],
+    "16.3 Create `frontend/src/hooks/useVisibilityTimer.ts` — custom hook that accepts `durationMs=60000`, returns `{isVisible, startTimer, stopTimer, secondsRemaining}`; uses `useRef` for interval ID to avoid stale closure issues": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720840505
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714380360
+      }
+    ],
+    "16.4 Create `frontend/src/components/LanguageToggle.tsx` — button group or dropdown in the app header that calls `i18n.changeLanguage(\"en\" | \"es\")`; persists choice to `sessionStorage`": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720840549
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714380436
+      }
+    ],
+    "16.5 Create `frontend/src/components/ProtectedRoute.tsx` — HOC that reads JWT from memory context, decodes claims; Admin passes unconditionally; User role calls `GET /api/profile/permissions` and checks screen key; redirects to `/login` if unauthenticated or `/403` if forbidden": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720840617
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714380495
+      }
+    ],
+    "16.6 Create `frontend/src/components/ConfirmDeleteModal.tsx` — generic confirmation modal with cancel and confirm buttons and i18n text": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720840666
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714380562
+      }
+    ],
+    "16.7 Create `frontend/src/components/AlreadyVisibleModal.tsx` — warning modal for the \"another password is visible\" state; \"Continue\" callback hides current and proceeds; \"Cancel\" closes modal": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720840811
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714380622
+      }
+    ],
+    "17.1 Create `frontend/src/api/apiClient.ts` using `axios` with a base URL from `import.meta.env.VITE_API_URL`; add a request interceptor that injects `Authorization: Bearer <token>` from React memory; add a response interceptor that redirects to `/login` on 401": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720840874
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714380684
+      }
+    ],
+    "17.2 Create `frontend/src/context/AuthContext.tsx` with `AuthProvider` holding `token` and `user` in `useState` (never `localStorage`); expose `login(token)`, `logout()`, and `useAuth()` hook": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720840923
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714380747
+      }
+    ],
+    "18. LoginPage": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720840968
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714380816
+      }
+    ],
+    "19. SignUpPage": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841016
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714380902
+      }
+    ],
+    "20. SaveCredentialPage": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841077
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714380959
+      }
+    ],
+    "21.1 Create `frontend/src/pages/ViewSearchPage.tsx` with a search input that calls `GET /api/credentials?q=` on change (debounced 300 ms); renders results in a responsive table (horizontally scrollable on mobile) with columns: website, email/username, password (masked), eye icon, edit icon, delete icon": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841126
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714381020
+      }
+    ],
+    "21.2 Implement Eye_Toggle logic in `ViewSearchPage`: clicking eye checks `AlreadyVisibleModal` if another row is visible; shows `PasswordConfirmModal`; on confirm calls `POST /api/credentials/{id}/reveal`; displays plaintext; starts `useVisibilityTimer` for 60 s; auto-masks on timer expiry; manual click on open eye masks immediately": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841172
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714381079
+      }
+    ],
+    "21.3 Implement Delete flow in `ViewSearchPage`: delete icon opens `ConfirmDeleteModal`; on confirm shows `PasswordConfirmModal`; on confirm calls `DELETE /api/credentials/{id}` with `account_password`; refreshes list": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841222
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714381138
+      }
+    ],
+    "21.4 Add edit icon link in each row navigating to `/credentials/:id/edit`": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841273
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714381199
+      }
+    ],
+    "22. EditCredentialPage": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841325
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714381256
+      }
+    ],
+    "23.1 Create `frontend/src/pages/AdminUsersPage.tsx` that calls `GET /api/admin/users`; renders a table of users with their current profile; includes a dropdown per row to reassign profile via `PUT /api/admin/users/{id}/profile`; all text via `t()`": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841388
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714381310
+      }
+    ],
+    "23.2 Create `frontend/src/pages/AdminProfilesPage.tsx` that reads available profiles (seed data) and displays their `permitted_screens` for reference; Admin-only route": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841452
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714381373
+      }
+    ],
+    "24.1 Create `frontend/src/router.tsx` using `react-router-dom v6` `createBrowserRouter` with all routes: `/login` → `LoginPage`, `/signup` → `SignUpPage`, `/credentials` → `ProtectedRoute(screen=\"credentials\")` → `ViewSearchPage`, `/credentials/new` → `ProtectedRoute(screen=\"credentials.new\")` → `SaveCredentialPage`, `/credentials/:id/edit` → `ProtectedRoute(screen=\"credentials.edit\")` → `EditCredentialPage`, `/admin/users` → `ProtectedRoute(screen=\"admin.users\")` → `AdminUsersPage`, `/admin/profiles` → `ProtectedRoute(screen=\"admin.profiles\")` → `AdminProfilesPage`, `/403` → `ForbiddenPage`, `*` → redirect to `/login`": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841509
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714381428
+      }
+    ],
+    "24.2 Create `frontend/src/pages/ForbiddenPage.tsx` with a 403 message and a link back to the user's home screen; all text via `t()`": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841565
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714381491
+      }
+    ],
+    "25. Frontend checkpoint — ensure all frontend tests pass": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841611
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714381545
+      }
+    ],
+    "26.1 Write unit tests for `PasswordInput` — Eye_Toggle toggles `type` attribute between `\"password\"` and `\"text\"`": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841658
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714381606
+      }
+    ],
+    "26.2 Write unit tests for `PasswordConfirmModal` — submit calls `onConfirm` with entered value; cancel calls `onCancel`": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841718
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714381666
+      }
+    ],
+    "26.3 Write unit tests for `useVisibilityTimer` hook — after 60 s (mocked `vi.useFakeTimers`) `isVisible` becomes false; manual stop halts countdown immediately": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841770
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714381721
+      }
+    ],
+    "26.4 Write unit tests for `AlreadyVisibleModal` — \"Continue\" callback fires and \"Cancel\" callback fires independently": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841815
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714381783
+      }
+    ],
+    "26.5 Write unit tests for `ProtectedRoute` — non-authenticated user redirects to `/login`; User with missing screen permission redirects to `/403`; Admin always renders children": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841863
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714381841
+      }
+    ],
+    "26.6 Write unit tests for `LanguageToggle` — clicking ES changes all `t()` output to Spanish strings; clicking EN reverts; no page reload": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841909
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714381898
+      }
+    ],
+    "26.7 Write unit tests for `ViewSearchPage` — search input with query `\"git\"` triggers `GET /api/credentials?q=git`; password column shows masked value by default; property test for Password_Confirmation_Prompt always shown on Eye_Toggle (Property 12, **Validates: Requirements 5.13**)": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720841953
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714381957
+      }
+    ],
+    "27.1 Write integration test `test_full_credential_lifecycle`: register → login → save credential → list → reveal → edit → delete → confirm audit_log entries for INSERT, SELECT, UPDATE, DELETE": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720842011
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714382017
+      }
+    ],
+    "27.2 Write integration test for admin profile assignment end-to-end: login as Admin → assign profile to User → login as User → confirm permitted and forbidden routes return expected status codes": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720842071
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714382101
+      }
+    ],
+    "27.3 Write property test for concurrent operations preserve per-user isolation (Property 15)": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720842113
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714382162
+      }
+    ],
+    "28.1 Create `README.md` in the repo root covering: project description, prerequisites (Docker, Node 18+, Python 3.11+), local setup steps, all required env variable names, `make up` / `make test-backend` / `make test-frontend` commands, and a screen-by-screen user guide (Login, Sign-Up, View/Search, Save, Edit, Delete, Admin pages, language toggle)": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720842161
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714382222
+      }
+    ],
+    "28.2 Create `ARCHITECTURE.md` in the repo root covering: system component diagram (Mermaid), encryption lifecycle (Save → Store → Retrieve → Display), authentication and session token flow, role and profile permission model, database schema overview, Fernet key management and rotation procedure, audit log structure": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720842212
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714382281
+      }
+    ],
+    "29. Final checkpoint — all tests pass end-to-end": [
+      {
+        "executionId": "ff0ecaf5-3001-4708-b2c5-2f2b741171d1",
+        "chatSessionId": "sess_58aabecd-dbfb-4dc9-b650-39ccdcbcc692",
+        "timestamp": 1785720842286
+      },
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714382337
+      }
+    ],
+    "3. SQLAlchemy ORM models": [
+      {
+        "executionId": "7e6c4a3a-f622-4d75-8998-306a4cd8bd02",
+        "chatSessionId": "sess_9a8720d0-448f-4afa-ac27-3b5f3e922b63",
+        "timestamp": 1785721893530
+      },
+      {
+        "executionId": "7e6c4a3a-f622-4d75-8998-306a4cd8bd02",
+        "chatSessionId": "sess_9a8720d0-448f-4afa-ac27-3b5f3e922b63",
+        "timestamp": 1785722207330
+      }
+    ],
+    "5. EncryptorService": [
+      {
+        "executionId": "05277f85-c3b6-48a9-ba57-ea3d70ae976e",
+        "chatSessionId": "sess_b5b660c6-db11-4b5d-8444-f30624d6e83f",
+        "timestamp": 1785723072743
+      },
+      {
+        "executionId": "05277f85-c3b6-48a9-ba57-ea3d70ae976e",
+        "chatSessionId": "sess_b5b660c6-db11-4b5d-8444-f30624d6e83f",
+        "timestamp": 1785723315380
+      }
+    ],
+    "6. AuthService": [
+      {
+        "executionId": "5aa9c9b0-8b39-4d88-b1cc-be02915625d1",
+        "chatSessionId": "sess_5f9b0f68-62d5-4a6f-9c02-a46a80babcc5",
+        "timestamp": 1785723618495
+      },
+      {
+        "executionId": "5aa9c9b0-8b39-4d88-b1cc-be02915625d1",
+        "chatSessionId": "sess_5f9b0f68-62d5-4a6f-9c02-a46a80babcc5",
+        "timestamp": 1785724279284
+      }
+    ],
+    "7. AuditService and audit column helpers": [
+      {
+        "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
+        "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
+        "timestamp": 1788714653291
+      }
+    ],
+    "8. ProfileService": [
+      {
+        "executionId": "485e4787-5adb-46f4-bc72-489fb76185a8",
+        "chatSessionId": "sess_3329f48a-24f2-4a1b-ba0a-181022efbef8",
+        "timestamp": 1788714702939
+      },
+      {
+        "executionId": "485e4787-5adb-46f4-bc72-489fb76185a8",
+        "chatSessionId": "sess_3329f48a-24f2-4a1b-ba0a-181022efbef8",
+        "timestamp": 1788715110761
+      }
+    ],
+    "11. Credentials router": [
+      {
+        "executionId": "b3e6583f-fe74-4687-af90-25f7fa1b2766",
+        "chatSessionId": "sess_8cf24dee-2e33-4e78-9d1b-408405a9db60",
+        "timestamp": 1788718557664
+      }
+    ]
+  }
+}

@@ -1,0 +1,144 @@
+# =============================================================================
+# Save-Pass — Password Manager
+# .gitignore
+# Stack: Python 3.11 / FastAPI + React 18 / Vite / TypeScript + Docker
+# =============================================================================
+
+# =============================================================================
+# SECRETS & ENVIRONMENT — nunca subir
+# =============================================================================
+.env
+.env.local
+.env.*.local
+# El .env.example SI se sube (plantilla sin valores reales)
+
+# =============================================================================
+# PYTHON — backend
+# =============================================================================
+
+# Bytecode compilado
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# Entornos virtuales
+venv/
+.venv/
+env/
+.env/
+ENV/
+env.bak/
+venv.bak/
+
+# Distribucion / empaquetado
+dist/
+build/
+*.egg-info/
+*.egg
+.eggs/
+MANIFEST
+
+# pytest / testing
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.lcov
+nosetests.xml
+test-results/
+
+# Hypothesis (property testing) — bases de datos de ejemplos generados
+# Se ignoran porque son artefactos locales de ejecucion
+.hypothesis/
+
+# mypy / type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff / linters
+.ruff_cache/
+
+# =============================================================================
+# NODE / FRONTEND — frontend
+# =============================================================================
+
+# Dependencias instaladas
+node_modules/
+
+# Output de build (Vite genera esto)
+frontend/dist/
+frontend/build/
+
+# Cache de Vite
+frontend/.vite/
+
+# Variables de entorno locales del frontend
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# =============================================================================
+# DOCKER
+# =============================================================================
+# Los docker-compose.yml y Dockerfile SI se suben.
+# Solo ignorar overrides con secretos locales.
+docker-compose.override.yml
+
+# =============================================================================
+# IDEs / EDITORES
+# =============================================================================
+
+# VSCode — se sube .vscode/extensions.json si quieres recomendar extensiones,
+# pero se ignoran configuraciones locales de usuario
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/*.code-workspace
+
+# JetBrains (PyCharm, WebStorm, etc.)
+.idea/
+
+# Vim / Emacs
+*.swp
+*.swo
+*~
+
+# =============================================================================
+# SISTEMA OPERATIVO
+# =============================================================================
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+.directory
+
+# =============================================================================
+# LOGS
+# =============================================================================
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =============================================================================
+# ARCHIVOS TEMPORALES / NOTAS PERSONALES
+# =============================================================================
+*.tmp
+*.temp
+jerarquia_cyber_cosmica.txt
+Requerimientos.txt

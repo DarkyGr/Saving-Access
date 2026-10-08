@@ -196,9 +196,9 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - Create `frontend/src/pages/EditCredentialPage.tsx` that fetches credential by `GET /api/credentials/:id` (no reveal), pre-populates `website_name`, email/username, and masked password; on "Update" shows `PasswordConfirmModal`; on confirm calls `PUT /api/credentials/:id` with `account_password`; on success redirects to `/credentials`; includes "Cancel" button; all text via `t()`
   - _Requirements: 6.1–6.9_
 
-- [ ] 23. AdminUsersPage and AdminProfilesPage
-  - [ ] 23.1 Create `frontend/src/pages/AdminUsersPage.tsx` that calls `GET /api/admin/users`; renders a table of users with their current profile; includes a dropdown per row to reassign profile via `PUT /api/admin/users/{id}/profile`; all text via `t()`
-  - [ ] 23.2 Create `frontend/src/pages/AdminProfilesPage.tsx` that reads available profiles (seed data) and displays their `permitted_screens` for reference; Admin-only route
+- [x] 23. AdminUsersPage and AdminProfilesPage
+  - [x] 23.1 Create `frontend/src/pages/AdminUsersPage.tsx` that calls `GET /api/admin/users`; renders a table of users with their current profile; includes a dropdown per row to reassign profile via `PUT /api/admin/users/{id}/profile`; all text via `t()`
+  - [x] 23.2 Create `frontend/src/pages/AdminProfilesPage.tsx` that reads available profiles (seed data) and displays their `permitted_screens` for reference; Admin-only route
   - _Requirements: 3.2, 3.3, 3.5, 3.7_
 
 - [ ] 24. React Router setup and 403 page

@@ -1048,6 +1048,16 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714381310
+      },
+      {
+        "executionId": "ad594d90-3790-482d-b4c9-7a7b45e2e9d8",
+        "chatSessionId": "sess_b3f84c06-fc67-4d5a-b19f-f88e2e6ebdc6",
+        "timestamp": 1791491419988
+      },
+      {
+        "executionId": "ad594d90-3790-482d-b4c9-7a7b45e2e9d8",
+        "chatSessionId": "sess_b3f84c06-fc67-4d5a-b19f-f88e2e6ebdc6",
+        "timestamp": 1791491993455
       }
     ],
     "23.2 Create `frontend/src/pages/AdminProfilesPage.tsx` that reads available profiles (seed data) and displays their `permitted_screens` for reference; Admin-only route": [
@@ -1060,6 +1070,16 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714381373
+      },
+      {
+        "executionId": "ad594d90-3790-482d-b4c9-7a7b45e2e9d8",
+        "chatSessionId": "sess_b3f84c06-fc67-4d5a-b19f-f88e2e6ebdc6",
+        "timestamp": 1791491423239
+      },
+      {
+        "executionId": "ad594d90-3790-482d-b4c9-7a7b45e2e9d8",
+        "chatSessionId": "sess_b3f84c06-fc67-4d5a-b19f-f88e2e6ebdc6",
+        "timestamp": 1791491996671
       }
     ],
     "24.1 Create `frontend/src/router.tsx` using `react-router-dom v6` `createBrowserRouter` with all routes: `/login` → `LoginPage`, `/signup` → `SignUpPage`, `/credentials` → `ProtectedRoute(screen=\"credentials\")` → `ViewSearchPage`, `/credentials/new` → `ProtectedRoute(screen=\"credentials.new\")` → `SaveCredentialPage`, `/credentials/:id/edit` → `ProtectedRoute(screen=\"credentials.edit\")` → `EditCredentialPage`, `/admin/users` → `ProtectedRoute(screen=\"admin.users\")` → `AdminUsersPage`, `/admin/profiles` → `ProtectedRoute(screen=\"admin.profiles\")` → `AdminProfilesPage`, `/403` → `ForbiddenPage`, `*` → redirect to `/login`": [
@@ -1347,6 +1367,13 @@
         "executionId": "0a3ef6eb-9e2f-425d-8936-436c03ca0922",
         "chatSessionId": "sess_01c88165-3b6a-4680-bceb-405213ad5b98",
         "timestamp": 1791490762214
+      }
+    ],
+    "23. AdminUsersPage and AdminProfilesPage": [
+      {
+        "executionId": "ad594d90-3790-482d-b4c9-7a7b45e2e9d8",
+        "chatSessionId": "sess_b3f84c06-fc67-4d5a-b19f-f88e2e6ebdc6",
+        "timestamp": 1791491997065
       }
     ]
   }

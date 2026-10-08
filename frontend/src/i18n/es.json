@@ -158,9 +158,29 @@
     "assignProfileSuccess": "Perfil asignado exitosamente.",
     "assignProfileError": "No se pudo asignar el perfil. Inténtalo de nuevo.",
     "noUsers": "No se encontraron usuarios.",
+    "noProfileAssigned": "Ninguno",
+    "noProfileOption": "— Sin perfil —",
     "profileNameLabel": "Nombre del Perfil",
     "permittedScreensLabel": "Pantallas Permitidas",
     "noProfiles": "No hay perfiles definidos."
+  },
+
+  "adminProfiles": {
+    "description": "Los perfiles controlan a qué pantallas puede acceder un usuario con rol Usuario. Asigna un perfil a un usuario en la página Administrar Usuarios.",
+    "adminNote": "Las cuentas Admin siempre tienen acceso completo a todas las pantallas y no están sujetas a restricciones de perfil.",
+    "profileId": "ID: {{id}}",
+    "permittedScreensLabel": "Pantallas Permitidas",
+    "allScreensTitle": "Todas las Pantallas Disponibles",
+    "screenKeyHeader": "Clave de Pantalla",
+    "screenDescriptionHeader": "Descripción",
+    "screenNames": {
+      "credentials": "Ver y Buscar Credenciales",
+      "credentials.new": "Guardar Nueva Credencial",
+      "credentials.edit": "Editar Credencial",
+      "credentials.delete": "Eliminar Credencial",
+      "admin.users": "Administrar Usuarios",
+      "admin.profiles": "Perfiles de Permisos"
+    }
   },
 
   "forbidden": {

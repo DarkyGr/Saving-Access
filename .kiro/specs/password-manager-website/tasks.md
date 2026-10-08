@@ -201,9 +201,9 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - [x] 23.2 Create `frontend/src/pages/AdminProfilesPage.tsx` that reads available profiles (seed data) and displays their `permitted_screens` for reference; Admin-only route
   - _Requirements: 3.2, 3.3, 3.5, 3.7_
 
-- [ ] 24. React Router setup and 403 page
-  - [ ] 24.1 Create `frontend/src/router.tsx` using `react-router-dom v6` `createBrowserRouter` with all routes: `/login` → `LoginPage`, `/signup` → `SignUpPage`, `/credentials` → `ProtectedRoute(screen="credentials")` → `ViewSearchPage`, `/credentials/new` → `ProtectedRoute(screen="credentials.new")` → `SaveCredentialPage`, `/credentials/:id/edit` → `ProtectedRoute(screen="credentials.edit")` → `EditCredentialPage`, `/admin/users` → `ProtectedRoute(screen="admin.users")` → `AdminUsersPage`, `/admin/profiles` → `ProtectedRoute(screen="admin.profiles")` → `AdminProfilesPage`, `/403` → `ForbiddenPage`, `*` → redirect to `/login`
-  - [ ] 24.2 Create `frontend/src/pages/ForbiddenPage.tsx` with a 403 message and a link back to the user's home screen; all text via `t()`
+- [x] 24. React Router setup and 403 page
+  - [x] 24.1 Create `frontend/src/router.tsx` using `react-router-dom v6` `createBrowserRouter` with all routes: `/login` → `LoginPage`, `/signup` → `SignUpPage`, `/credentials` → `ProtectedRoute(screen="credentials")` → `ViewSearchPage`, `/credentials/new` → `ProtectedRoute(screen="credentials.new")` → `SaveCredentialPage`, `/credentials/:id/edit` → `ProtectedRoute(screen="credentials.edit")` → `EditCredentialPage`, `/admin/users` → `ProtectedRoute(screen="admin.users")` → `AdminUsersPage`, `/admin/profiles` → `ProtectedRoute(screen="admin.profiles")` → `AdminProfilesPage`, `/403` → `ForbiddenPage`, `*` → redirect to `/login`
+  - [x] 24.2 Create `frontend/src/pages/ForbiddenPage.tsx` with a 403 message and a link back to the user's home screen; all text via `t()`
   - Wire `RouterProvider` into `frontend/src/main.tsx` wrapping `AuthProvider`
   - _Requirements: 2.5, 3.4, 3.6, 10.1_
 

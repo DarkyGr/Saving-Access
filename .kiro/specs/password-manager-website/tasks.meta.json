@@ -1092,6 +1092,16 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714381428
+      },
+      {
+        "executionId": "fb7c204a-2750-46b6-9e97-078bc973e42a",
+        "chatSessionId": "sess_26336103-d69d-4b80-8001-b5ef45f67ee9",
+        "timestamp": 1791492070506
+      },
+      {
+        "executionId": "fb7c204a-2750-46b6-9e97-078bc973e42a",
+        "chatSessionId": "sess_26336103-d69d-4b80-8001-b5ef45f67ee9",
+        "timestamp": 1791492139630
       }
     ],
     "24.2 Create `frontend/src/pages/ForbiddenPage.tsx` with a 403 message and a link back to the user's home screen; all text via `t()`": [
@@ -1104,6 +1114,16 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714381491
+      },
+      {
+        "executionId": "fb7c204a-2750-46b6-9e97-078bc973e42a",
+        "chatSessionId": "sess_26336103-d69d-4b80-8001-b5ef45f67ee9",
+        "timestamp": 1791492073127
+      },
+      {
+        "executionId": "fb7c204a-2750-46b6-9e97-078bc973e42a",
+        "chatSessionId": "sess_26336103-d69d-4b80-8001-b5ef45f67ee9",
+        "timestamp": 1791492142113
       }
     ],
     "25. Frontend checkpoint — ensure all frontend tests pass": [
@@ -1374,6 +1394,13 @@
         "executionId": "ad594d90-3790-482d-b4c9-7a7b45e2e9d8",
         "chatSessionId": "sess_b3f84c06-fc67-4d5a-b19f-f88e2e6ebdc6",
         "timestamp": 1791491997065
+      }
+    ],
+    "24. React Router setup and 403 page": [
+      {
+        "executionId": "fb7c204a-2750-46b6-9e97-078bc973e42a",
+        "chatSessionId": "sess_26336103-d69d-4b80-8001-b5ef45f67ee9",
+        "timestamp": 1791492142297
       }
     ]
   }

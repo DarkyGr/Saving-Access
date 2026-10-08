@@ -192,7 +192,7 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - _Requirements: 5.1–5.14, 7.1–7.7_
 
 
-- [ ] 22. EditCredentialPage
+- [x] 22. EditCredentialPage
   - Create `frontend/src/pages/EditCredentialPage.tsx` that fetches credential by `GET /api/credentials/:id` (no reveal), pre-populates `website_name`, email/username, and masked password; on "Update" shows `PasswordConfirmModal`; on confirm calls `PUT /api/credentials/:id` with `account_password`; on success redirects to `/credentials`; includes "Cancel" button; all text via `t()`
   - _Requirements: 6.1–6.9_
 

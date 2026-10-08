@@ -1026,6 +1026,16 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714381256
+      },
+      {
+        "executionId": "a789f562-ea4a-4b5b-8ed6-7f822369629a",
+        "chatSessionId": "sess_56c0f520-2683-4fbc-aa6a-991a60a6f457",
+        "timestamp": 1791491141349
+      },
+      {
+        "executionId": "a789f562-ea4a-4b5b-8ed6-7f822369629a",
+        "chatSessionId": "sess_56c0f520-2683-4fbc-aa6a-991a60a6f457",
+        "timestamp": 1791491234259
       }
     ],
     "23.1 Create `frontend/src/pages/AdminUsersPage.tsx` that calls `GET /api/admin/users`; renders a table of users with their current profile; includes a dropdown per row to reassign profile via `PUT /api/admin/users/{id}/profile`; all text via `t()`": [

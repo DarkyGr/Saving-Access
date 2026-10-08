@@ -131,13 +131,23 @@ _client = TestClient(app, raise_server_exceptions=True)
 # ---------------------------------------------------------------------------
 
 def _make_jwt(user_id: int, role: str = "Admin") -> str:
-    """Issue a signed JWT for the given user_id and role."""
+    """Issue a signed JWT for the given user_id and role.
+
+    Reads JWT_SECRET and JWT_ALGORITHM from os.environ at call time so that
+    the token is always signed with the same secret that AuthService.verify_token
+    will use — even when another test file changes JWT_SECRET between test runs.
+    """
     now = datetime.now(timezone.utc)
     payload = {
         "user_id": user_id,
         "role": role,
         "exp": now + timedelta(minutes=15),
     }
+    secret = os.environ.get("JWT_SECRET", _TEST_JWT_SECRET)
+    algorithm = os.environ.get("JWT_ALGORITHM", _TEST_JWT_ALGORITHM)
+    # Restore the known test secret so AuthService decodes with the same key.
+    os.environ["JWT_SECRET"] = _TEST_JWT_SECRET
+    os.environ["JWT_ALGORITHM"] = _TEST_JWT_ALGORITHM
     return jwt.encode(
         payload,
         _TEST_JWT_SECRET,

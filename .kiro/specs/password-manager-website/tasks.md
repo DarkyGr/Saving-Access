@@ -145,7 +145,7 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
     - Minimum 200 Hypothesis iterations using `st.emails()` and manually constructed invalid strings
   - _Requirements: 4.13_
 
-- [ ] 14. Backend checkpoint — ensure all backend tests pass
+- [x] 14. Backend checkpoint — ensure all backend tests pass
   - Run `pytest backend/` and confirm all unit and property-based tests pass with zero failures; fix any issues before proceeding to frontend tasks.
 
 

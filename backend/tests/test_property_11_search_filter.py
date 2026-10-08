@@ -63,12 +63,12 @@ from app.utils.audit_columns import set_creation_audit  # noqa: E402
 # ---------------------------------------------------------------------------
 
 # Safe alphabet: uppercase letters, lowercase letters, and digits.
-# Avoids characters that SQLite ILIKE / Python str.lower() behave
-# ambiguously with (e.g., certain Unicode accents).
+# Restricted to ASCII to ensure SQLite ILIKE case-insensitivity matches
+# Python's str.lower() behaviour (SQLite ILIKE only folds ASCII A-Z).
 _SAFE_ALPHABET = string.ascii_letters + string.digits
 
 _safe_text = st.text(
-    alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd")),
+    alphabet=string.ascii_letters + string.digits,
     min_size=1,
     max_size=20,
 )

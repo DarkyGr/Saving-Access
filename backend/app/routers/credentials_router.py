@@ -38,6 +38,7 @@ from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
 from app.services.encryptor_service import EncryptorService
 from app.utils.audit_columns import set_creation_audit, set_modification_audit
+from app.utils.email_validator import validate_email as _validate_email_format
 
 router = APIRouter()
 
@@ -259,6 +260,13 @@ def create_credential(
     """
     user_id: int = claims["user_id"]
 
+    # 0. Validate email format when logging in with email (Requirement 4.13)
+    if not body.is_username_login and not _validate_email_format(body.email_or_username):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid email address or disposable email domains are not allowed.",
+        )
+
     # 1. Verify account password before any sensitive operation
     _verify_account_password(user_id, body.account_password, db)
 
@@ -326,6 +334,13 @@ def update_credential(
 
     # 1. Fetch and verify ownership
     credential = _get_owned_credential(credential_id, user_id, db)
+
+    # 1a. Validate email format when logging in with email (Requirement 4.13)
+    if not body.is_username_login and not _validate_email_format(body.email_or_username):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid email address or disposable email domains are not allowed.",
+        )
 
     # 2. Verify account password
     _verify_account_password(user_id, body.account_password, db)

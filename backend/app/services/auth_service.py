@@ -15,6 +15,7 @@ from passlib.hash import bcrypt as bcrypt_hasher
 from sqlalchemy.orm import Session
 
 from app.models import User
+from app.utils.email_validator import validate_email as _validate_email_format
 
 
 # ---------------------------------------------------------------------------
@@ -102,25 +103,32 @@ class AuthService:
                 detail={"password_errors": strength_errors},
             )
 
-        # 3. Duplicate username (Requirement 1.2)
+        # 3. Email format + disposable-domain check (Requirement 4.13)
+        if not _validate_email_format(email):
+            raise HTTPException(
+                status_code=422,
+                detail="Invalid email address or disposable email domains are not allowed.",
+            )
+
+        # 4. Duplicate username (Requirement 1.2)
         if self._db.query(User).filter(User.username == username).first():
             raise HTTPException(
                 status_code=400,
                 detail="Username is already taken.",
             )
 
-        # 4. Duplicate email
+        # 5. Duplicate email
         if self._db.query(User).filter(User.email == email).first():
             raise HTTPException(
                 status_code=400,
                 detail="Email address is already registered.",
             )
 
-        # 5. Hash password (Requirement 1.7, 8.5)
+        # 6. Hash password (Requirement 1.7, 8.5)
         rounds = int(os.environ.get("BCRYPT_ROUNDS", "12"))
         password_hash: str = bcrypt_hasher.using(rounds=rounds).hash(password)
 
-        # 6. Create user with audit columns (Requirement 1.8)
+        # 7. Create user with audit columns (Requirement 1.8)
         now_date = date.today()
         now_time = datetime.now(timezone.utc).time().replace(tzinfo=None)
         user = User(

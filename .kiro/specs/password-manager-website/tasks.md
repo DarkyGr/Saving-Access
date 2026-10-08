@@ -137,9 +137,9 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - Wire admin router into `main.py`
   - _Requirements: 3.2, 3.3, 3.5, 3.7_
 
-- [~] 13. Email validation utility
+- [x] 13. Email validation utility
   - Create `backend/app/utils/email_validator.py` with `validate_email(email: str) -> bool` that checks RFC 5321 format using a regex and rejects domains from a bundled `disposable_domains.txt` blocklist file; integrate into `AuthService.register` and the credentials router email field
-  - [-] 13.1 Write property test for email validation (Property 16)
+  - [x] 13.1 Write property test for email validation (Property 16)
     - **Property 16: Email Validation Rejects Invalid Formats and Disposable Domains** — validator accepts iff RFC 5321 format is valid AND domain is not on blocklist
     - **Validates: Requirements 4.13**
     - Minimum 200 Hypothesis iterations using `st.emails()` and manually constructed invalid strings
@@ -240,7 +240,7 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
 
 
 - [ ] 28. Documentation
-  - [ ] 28.1 Create `README.md` in the repo root covering: project description, prerequisites (Docker, Node 18+, Python 3.11+), local setup steps, all required env variable names, `make up` / `make test-backend` / `make test-frontend` commands, and a screen-by-screen user guide (Login, Sign-Up, View/Search, Save, Edit, Delete, Admin pages, language toggle)
+  - [x] 28.1 Create `README.md` in the repo root covering: project description, prerequisites (Docker, Node 18+, Python 3.11+), local setup steps, all required env variable names, `make up` / `make test-backend` / `make test-frontend` commands, and a screen-by-screen user guide (Login, Sign-Up, View/Search, Save, Edit, Delete, Admin pages, language toggle)
   - [ ] 28.2 Create `ARCHITECTURE.md` in the repo root covering: system component diagram (Mermaid), encryption lifecycle (Save → Store → Retrieve → Display), authentication and session token flow, role and profile permission model, database schema overview, Fernet key management and rotation procedure, audit log structure
   - _Requirements: 12.1–12.3_
 

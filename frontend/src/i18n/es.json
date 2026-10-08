@@ -25,6 +25,9 @@
     "noAccount": "¿No tienes una cuenta?",
     "signupLink": "Regístrate",
     "genericError": "Usuario o contraseña incorrectos.",
+    "serverError": "Ocurrió un error inesperado. Inténtalo de nuevo.",
+    "errorUsernameRequired": "El usuario es requerido.",
+    "errorPasswordRequired": "La contraseña es requerida.",
     "sessionExpired": "Tu sesión ha expirado. Inicia sesión de nuevo."
   },
 

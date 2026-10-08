@@ -25,6 +25,9 @@
     "noAccount": "Don't have an account?",
     "signupLink": "Sign up",
     "genericError": "Invalid username or password.",
+    "serverError": "An unexpected error occurred. Please try again.",
+    "errorUsernameRequired": "Username is required.",
+    "errorPasswordRequired": "Password is required.",
     "sessionExpired": "Your session has expired. Please log in again."
   },
 

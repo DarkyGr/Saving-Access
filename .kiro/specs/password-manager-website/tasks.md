@@ -172,7 +172,7 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - [x] 17.2 Create `frontend/src/context/AuthContext.tsx` with `AuthProvider` holding `token` and `user` in `useState` (never `localStorage`); expose `login(token)`, `logout()`, and `useAuth()` hook
   - _Requirements: 2.2, 2.4, 2.5, 8.3_
 
-- [ ] 18. LoginPage
+- [x] 18. LoginPage
   - Create `frontend/src/pages/LoginPage.tsx` with username and password fields (using `PasswordInput`), form validation, calls `POST /api/auth/login`, stores token via `AuthContext.login()`, redirects to `/credentials` on success, displays generic error message on 401; all text via `t()`
   - _Requirements: 2.1–2.5_
 

@@ -207,7 +207,7 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - Wire `RouterProvider` into `frontend/src/main.tsx` wrapping `AuthProvider`
   - _Requirements: 2.5, 3.4, 3.6, 10.1_
 
-- [ ] 25. Frontend checkpoint — ensure all frontend tests pass
+- [x] 25. Frontend checkpoint — ensure all frontend tests pass
   - Run `npx vitest --run` and confirm all component tests pass; fix any issues before proceeding.
 
 

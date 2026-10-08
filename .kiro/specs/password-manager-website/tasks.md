@@ -156,14 +156,14 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - Import and initialize i18n in `frontend/src/main.tsx`
   - _Requirements: 10.1–10.5_
 
-- [ ] 16. Frontend shared components
-  - [ ] 16.1 Create `frontend/src/components/PasswordInput.tsx` — masked text input with an Eye_Toggle `<button>` that toggles `type="password"` / `type="text"`; uses `t()` for aria-label; min touch target 44×44 px on mobile
-  - [ ] 16.2 Create `frontend/src/components/PasswordConfirmModal.tsx` — modal dialog with a `PasswordInput` and confirm/cancel buttons; accepts `onConfirm(password: string)` and `onCancel()` callbacks; uses `t()` for all text
-  - [ ] 16.3 Create `frontend/src/hooks/useVisibilityTimer.ts` — custom hook that accepts `durationMs=60000`, returns `{isVisible, startTimer, stopTimer, secondsRemaining}`; uses `useRef` for interval ID to avoid stale closure issues
-  - [ ] 16.4 Create `frontend/src/components/LanguageToggle.tsx` — button group or dropdown in the app header that calls `i18n.changeLanguage("en" | "es")`; persists choice to `sessionStorage`
-  - [ ] 16.5 Create `frontend/src/components/ProtectedRoute.tsx` — HOC that reads JWT from memory context, decodes claims; Admin passes unconditionally; User role calls `GET /api/profile/permissions` and checks screen key; redirects to `/login` if unauthenticated or `/403` if forbidden
-  - [ ] 16.6 Create `frontend/src/components/ConfirmDeleteModal.tsx` — generic confirmation modal with cancel and confirm buttons and i18n text
-  - [ ] 16.7 Create `frontend/src/components/AlreadyVisibleModal.tsx` — warning modal for the "another password is visible" state; "Continue" callback hides current and proceeds; "Cancel" closes modal
+- [x] 16. Frontend shared components
+  - [x] 16.1 Create `frontend/src/components/PasswordInput.tsx` — masked text input with an Eye_Toggle `<button>` that toggles `type="password"` / `type="text"`; uses `t()` for aria-label; min touch target 44×44 px on mobile
+  - [x] 16.2 Create `frontend/src/components/PasswordConfirmModal.tsx` — modal dialog with a `PasswordInput` and confirm/cancel buttons; accepts `onConfirm(password: string)` and `onCancel()` callbacks; uses `t()` for all text
+  - [x] 16.3 Create `frontend/src/hooks/useVisibilityTimer.ts` — custom hook that accepts `durationMs=60000`, returns `{isVisible, startTimer, stopTimer, secondsRemaining}`; uses `useRef` for interval ID to avoid stale closure issues
+  - [x] 16.4 Create `frontend/src/components/LanguageToggle.tsx` — button group or dropdown in the app header that calls `i18n.changeLanguage("en" | "es")`; persists choice to `sessionStorage`
+  - [x] 16.5 Create `frontend/src/components/ProtectedRoute.tsx` — HOC that reads JWT from memory context, decodes claims; Admin passes unconditionally; User role calls `GET /api/profile/permissions` and checks screen key; redirects to `/login` if unauthenticated or `/403` if forbidden
+  - [x] 16.6 Create `frontend/src/components/ConfirmDeleteModal.tsx` — generic confirmation modal with cancel and confirm buttons and i18n text
+  - [x] 16.7 Create `frontend/src/components/AlreadyVisibleModal.tsx` — warning modal for the "another password is visible" state; "Continue" callback hides current and proceeds; "Cancel" closes modal
   - _Requirements: 4.5–4.7, 5.4–5.12, 7.2–7.3, 10.1–10.4, 11.2_
 
 

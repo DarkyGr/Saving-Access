@@ -674,6 +674,16 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714380234
+      },
+      {
+        "executionId": "319cb35e-7ec3-4cef-b2d6-91a9f6880f08",
+        "chatSessionId": "sess_91622bcd-b872-469b-a133-e2663fc54b76",
+        "timestamp": 1791488293011
+      },
+      {
+        "executionId": "319cb35e-7ec3-4cef-b2d6-91a9f6880f08",
+        "chatSessionId": "sess_91622bcd-b872-469b-a133-e2663fc54b76",
+        "timestamp": 1791488556574
       }
     ],
     "16.2 Create `frontend/src/components/PasswordConfirmModal.tsx` — modal dialog with a `PasswordInput` and confirm/cancel buttons; accepts `onConfirm(password: string)` and `onCancel()` callbacks; uses `t()` for all text": [
@@ -686,6 +696,16 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714380294
+      },
+      {
+        "executionId": "319cb35e-7ec3-4cef-b2d6-91a9f6880f08",
+        "chatSessionId": "sess_91622bcd-b872-469b-a133-e2663fc54b76",
+        "timestamp": 1791488296501
+      },
+      {
+        "executionId": "319cb35e-7ec3-4cef-b2d6-91a9f6880f08",
+        "chatSessionId": "sess_91622bcd-b872-469b-a133-e2663fc54b76",
+        "timestamp": 1791488559297
       }
     ],
     "16.3 Create `frontend/src/hooks/useVisibilityTimer.ts` — custom hook that accepts `durationMs=60000`, returns `{isVisible, startTimer, stopTimer, secondsRemaining}`; uses `useRef` for interval ID to avoid stale closure issues": [
@@ -698,6 +718,16 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714380360
+      },
+      {
+        "executionId": "319cb35e-7ec3-4cef-b2d6-91a9f6880f08",
+        "chatSessionId": "sess_91622bcd-b872-469b-a133-e2663fc54b76",
+        "timestamp": 1791488299295
+      },
+      {
+        "executionId": "319cb35e-7ec3-4cef-b2d6-91a9f6880f08",
+        "chatSessionId": "sess_91622bcd-b872-469b-a133-e2663fc54b76",
+        "timestamp": 1791488562967
       }
     ],
     "16.4 Create `frontend/src/components/LanguageToggle.tsx` — button group or dropdown in the app header that calls `i18n.changeLanguage(\"en\" | \"es\")`; persists choice to `sessionStorage`": [
@@ -710,6 +740,16 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714380436
+      },
+      {
+        "executionId": "319cb35e-7ec3-4cef-b2d6-91a9f6880f08",
+        "chatSessionId": "sess_91622bcd-b872-469b-a133-e2663fc54b76",
+        "timestamp": 1791488302127
+      },
+      {
+        "executionId": "319cb35e-7ec3-4cef-b2d6-91a9f6880f08",
+        "chatSessionId": "sess_91622bcd-b872-469b-a133-e2663fc54b76",
+        "timestamp": 1791488565722
       }
     ],
     "16.5 Create `frontend/src/components/ProtectedRoute.tsx` — HOC that reads JWT from memory context, decodes claims; Admin passes unconditionally; User role calls `GET /api/profile/permissions` and checks screen key; redirects to `/login` if unauthenticated or `/403` if forbidden": [
@@ -722,6 +762,16 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714380495
+      },
+      {
+        "executionId": "319cb35e-7ec3-4cef-b2d6-91a9f6880f08",
+        "chatSessionId": "sess_91622bcd-b872-469b-a133-e2663fc54b76",
+        "timestamp": 1791488305084
+      },
+      {
+        "executionId": "319cb35e-7ec3-4cef-b2d6-91a9f6880f08",
+        "chatSessionId": "sess_91622bcd-b872-469b-a133-e2663fc54b76",
+        "timestamp": 1791488568908
       }
     ],
     "16.6 Create `frontend/src/components/ConfirmDeleteModal.tsx` — generic confirmation modal with cancel and confirm buttons and i18n text": [
@@ -734,6 +784,16 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714380562
+      },
+      {
+        "executionId": "319cb35e-7ec3-4cef-b2d6-91a9f6880f08",
+        "chatSessionId": "sess_91622bcd-b872-469b-a133-e2663fc54b76",
+        "timestamp": 1791488307434
+      },
+      {
+        "executionId": "319cb35e-7ec3-4cef-b2d6-91a9f6880f08",
+        "chatSessionId": "sess_91622bcd-b872-469b-a133-e2663fc54b76",
+        "timestamp": 1791488572017
       }
     ],
     "16.7 Create `frontend/src/components/AlreadyVisibleModal.tsx` — warning modal for the \"another password is visible\" state; \"Continue\" callback hides current and proceeds; \"Cancel\" closes modal": [
@@ -746,6 +806,16 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714380622
+      },
+      {
+        "executionId": "319cb35e-7ec3-4cef-b2d6-91a9f6880f08",
+        "chatSessionId": "sess_91622bcd-b872-469b-a133-e2663fc54b76",
+        "timestamp": 1791488310122
+      },
+      {
+        "executionId": "319cb35e-7ec3-4cef-b2d6-91a9f6880f08",
+        "chatSessionId": "sess_91622bcd-b872-469b-a133-e2663fc54b76",
+        "timestamp": 1791488574923
       }
     ],
     "17.1 Create `frontend/src/api/apiClient.ts` using `axios` with a base URL from `import.meta.env.VITE_API_URL`; add a request interceptor that injects `Authorization: Bearer <token>` from React memory; add a response interceptor that redirects to `/login` on 401": [
@@ -1151,6 +1221,18 @@
         "executionId": "5320872d-274e-4268-a9f9-3eecdf7bbf3c",
         "chatSessionId": "sess_08664825-107f-479f-bbce-70a70fef7cec",
         "timestamp": 1791488067456
+      }
+    ],
+    "16. Frontend shared components": [
+      {
+        "executionId": "319cb35e-7ec3-4cef-b2d6-91a9f6880f08",
+        "chatSessionId": "sess_91622bcd-b872-469b-a133-e2663fc54b76",
+        "timestamp": 1791488289780
+      },
+      {
+        "executionId": "319cb35e-7ec3-4cef-b2d6-91a9f6880f08",
+        "chatSessionId": "sess_91622bcd-b872-469b-a133-e2663fc54b76",
+        "timestamp": 1791488574996
       }
     ]
   }

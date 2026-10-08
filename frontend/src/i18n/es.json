@@ -1,0 +1,190 @@
+{
+  "nav": {
+    "credentials": "Mis Credenciales",
+    "saveCredential": "Guardar Credencial",
+    "adminUsers": "Administrar Usuarios",
+    "adminProfiles": "Perfiles",
+    "logout": "Cerrar Sesión",
+    "login": "Iniciar Sesión",
+    "signup": "Registrarse"
+  },
+
+  "language": {
+    "toggle": "Idioma",
+    "en": "Inglés",
+    "es": "Español"
+  },
+
+  "login": {
+    "title": "Iniciar Sesión",
+    "usernameLabel": "Usuario",
+    "usernamePlaceholder": "Ingresa tu nombre de usuario",
+    "passwordLabel": "Contraseña",
+    "passwordPlaceholder": "Ingresa tu contraseña",
+    "submitButton": "Iniciar Sesión",
+    "noAccount": "¿No tienes una cuenta?",
+    "signupLink": "Regístrate",
+    "genericError": "Usuario o contraseña incorrectos.",
+    "sessionExpired": "Tu sesión ha expirado. Inicia sesión de nuevo."
+  },
+
+  "signup": {
+    "title": "Crear Cuenta",
+    "usernameLabel": "Usuario",
+    "usernamePlaceholder": "Elige un nombre de usuario",
+    "emailLabel": "Correo Electrónico",
+    "emailPlaceholder": "Ingresa tu correo electrónico",
+    "passwordLabel": "Contraseña",
+    "passwordPlaceholder": "Crea una contraseña",
+    "passwordConfirmLabel": "Confirmar Contraseña",
+    "passwordConfirmPlaceholder": "Reingresa tu contraseña",
+    "submitButton": "Crear Cuenta",
+    "hasAccount": "¿Ya tienes una cuenta?",
+    "loginLink": "Inicia sesión",
+    "successMessage": "Cuenta creada exitosamente. Por favor, inicia sesión.",
+    "errorDuplicateUsername": "El nombre de usuario ya está en uso.",
+    "errorDuplicateEmail": "El correo electrónico ya está registrado.",
+    "errorPasswordMismatch": "Las contraseñas no coinciden.",
+    "errorInvalidEmail": "Por favor, ingresa un correo electrónico válido.",
+    "errorDisposableEmail": "No se permiten correos electrónicos desechables."
+  },
+
+  "passwordRules": {
+    "title": "Requisitos de Contraseña",
+    "minLength": "Al menos 12 caracteres",
+    "uppercase": "Al menos una letra mayúscula (A–Z)",
+    "lowercase": "Al menos una letra minúscula (a–z)",
+    "digit": "Al menos un dígito (0–9)",
+    "symbol": "Al menos un símbolo (@, $ o !)",
+    "mismatch": "Las contraseñas no coinciden"
+  },
+
+  "credentials": {
+    "pageTitle": "Mis Credenciales",
+    "searchPlaceholder": "Buscar por sitio web o correo / usuario…",
+    "noResults": "No se encontraron credenciales.",
+    "tableHeaderWebsite": "Sitio Web",
+    "tableHeaderEmailUsername": "Correo / Usuario",
+    "tableHeaderPassword": "Contraseña",
+    "tableHeaderActions": "Acciones",
+    "maskedPassword": "••••••••",
+    "editButton": "Editar",
+    "deleteButton": "Eliminar",
+    "revealButton": "Mostrar contraseña",
+    "hideButton": "Ocultar contraseña",
+    "addNew": "Guardar Nueva Credencial"
+  },
+
+  "visibilityTimer": {
+    "label": "Se oculta en",
+    "seconds": "{{count}} segundo",
+    "seconds_plural": "{{count}} segundos",
+    "expired": "Contraseña ocultada"
+  },
+
+  "saveCredential": {
+    "pageTitle": "Guardar Credencial",
+    "websiteLabel": "Nombre del Sitio Web",
+    "websitePlaceholder": "ej. github.com",
+    "emailLabel": "Correo Electrónico",
+    "emailPlaceholder": "tu@correo.com",
+    "usernameLabel": "Usuario",
+    "usernamePlaceholder": "Ingresa el usuario",
+    "usernameLoginCheckbox": "Este sitio usa un usuario en lugar de un correo electrónico",
+    "passwordLabel": "Contraseña del Sitio",
+    "passwordPlaceholder": "Contraseña para este sitio web",
+    "submitButton": "Guardar Credencial",
+    "cancelButton": "Cancelar",
+    "successMessage": "Credencial guardada exitosamente.",
+    "errorSaveFailed": "No se pudo guardar la credencial. Inténtalo de nuevo."
+  },
+
+  "editCredential": {
+    "pageTitle": "Editar Credencial",
+    "websiteLabel": "Nombre del Sitio Web",
+    "websitePlaceholder": "ej. github.com",
+    "emailLabel": "Correo Electrónico",
+    "emailPlaceholder": "tu@correo.com",
+    "usernameLabel": "Usuario",
+    "usernamePlaceholder": "Ingresa el usuario",
+    "usernameLoginCheckbox": "Este sitio usa un usuario en lugar de un correo electrónico",
+    "passwordLabel": "Contraseña del Sitio",
+    "passwordPlaceholder": "Sin cambios o ingresa una nueva contraseña",
+    "updateButton": "Actualizar Credencial",
+    "cancelButton": "Cancelar",
+    "successMessage": "Credencial actualizada exitosamente.",
+    "errorUpdateFailed": "No se pudo actualizar la credencial. Inténtalo de nuevo.",
+    "errorNotFound": "Credencial no encontrada."
+  },
+
+  "passwordConfirmModal": {
+    "title": "Confirma tu Contraseña de Cuenta",
+    "description": "Ingresa tu contraseña de cuenta para continuar.",
+    "passwordLabel": "Contraseña de Cuenta",
+    "passwordPlaceholder": "Tu contraseña de cuenta",
+    "confirmButton": "Confirmar",
+    "cancelButton": "Cancelar",
+    "errorWrongPassword": "Contraseña de cuenta incorrecta.",
+    "errorGeneric": "Ocurrió un error. Inténtalo de nuevo."
+  },
+
+  "confirmDeleteModal": {
+    "title": "Eliminar Credencial",
+    "body": "¿Estás seguro de que deseas eliminar permanentemente la credencial de {{website}}? Esta acción no se puede deshacer.",
+    "confirmButton": "Eliminar",
+    "cancelButton": "Cancelar"
+  },
+
+  "alreadyVisibleModal": {
+    "title": "Contraseña Ya Visible",
+    "body": "Actualmente hay otra contraseña visible. ¿Deseas ocultarla y mostrar esta?",
+    "continueButton": "Continuar",
+    "cancelButton": "Cancelar"
+  },
+
+  "admin": {
+    "usersPageTitle": "Administrar Usuarios",
+    "profilesPageTitle": "Perfiles de Permisos",
+    "tableHeaderUser": "Usuario",
+    "tableHeaderEmail": "Correo",
+    "tableHeaderRole": "Rol",
+    "tableHeaderProfile": "Perfil Asignado",
+    "tableHeaderActions": "Acciones",
+    "assignProfileLabel": "Asignar Perfil",
+    "assignProfileButton": "Asignar",
+    "assignProfileSuccess": "Perfil asignado exitosamente.",
+    "assignProfileError": "No se pudo asignar el perfil. Inténtalo de nuevo.",
+    "noUsers": "No se encontraron usuarios.",
+    "profileNameLabel": "Nombre del Perfil",
+    "permittedScreensLabel": "Pantallas Permitidas",
+    "noProfiles": "No hay perfiles definidos."
+  },
+
+  "forbidden": {
+    "title": "403 — Acceso Prohibido",
+    "message": "No tienes permiso para ver esta página.",
+    "goHomeButton": "Ir a Mis Credenciales"
+  },
+
+  "errors": {
+    "generic": "Algo salió mal. Inténtalo de nuevo.",
+    "unauthorized": "No estás autorizado para realizar esta acción.",
+    "forbidden": "Acceso denegado.",
+    "notFound": "El recurso solicitado no fue encontrado.",
+    "networkError": "Error de red. Verifica tu conexión.",
+    "validationError": "Por favor, corrige los errores en el formulario.",
+    "serverError": "Ocurrió un error en el servidor. Inténtalo más tarde."
+  },
+
+  "common": {
+    "loading": "Cargando…",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "close": "Cerrar",
+    "back": "Volver",
+    "required": "Requerido"
+  }
+}

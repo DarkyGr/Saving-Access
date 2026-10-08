@@ -1,0 +1,190 @@
+{
+  "nav": {
+    "credentials": "My Credentials",
+    "saveCredential": "Save Credential",
+    "adminUsers": "Manage Users",
+    "adminProfiles": "Profiles",
+    "logout": "Log Out",
+    "login": "Log In",
+    "signup": "Sign Up"
+  },
+
+  "language": {
+    "toggle": "Language",
+    "en": "English",
+    "es": "Spanish"
+  },
+
+  "login": {
+    "title": "Log In",
+    "usernameLabel": "Username",
+    "usernamePlaceholder": "Enter your username",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "submitButton": "Log In",
+    "noAccount": "Don't have an account?",
+    "signupLink": "Sign up",
+    "genericError": "Invalid username or password.",
+    "sessionExpired": "Your session has expired. Please log in again."
+  },
+
+  "signup": {
+    "title": "Create Account",
+    "usernameLabel": "Username",
+    "usernamePlaceholder": "Choose a username",
+    "emailLabel": "Email",
+    "emailPlaceholder": "Enter your email address",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Create a password",
+    "passwordConfirmLabel": "Confirm Password",
+    "passwordConfirmPlaceholder": "Re-enter your password",
+    "submitButton": "Create Account",
+    "hasAccount": "Already have an account?",
+    "loginLink": "Log in",
+    "successMessage": "Account created successfully. Please log in.",
+    "errorDuplicateUsername": "Username is already taken.",
+    "errorDuplicateEmail": "Email is already registered.",
+    "errorPasswordMismatch": "Passwords do not match.",
+    "errorInvalidEmail": "Please enter a valid email address.",
+    "errorDisposableEmail": "Disposable email addresses are not allowed."
+  },
+
+  "passwordRules": {
+    "title": "Password Requirements",
+    "minLength": "At least 12 characters",
+    "uppercase": "At least one uppercase letter (A–Z)",
+    "lowercase": "At least one lowercase letter (a–z)",
+    "digit": "At least one digit (0–9)",
+    "symbol": "At least one symbol (@, $, or !)",
+    "mismatch": "Passwords do not match"
+  },
+
+  "credentials": {
+    "pageTitle": "My Credentials",
+    "searchPlaceholder": "Search by website or email / username…",
+    "noResults": "No credentials found.",
+    "tableHeaderWebsite": "Website",
+    "tableHeaderEmailUsername": "Email / Username",
+    "tableHeaderPassword": "Password",
+    "tableHeaderActions": "Actions",
+    "maskedPassword": "••••••••",
+    "editButton": "Edit",
+    "deleteButton": "Delete",
+    "revealButton": "Show password",
+    "hideButton": "Hide password",
+    "addNew": "Save New Credential"
+  },
+
+  "visibilityTimer": {
+    "label": "Auto-hides in",
+    "seconds": "{{count}} second",
+    "seconds_plural": "{{count}} seconds",
+    "expired": "Password hidden"
+  },
+
+  "saveCredential": {
+    "pageTitle": "Save Credential",
+    "websiteLabel": "Website Name",
+    "websitePlaceholder": "e.g. github.com",
+    "emailLabel": "Email",
+    "emailPlaceholder": "your@email.com",
+    "usernameLabel": "Username",
+    "usernamePlaceholder": "Enter username",
+    "usernameLoginCheckbox": "This site uses a username instead of an email",
+    "passwordLabel": "Credential Password",
+    "passwordPlaceholder": "Password for this website",
+    "submitButton": "Save Credential",
+    "cancelButton": "Cancel",
+    "successMessage": "Credential saved successfully.",
+    "errorSaveFailed": "Failed to save credential. Please try again."
+  },
+
+  "editCredential": {
+    "pageTitle": "Edit Credential",
+    "websiteLabel": "Website Name",
+    "websitePlaceholder": "e.g. github.com",
+    "emailLabel": "Email",
+    "emailPlaceholder": "your@email.com",
+    "usernameLabel": "Username",
+    "usernamePlaceholder": "Enter username",
+    "usernameLoginCheckbox": "This site uses a username instead of an email",
+    "passwordLabel": "Credential Password",
+    "passwordPlaceholder": "Leave unchanged or enter a new password",
+    "updateButton": "Update Credential",
+    "cancelButton": "Cancel",
+    "successMessage": "Credential updated successfully.",
+    "errorUpdateFailed": "Failed to update credential. Please try again.",
+    "errorNotFound": "Credential not found."
+  },
+
+  "passwordConfirmModal": {
+    "title": "Confirm Your Account Password",
+    "description": "Enter your account password to continue.",
+    "passwordLabel": "Account Password",
+    "passwordPlaceholder": "Your account password",
+    "confirmButton": "Confirm",
+    "cancelButton": "Cancel",
+    "errorWrongPassword": "Incorrect account password.",
+    "errorGeneric": "An error occurred. Please try again."
+  },
+
+  "confirmDeleteModal": {
+    "title": "Delete Credential",
+    "body": "Are you sure you want to permanently delete the credential for {{website}}? This action cannot be undone.",
+    "confirmButton": "Delete",
+    "cancelButton": "Cancel"
+  },
+
+  "alreadyVisibleModal": {
+    "title": "Password Already Visible",
+    "body": "Another password is currently visible. Do you want to hide it and reveal this one?",
+    "continueButton": "Continue",
+    "cancelButton": "Cancel"
+  },
+
+  "admin": {
+    "usersPageTitle": "Manage Users",
+    "profilesPageTitle": "Permission Profiles",
+    "tableHeaderUser": "Username",
+    "tableHeaderEmail": "Email",
+    "tableHeaderRole": "Role",
+    "tableHeaderProfile": "Assigned Profile",
+    "tableHeaderActions": "Actions",
+    "assignProfileLabel": "Assign Profile",
+    "assignProfileButton": "Assign",
+    "assignProfileSuccess": "Profile assigned successfully.",
+    "assignProfileError": "Failed to assign profile. Please try again.",
+    "noUsers": "No users found.",
+    "profileNameLabel": "Profile Name",
+    "permittedScreensLabel": "Permitted Screens",
+    "noProfiles": "No profiles defined."
+  },
+
+  "forbidden": {
+    "title": "403 — Access Forbidden",
+    "message": "You do not have permission to view this page.",
+    "goHomeButton": "Go to My Credentials"
+  },
+
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "unauthorized": "You are not authorized to perform this action.",
+    "forbidden": "Access denied.",
+    "notFound": "The requested resource was not found.",
+    "networkError": "Network error. Please check your connection.",
+    "validationError": "Please correct the errors in the form.",
+    "serverError": "A server error occurred. Please try again later."
+  },
+
+  "common": {
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "required": "Required"
+  }
+}

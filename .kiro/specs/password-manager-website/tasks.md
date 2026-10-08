@@ -149,10 +149,10 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - Run `pytest backend/` and confirm all unit and property-based tests pass with zero failures; fix any issues before proceeding to frontend tasks.
 
 
-- [ ] 15. Frontend i18n setup and translation files
-  - [ ] 15.1 Create `frontend/src/i18n/i18n.ts` initializing `i18next` with `react-i18next`, language detection from browser, fallback to `"en"`, and `sessionStorage` persistence
-  - [ ] 15.2 Create `frontend/src/i18n/en.json` with all English string keys covering: login, signup, navigation, credential form labels, modal text, error messages, table headers, admin page labels, password rules, and timer text
-  - [ ] 15.3 Create `frontend/src/i18n/es.json` with equivalent Spanish translations for every key in `en.json`
+- [x] 15. Frontend i18n setup and translation files
+  - [x] 15.1 Create `frontend/src/i18n/i18n.ts` initializing `i18next` with `react-i18next`, language detection from browser, fallback to `"en"`, and `sessionStorage` persistence
+  - [x] 15.2 Create `frontend/src/i18n/en.json` with all English string keys covering: login, signup, navigation, credential form labels, modal text, error messages, table headers, admin page labels, password rules, and timer text
+  - [x] 15.3 Create `frontend/src/i18n/es.json` with equivalent Spanish translations for every key in `en.json`
   - Import and initialize i18n in `frontend/src/main.tsx`
   - _Requirements: 10.1–10.5_
 

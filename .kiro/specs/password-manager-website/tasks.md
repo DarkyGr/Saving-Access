@@ -184,11 +184,11 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - Create `frontend/src/pages/SaveCredentialPage.tsx` with `website_name`, email/username toggle (controlled by `is_username_login` checkbox), `PasswordInput` for credential password, Eye_Toggle; on submit shows `PasswordConfirmModal`; on confirm calls `POST /api/credentials` with `account_password`; redirects to `/credentials` on 201; all text via `t()`
   - _Requirements: 4.1–4.13_
 
-- [ ] 21. ViewSearchPage
-  - [ ] 21.1 Create `frontend/src/pages/ViewSearchPage.tsx` with a search input that calls `GET /api/credentials?q=` on change (debounced 300 ms); renders results in a responsive table (horizontally scrollable on mobile) with columns: website, email/username, password (masked), eye icon, edit icon, delete icon
-  - [ ] 21.2 Implement Eye_Toggle logic in `ViewSearchPage`: clicking eye checks `AlreadyVisibleModal` if another row is visible; shows `PasswordConfirmModal`; on confirm calls `POST /api/credentials/{id}/reveal`; displays plaintext; starts `useVisibilityTimer` for 60 s; auto-masks on timer expiry; manual click on open eye masks immediately
-  - [ ] 21.3 Implement Delete flow in `ViewSearchPage`: delete icon opens `ConfirmDeleteModal`; on confirm shows `PasswordConfirmModal`; on confirm calls `DELETE /api/credentials/{id}` with `account_password`; refreshes list
-  - [ ] 21.4 Add edit icon link in each row navigating to `/credentials/:id/edit`
+- [x] 21. ViewSearchPage
+  - [x] 21.1 Create `frontend/src/pages/ViewSearchPage.tsx` with a search input that calls `GET /api/credentials?q=` on change (debounced 300 ms); renders results in a responsive table (horizontally scrollable on mobile) with columns: website, email/username, password (masked), eye icon, edit icon, delete icon
+  - [x] 21.2 Implement Eye_Toggle logic in `ViewSearchPage`: clicking eye checks `AlreadyVisibleModal` if another row is visible; shows `PasswordConfirmModal`; on confirm calls `POST /api/credentials/{id}/reveal`; displays plaintext; starts `useVisibilityTimer` for 60 s; auto-masks on timer expiry; manual click on open eye masks immediately
+  - [x] 21.3 Implement Delete flow in `ViewSearchPage`: delete icon opens `ConfirmDeleteModal`; on confirm shows `PasswordConfirmModal`; on confirm calls `DELETE /api/credentials/{id}` with `account_password`; refreshes list
+  - [x] 21.4 Add edit icon link in each row navigating to `/credentials/:id/edit`
   - _Requirements: 5.1–5.14, 7.1–7.7_
 
 

@@ -167,9 +167,9 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - _Requirements: 4.5–4.7, 5.4–5.12, 7.2–7.3, 10.1–10.4, 11.2_
 
 
-- [ ] 17. Frontend API client and auth context
-  - [ ] 17.1 Create `frontend/src/api/apiClient.ts` using `axios` with a base URL from `import.meta.env.VITE_API_URL`; add a request interceptor that injects `Authorization: Bearer <token>` from React memory; add a response interceptor that redirects to `/login` on 401
-  - [ ] 17.2 Create `frontend/src/context/AuthContext.tsx` with `AuthProvider` holding `token` and `user` in `useState` (never `localStorage`); expose `login(token)`, `logout()`, and `useAuth()` hook
+- [x] 17. Frontend API client and auth context
+  - [x] 17.1 Create `frontend/src/api/apiClient.ts` using `axios` with a base URL from `import.meta.env.VITE_API_URL`; add a request interceptor that injects `Authorization: Bearer <token>` from React memory; add a response interceptor that redirects to `/login` on 401
+  - [x] 17.2 Create `frontend/src/context/AuthContext.tsx` with `AuthProvider` holding `token` and `user` in `useState` (never `localStorage`); expose `login(token)`, `logout()`, and `useAuth()` hook
   - _Requirements: 2.2, 2.4, 2.5, 8.3_
 
 - [ ] 18. LoginPage

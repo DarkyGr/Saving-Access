@@ -828,6 +828,16 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714380684
+      },
+      {
+        "executionId": "dd1081b8-4382-4015-beba-cfffcf976fc0",
+        "chatSessionId": "sess_7b67030f-87a3-4fed-85bd-c59fef5c21d6",
+        "timestamp": 1791488935195
+      },
+      {
+        "executionId": "dd1081b8-4382-4015-beba-cfffcf976fc0",
+        "chatSessionId": "sess_7b67030f-87a3-4fed-85bd-c59fef5c21d6",
+        "timestamp": 1791489072834
       }
     ],
     "17.2 Create `frontend/src/context/AuthContext.tsx` with `AuthProvider` holding `token` and `user` in `useState` (never `localStorage`); expose `login(token)`, `logout()`, and `useAuth()` hook": [
@@ -840,6 +850,16 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714380747
+      },
+      {
+        "executionId": "dd1081b8-4382-4015-beba-cfffcf976fc0",
+        "chatSessionId": "sess_7b67030f-87a3-4fed-85bd-c59fef5c21d6",
+        "timestamp": 1791488937547
+      },
+      {
+        "executionId": "dd1081b8-4382-4015-beba-cfffcf976fc0",
+        "chatSessionId": "sess_7b67030f-87a3-4fed-85bd-c59fef5c21d6",
+        "timestamp": 1791489075584
       }
     ],
     "18. LoginPage": [
@@ -1233,6 +1253,13 @@
         "executionId": "319cb35e-7ec3-4cef-b2d6-91a9f6880f08",
         "chatSessionId": "sess_91622bcd-b872-469b-a133-e2663fc54b76",
         "timestamp": 1791488574996
+      }
+    ],
+    "17. Frontend API client and auth context": [
+      {
+        "executionId": "dd1081b8-4382-4015-beba-cfffcf976fc0",
+        "chatSessionId": "sess_7b67030f-87a3-4fed-85bd-c59fef5c21d6",
+        "timestamp": 1791489075657
       }
     ]
   }

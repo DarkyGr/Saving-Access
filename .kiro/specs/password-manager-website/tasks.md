@@ -180,7 +180,7 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - Create `frontend/src/pages/SignUpPage.tsx` with username, email, password, and password_confirmation fields; client-side password strength validation displaying per-rule errors via `t()`; calls `POST /api/auth/register`; on 201 redirects to `/login`; all text via `t()`
   - _Requirements: 1.1–1.8_
 
-- [ ] 20. SaveCredentialPage
+- [x] 20. SaveCredentialPage
   - Create `frontend/src/pages/SaveCredentialPage.tsx` with `website_name`, email/username toggle (controlled by `is_username_login` checkbox), `PasswordInput` for credential password, Eye_Toggle; on submit shows `PasswordConfirmModal`; on confirm calls `POST /api/credentials` with `account_password`; redirects to `/credentials` on 201; all text via `t()`
   - _Requirements: 4.1–4.13_
 

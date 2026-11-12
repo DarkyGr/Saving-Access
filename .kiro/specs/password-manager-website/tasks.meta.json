@@ -23,6 +23,10 @@
     "6.6 Write property test for generic error on invalid login (Property 5)": {
       "status": "passed",
       "lastRunTimestamp": 1785724255172
+    },
+    "27.3 Write property test for concurrent operations preserving per-user isolation (Property 15) in `backend/tests/test_property_15_concurrency.py`": {
+      "status": "passed",
+      "lastRunTimestamp": 1794459416675
     }
   },
   "executionHistory": {
@@ -1512,6 +1516,74 @@
         "executionId": "232beafc-b55a-4f39-a6cf-9db81e5d8ef0",
         "chatSessionId": "sess_d1c6b4e7-53ca-49ab-be78-afea2708d74a",
         "timestamp": 1794455694134
+      }
+    ],
+    "27.1 Write integration test `test_full_credential_lifecycle` in `backend/tests/test_integration.py`": [
+      {
+        "executionId": "7e4cb476-1c84-4a53-850f-6eaa6d832c89",
+        "chatSessionId": "sess_e1981a40-ac8b-41b3-a659-8fd56c1e0cde",
+        "timestamp": 1794456350996
+      },
+      {
+        "executionId": "7e4cb476-1c84-4a53-850f-6eaa6d832c89",
+        "chatSessionId": "sess_e1981a40-ac8b-41b3-a659-8fd56c1e0cde",
+        "timestamp": 1794456439335
+      },
+      {
+        "executionId": "338a541d-8261-429f-b24d-9142059e9d74",
+        "chatSessionId": "sess_c6615d0b-2949-436c-a1f9-7b832fc518ca",
+        "timestamp": 1794459228174
+      },
+      {
+        "executionId": "338a541d-8261-429f-b24d-9142059e9d74",
+        "chatSessionId": "sess_c6615d0b-2949-436c-a1f9-7b832fc518ca",
+        "timestamp": 1794459253481
+      }
+    ],
+    "27. Backend integration tests": [
+      {
+        "executionId": "7e4cb476-1c84-4a53-850f-6eaa6d832c89",
+        "chatSessionId": "sess_e1981a40-ac8b-41b3-a659-8fd56c1e0cde",
+        "timestamp": 1794456439720
+      }
+    ],
+    "27.2 Write integration test for admin profile assignment end-to-end in `backend/tests/test_integration.py`": [
+      {
+        "executionId": "7e4cb476-1c84-4a53-850f-6eaa6d832c89",
+        "chatSessionId": "sess_e1981a40-ac8b-41b3-a659-8fd56c1e0cde",
+        "timestamp": 1794456442135
+      },
+      {
+        "executionId": "7e4cb476-1c84-4a53-850f-6eaa6d832c89",
+        "chatSessionId": "sess_e1981a40-ac8b-41b3-a659-8fd56c1e0cde",
+        "timestamp": 1794457347198
+      },
+      {
+        "executionId": "2a281427-bb84-46f1-bf0a-3a8b9346d136",
+        "chatSessionId": "sess_190420b8-c1e8-48a3-9c69-5ab77b81ca96",
+        "timestamp": 1794459588561
+      }
+    ],
+    "27.3 Write property test for concurrent operations preserving per-user isolation (Property 15) in `backend/tests/test_property_15_concurrency.py`": [
+      {
+        "executionId": "7e4cb476-1c84-4a53-850f-6eaa6d832c89",
+        "chatSessionId": "sess_e1981a40-ac8b-41b3-a659-8fd56c1e0cde",
+        "timestamp": 1794457349916
+      },
+      {
+        "executionId": "7e4cb476-1c84-4a53-850f-6eaa6d832c89",
+        "chatSessionId": "sess_e1981a40-ac8b-41b3-a659-8fd56c1e0cde",
+        "timestamp": 1794459064807
+      },
+      {
+        "executionId": "17aa0f1f-4c7d-436f-995b-42bcb50736fa",
+        "chatSessionId": "sess_af31ce5a-1fe4-4c88-8911-c1ae3cd80683",
+        "timestamp": 1794459342724
+      },
+      {
+        "executionId": "17aa0f1f-4c7d-436f-995b-42bcb50736fa",
+        "chatSessionId": "sess_af31ce5a-1fe4-4c88-8911-c1ae3cd80683",
+        "timestamp": 1794459424677
       }
     ]
   }

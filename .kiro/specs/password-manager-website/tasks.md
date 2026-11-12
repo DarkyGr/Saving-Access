@@ -237,17 +237,17 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
     - _Requirements: 5.1–5.14_
   - _Requirements: 5.1–5.14, 10.2–10.4_
 
-- [ ] 27. Backend integration tests
-  - [ ]* 27.1 Write integration test `test_full_credential_lifecycle` in `backend/tests/test_integration.py`
+- [x] 27. Backend integration tests
+  - [x] 27.1 Write integration test `test_full_credential_lifecycle` in `backend/tests/test_integration.py`
     - Use `httpx.AsyncClient` with `TestClient` against an in-memory SQLite DB (override `get_db` dependency)
     - Steps: `POST /api/auth/register` → `POST /api/auth/login` → `POST /api/credentials` → `GET /api/credentials` → `POST /api/credentials/{id}/reveal` → `PUT /api/credentials/{id}` → `DELETE /api/credentials/{id}`
     - After each mutating step, query `audit_log` and assert a row exists with correct `operation`, `user_id`, and `affected_record_id`
     - _Requirements: 4.1–4.12, 5.1–5.14, 6.1–6.9, 7.1–7.7_
-  - [ ]* 27.2 Write integration test for admin profile assignment end-to-end in `backend/tests/test_integration.py`
+  - [x] 27.2 Write integration test for admin profile assignment end-to-end in `backend/tests/test_integration.py`
     - Register an Admin user and a regular User; Admin logs in and calls `PUT /api/admin/users/{user_id}/profile`
     - Log in as the User and assert that only the permitted routes return 200; assert that routes outside the assigned profile return 403
     - _Requirements: 3.1–3.7_
-  - [ ]* 27.3 Write property test for concurrent operations preserving per-user isolation (Property 15) in `backend/tests/test_property_15_concurrency.py`
+  - [x] 27.3 Write property test for concurrent operations preserving per-user isolation (Property 15) in `backend/tests/test_property_15_concurrency.py`
     - **Property 15: Concurrent Operations Preserve Per-User Isolation** — simultaneous credential operations by distinct users never cross-contaminate data
     - **Validates: Requirements 8.7**
     - Use `asyncio.gather` with SQLAlchemy in-memory SQLite; create two users, run concurrent save/list/reveal operations; assert each user's response list contains only their own credentials

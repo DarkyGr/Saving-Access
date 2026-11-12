@@ -9,11 +9,10 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
 - [x] 1. Project scaffolding and monorepo structure
   - Create root-level `docker-compose.yml` with services: `db` (postgres:15), `backend` (FastAPI), `frontend` (Vite dev server)
   - Create `.env.example` with all required env vars: `DATABASE_URL`, `FERNET_KEY`, `JWT_SECRET`, `JWT_ALGORITHM=HS256`, `JWT_EXPIRE_MINUTES=15`, `CORS_ORIGINS`
-  - Create `backend/` directory with `pyproject.toml` (or `requirements.txt`) pinning: `fastapi`, `uvicorn[standard]`, `sqlalchemy`, `psycopg2-binary`, `cryptography`, `passlib[bcrypt]`, `python-jose[cryptography]`, `python-dotenv`, `hypothesis`, `pytest`, `pytest-asyncio`, `httpx`
+  - Create `backend/` directory with `requirements.txt` pinning: `fastapi`, `uvicorn[standard]`, `sqlalchemy`, `psycopg2-binary`, `cryptography`, `passlib[bcrypt]`, `python-jose[cryptography]`, `python-dotenv`, `hypothesis`, `pytest`, `pytest-asyncio`, `httpx`
   - Create `frontend/` directory bootstrapped with `npm create vite@latest` using the `react-ts` template; install `react-router-dom`, `react-i18next`, `i18next`, `axios`, `tailwindcss`, `postcss`, `autoprefixer`; initialize Tailwind config
-  - Create root-level `Makefile` or `justfile` with targets: `up`, `down`, `test-backend`, `test-frontend`
+  - Create root-level `Makefile` with targets: `up`, `down`, `test-backend`, `test-frontend`
   - _Requirements: 8.4, 9.9_
-
 
 - [x] 2. Database schema DDL script
   - [x] 2.1 Write `backend/db/schema.sql` with all five CREATE TABLE statements (`users`, `profiles`, `user_profiles`, `credentials`, `audit_log`) including audit columns, CHECK constraints, and FK references exactly as specified in the design
@@ -32,12 +31,11 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
 
 - [x] 5. EncryptorService
   - [x] 5.1 Create `backend/app/services/encryptor_service.py` implementing `EncryptorService` with `encrypt(plaintext: str) -> bytes` using `Fernet(FERNET_KEY)` and `decrypt(ciphertext: bytes) -> str`; load key from env var at instantiation; raise `ValueError` if key is absent
-  - [x] 5.2 Write property test for credential encryption invariant (Property 9)
+  - [x]* 5.2 Write property test for credential encryption invariant (Property 9)
     - **Property 9: Credential Encryption Invariant** — `encrypt(p)` result is a valid Fernet token that decrypts to `p` and never equals `p`
     - **Validates: Requirements 4.10, 6.7, 8.1**
     - Minimum 200 Hypothesis iterations; use `st.text(min_size=1)` strategy
   - _Requirements: 8.1, 8.2, 8.3_
-
 
 - [x] 6. AuthService
   - [x] 6.1 Create `backend/app/services/auth_service.py` implementing `AuthService` with:
@@ -45,37 +43,36 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
     - `login(payload) -> dict`: looks up user by username, verifies bcrypt hash, on success issues HS256 JWT with `user_id`, `role`, `exp=now+15min`; on any failure returns the same generic error
     - `verify_token(token: str) -> dict`: decodes and validates JWT; raises `401` on expiry or invalid signature
     - `check_account_password(user_id: int, raw: str) -> bool`: fetches `password_hash`, runs `bcrypt.verify`
-  - [x] 6.2 Write property test for password confirmation match (Property 1)
+  - [x]* 6.2 Write property test for password confirmation match (Property 1)
     - **Property 1: Password Confirmation Match** — register accepts iff `password == password_confirmation`
     - **Validates: Requirements 1.3, 1.4**
     - Minimum 100 Hypothesis iterations
-  - [x] 6.3 Write property test for password strength validation (Property 2)
+  - [x]* 6.3 Write property test for password strength validation (Property 2)
     - **Property 2: Password Strength Validation** — validator rejects iff at least one rule (length, uppercase, lowercase, digit, symbol) is unmet
     - **Validates: Requirements 1.5, 1.6**
     - Minimum 200 Hypothesis iterations; generate strings with `st.text()`
-  - [x] 6.4 Write property test for account password hashing (Property 3)
+  - [x]* 6.4 Write property test for account password hashing (Property 3)
     - **Property 3: Account Password Hashing** — stored `password_hash` is a valid bcrypt hash and differs from plaintext
     - **Validates: Requirements 1.7, 8.5**
     - Minimum 100 Hypothesis iterations
-  - [x] 6.5 Write property test for JWT issued on successful login (Property 6)
+  - [x]* 6.5 Write property test for JWT issued on successful login (Property 6)
     - **Property 6: JWT Issued on Successful Login** — response contains `access_token` with `user_id`, `role`, and `exp` within 15 min
     - **Validates: Requirements 2.4**
     - Minimum 100 Hypothesis iterations
-  - [x] 6.6 Write property test for generic error on invalid login (Property 5)
+  - [x]* 6.6 Write property test for generic error on invalid login (Property 5)
     - **Property 5: Generic Error on Invalid Login** — all failed login attempts return the same generic response body
     - **Validates: Requirements 2.3**
     - Minimum 100 Hypothesis iterations
   - _Requirements: 1.3–1.7, 2.2–2.4, 8.5_
 
-
 - [x] 7. AuditService and audit column helpers
   - [x] 7.1 Create `backend/app/services/audit_service.py` implementing `AuditService.log(user_id, operation, affected_record_id)` that writes a row to `audit_log` and commits synchronously; `operation` must be one of `SELECT|INSERT|UPDATE|DELETE`
   - [x] 7.2 Create `backend/app/utils/audit_columns.py` with `set_creation_audit(record, user_id)` and `set_modification_audit(record, user_id)` helper functions that populate the six audit column fields with `date.today()` and `datetime.utcnow().time()`
-  - [x] 7.3 Write property test for audit columns on creation (Property 4)
+  - [x]* 7.3 Write property test for audit columns on creation (Property 4)
     - **Property 4: Audit Columns on Creation** — `creation_date`, `creation_time`, `creation_user_id` are all non-null after any record creation
     - **Validates: Requirements 1.8, 4.11, 9.8**
     - Minimum 100 Hypothesis iterations using mocked DB session
-  - [x] 7.4 Write property test for audit log entry on every mutation and reveal (Property 13)
+  - [x]* 7.4 Write property test for audit log entry on every mutation and reveal (Property 13)
     - **Property 13: Audit Log Entry on Every Mutation and Reveal** — after each INSERT/SELECT/UPDATE/DELETE operation an `audit_log` row exists with correct `operation`, `user_id`, and `affected_record_id`
     - **Validates: Requirements 4.12, 5.14, 6.9, 7.7**
     - Minimum 100 Hypothesis iterations
@@ -85,16 +82,15 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - [x] 8.1 Create `backend/app/services/profile_service.py` implementing:
     - `get_user_permissions(user_id: int) -> list[str]`: queries `user_profiles` → `profiles.permitted_screens`; returns `["*"]` for Admin role
     - `assign_profile(admin_id: int, user_id: int, profile_id: int)`: updates or inserts `user_profiles` row, calls `set_modification_audit`, commits
-  - [x] 8.2 Write property test for non-admin denied access to admin endpoints (Property 7)
+  - [x]* 8.2 Write property test for non-admin denied access to admin endpoints (Property 7)
     - **Property 7: Non-Admin Denied Access to Admin Screens** — any JWT with `role="User"` receives HTTP 403 on all `/api/admin/*` endpoints
     - **Validates: Requirements 3.2, 3.4, 3.6**
     - Minimum 100 Hypothesis iterations using `httpx` TestClient
-  - [x] 8.3 Write property test for profile assignment updates audit columns (Property 8)
+  - [x]* 8.3 Write property test for profile assignment updates audit columns (Property 8)
     - **Property 8: Profile Assignment Updates Audit Columns** — after `assign_profile`, `modification_date`, `modification_time`, `modification_user_id` are non-null and equal current timestamp and admin's user_id
     - **Validates: Requirements 3.3**
     - Minimum 100 Hypothesis iterations using mocked DB
   - _Requirements: 3.1–3.7_
-
 
 - [x] 9. Permission middleware
   - Create `backend/app/middleware/permissions.py` with a `require_permission(screen: str)` FastAPI dependency factory: decodes JWT from `Authorization: Bearer`, checks `role == "Admin"` → pass; else fetches `ProfileService.get_user_permissions(user_id)` and checks `screen in permissions`; raises `HTTPException(403)` on failure
@@ -115,20 +111,19 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
     - `DELETE /api/credentials/{id}` — requires `require_permission("credentials.delete")`; verifies ownership; calls `check_account_password`; hard-deletes; logs DELETE; returns 204
     - `POST /api/credentials/{id}/reveal` — requires `require_permission("credentials")`; verifies ownership; calls `check_account_password`; calls `EncryptorService.decrypt`; logs SELECT; returns `{password: plaintext}`
   - [x] 11.2 Wire credentials router into `main.py`
-  - [x] 11.3 Write property test for credential ownership isolation (Property 10)
+  - [x]* 11.3 Write property test for credential ownership isolation (Property 10)
     - **Property 10: Credential Ownership Isolation** — user U cannot list, reveal, edit, or delete any credential owned by user V
     - **Validates: Requirements 5.3, 8.2**
     - Minimum 100 Hypothesis iterations
-  - [x] 11.4 Write property test for search filter correctness (Property 11)
+  - [x]* 11.4 Write property test for search filter correctness (Property 11)
     - **Property 11: Search Filter Correctness** — every returned credential contains query Q as case-insensitive substring in `website_name` or `email_or_username`
     - **Validates: Requirements 5.2**
     - Minimum 200 Hypothesis iterations
-  - [x] 11.5 Write property test for wrong account password rejects sensitive operations (Property 14)
+  - [x]* 11.5 Write property test for wrong account password rejects sensitive operations (Property 14)
     - **Property 14: Wrong Account Password Rejects Sensitive Operations** — any save/reveal/edit/delete with incorrect account password returns 401 and performs no mutation
     - **Validates: Requirements 4.9, 6.6, 7.5**
     - Minimum 100 Hypothesis iterations
   - _Requirements: 4.1–4.13, 5.1–5.14, 6.1–6.9, 7.1–7.7, 8.1–8.3_
-
 
 - [x] 12. Admin router
   - Create `backend/app/routers/admin_router.py` with:
@@ -139,7 +134,7 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
 
 - [x] 13. Email validation utility
   - Create `backend/app/utils/email_validator.py` with `validate_email(email: str) -> bool` that checks RFC 5321 format using a regex and rejects domains from a bundled `disposable_domains.txt` blocklist file; integrate into `AuthService.register` and the credentials router email field
-  - [x] 13.1 Write property test for email validation (Property 16)
+  - [x]* 13.1 Write property test for email validation (Property 16)
     - **Property 16: Email Validation Rejects Invalid Formats and Disposable Domains** — validator accepts iff RFC 5321 format is valid AND domain is not on blocklist
     - **Validates: Requirements 4.13**
     - Minimum 200 Hypothesis iterations using `st.emails()` and manually constructed invalid strings
@@ -147,7 +142,6 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
 
 - [x] 14. Backend checkpoint — ensure all backend tests pass
   - Run `pytest backend/` and confirm all unit and property-based tests pass with zero failures; fix any issues before proceeding to frontend tasks.
-
 
 - [x] 15. Frontend i18n setup and translation files
   - [x] 15.1 Create `frontend/src/i18n/i18n.ts` initializing `i18next` with `react-i18next`, language detection from browser, fallback to `"en"`, and `sessionStorage` persistence
@@ -165,7 +159,6 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - [x] 16.6 Create `frontend/src/components/ConfirmDeleteModal.tsx` — generic confirmation modal with cancel and confirm buttons and i18n text
   - [x] 16.7 Create `frontend/src/components/AlreadyVisibleModal.tsx` — warning modal for the "another password is visible" state; "Continue" callback hides current and proceeds; "Cancel" closes modal
   - _Requirements: 4.5–4.7, 5.4–5.12, 7.2–7.3, 10.1–10.4, 11.2_
-
 
 - [x] 17. Frontend API client and auth context
   - [x] 17.1 Create `frontend/src/api/apiClient.ts` using `axios` with a base URL from `import.meta.env.VITE_API_URL`; add a request interceptor that injects `Authorization: Bearer <token>` from React memory; add a response interceptor that redirects to `/login` on 401
@@ -191,7 +184,6 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - [x] 21.4 Add edit icon link in each row navigating to `/credentials/:id/edit`
   - _Requirements: 5.1–5.14, 7.1–7.7_
 
-
 - [x] 22. EditCredentialPage
   - Create `frontend/src/pages/EditCredentialPage.tsx` that fetches credential by `GET /api/credentials/:id` (no reveal), pre-populates `website_name`, email/username, and masked password; on "Update" shows `PasswordConfirmModal`; on confirm calls `PUT /api/credentials/:id` with `account_password`; on success redirects to `/credentials`; includes "Cancel" button; all text via `t()`
   - _Requirements: 6.1–6.9_
@@ -210,38 +202,69 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
 - [x] 25. Frontend checkpoint — ensure all frontend tests pass
   - Run `npx vitest --run` and confirm all component tests pass; fix any issues before proceeding.
 
-
-- [ ] 26. Frontend component tests (Vitest + React Testing Library)
-  - [ ] 26.1 Write unit tests for `PasswordInput` — Eye_Toggle toggles `type` attribute between `"password"` and `"text"`
+- [x] 26. Frontend component tests (Vitest + React Testing Library)
+  - [x] 26.1 Write unit tests for `PasswordInput` — Eye_Toggle toggles `type` attribute between `"password"` and `"text"`
+    - File: `frontend/src/components/__tests__/PasswordInput.test.tsx`
     - _Requirements: 4.5–4.7_
-  - [ ] 26.2 Write unit tests for `PasswordConfirmModal` — submit calls `onConfirm` with entered value; cancel calls `onCancel`
+  - [x] 26.2 Write unit tests for `PasswordConfirmModal` — submit calls `onConfirm` with entered value; cancel calls `onCancel`; password field uses `PasswordInput` with working Eye_Toggle
+    - Create `frontend/src/components/__tests__/PasswordConfirmModal.test.tsx`
+    - Render `<PasswordConfirmModal onConfirm={...} onCancel={...} />`, type a password, click confirm — assert `onConfirm` called with the typed value
+    - Assert clicking cancel calls `onCancel` and not `onConfirm`
     - _Requirements: 4.8, 5.5, 6.5, 7.4_
-  - [ ] 26.3 Write unit tests for `useVisibilityTimer` hook — after 60 s (mocked `vi.useFakeTimers`) `isVisible` becomes false; manual stop halts countdown immediately
+  - [x] 26.3 Write unit tests for `useVisibilityTimer` hook — after 60 s (mocked `vi.useFakeTimers`) `isVisible` becomes false; manual stop halts countdown immediately
+    - File: `frontend/src/hooks/__tests__/useVisibilityTimer.test.ts`
     - _Requirements: 5.7, 5.8, 5.9_
-  - [ ] 26.4 Write unit tests for `AlreadyVisibleModal` — "Continue" callback fires and "Cancel" callback fires independently
+  - [x] 26.4 Write unit tests for `AlreadyVisibleModal` — "Continue" callback fires and "Cancel" callback fires independently
+    - File: `frontend/src/components/__tests__/AlreadyVisibleModal.test.tsx`
     - _Requirements: 5.10–5.12_
-  - [ ] 26.5 Write unit tests for `ProtectedRoute` — non-authenticated user redirects to `/login`; User with missing screen permission redirects to `/403`; Admin always renders children
+  - [x] 26.5 Write unit tests for `ProtectedRoute` — non-authenticated user redirects to `/login`; User with missing screen permission redirects to `/403`; Admin always renders children
+    - Create `frontend/src/components/__tests__/ProtectedRoute.test.tsx`
+    - Mock `useAuth()` to return null token → assert `<Navigate to="/login" />` is rendered
+    - Mock `useAuth()` to return a User JWT and mock `GET /api/profile/permissions` to return a list that excludes the requested screen → assert `<Navigate to="/403" />` is rendered
+    - Mock `useAuth()` to return an Admin JWT → assert children are rendered without any redirect
     - _Requirements: 3.4, 3.6_
-  - [ ] 26.6 Write unit tests for `LanguageToggle` — clicking ES changes all `t()` output to Spanish strings; clicking EN reverts; no page reload
+  - [x] 26.6 Write unit tests for `LanguageToggle` — clicking ES changes all `t()` output to Spanish strings; clicking EN reverts; no page reload
+    - Create `frontend/src/components/__tests__/LanguageToggle.test.tsx`
+    - Wrap component in `I18nextProvider`; click the ES button; query a translated text node and assert it matches the Spanish value from `es.json`; click EN and assert it reverts to the English value
+    - Assert `window.location.reload` is never called during language change
     - _Requirements: 10.2–10.4_
-  - [ ] 26.7 Write unit tests for `ViewSearchPage` — search input with query `"git"` triggers `GET /api/credentials?q=git`; password column shows masked value by default; property test for Password_Confirmation_Prompt always shown on Eye_Toggle (Property 12, **Validates: Requirements 5.13**)
+  - [x] 26.7 Write unit tests for `ViewSearchPage` — search input with query `"git"` triggers `GET /api/credentials?q=git`; password column shows masked value by default
+    - Create `frontend/src/pages/__tests__/ViewSearchPage.test.tsx`
+    - Mock `apiClient` to return a fixture credential list; render `<ViewSearchPage />`; type `"git"` in the search box; assert `GET /api/credentials?q=git` was called
+    - Assert the password cell value is `"••••••••"` (or hidden `<input type="password">`) before any Eye_Toggle is clicked
+    - **Property 12: Password Confirmation Always Required for Reveal** — click Eye_Toggle twice on the same row (after masking); assert `PasswordConfirmModal` appears both times
+    - **Validates: Requirements 5.13**
+    - _Requirements: 5.1–5.14_
   - _Requirements: 5.1–5.14, 10.2–10.4_
 
 - [ ] 27. Backend integration tests
-  - [ ] 27.1 Write integration test `test_full_credential_lifecycle`: register → login → save credential → list → reveal → edit → delete → confirm audit_log entries for INSERT, SELECT, UPDATE, DELETE
+  - [ ]* 27.1 Write integration test `test_full_credential_lifecycle` in `backend/tests/test_integration.py`
+    - Use `httpx.AsyncClient` with `TestClient` against an in-memory SQLite DB (override `get_db` dependency)
+    - Steps: `POST /api/auth/register` → `POST /api/auth/login` → `POST /api/credentials` → `GET /api/credentials` → `POST /api/credentials/{id}/reveal` → `PUT /api/credentials/{id}` → `DELETE /api/credentials/{id}`
+    - After each mutating step, query `audit_log` and assert a row exists with correct `operation`, `user_id`, and `affected_record_id`
     - _Requirements: 4.1–4.12, 5.1–5.14, 6.1–6.9, 7.1–7.7_
-  - [ ] 27.2 Write integration test for admin profile assignment end-to-end: login as Admin → assign profile to User → login as User → confirm permitted and forbidden routes return expected status codes
+  - [ ]* 27.2 Write integration test for admin profile assignment end-to-end in `backend/tests/test_integration.py`
+    - Register an Admin user and a regular User; Admin logs in and calls `PUT /api/admin/users/{user_id}/profile`
+    - Log in as the User and assert that only the permitted routes return 200; assert that routes outside the assigned profile return 403
     - _Requirements: 3.1–3.7_
-  - [ ] 27.3 Write property test for concurrent operations preserve per-user isolation (Property 15)
+  - [ ]* 27.3 Write property test for concurrent operations preserving per-user isolation (Property 15) in `backend/tests/test_property_15_concurrency.py`
     - **Property 15: Concurrent Operations Preserve Per-User Isolation** — simultaneous credential operations by distinct users never cross-contaminate data
     - **Validates: Requirements 8.7**
-    - Uses `asyncio.gather` with in-memory SQLite via SQLAlchemy; minimum 100 iterations
+    - Use `asyncio.gather` with SQLAlchemy in-memory SQLite; create two users, run concurrent save/list/reveal operations; assert each user's response list contains only their own credentials
+    - Minimum 100 Hypothesis iterations
   - _Requirements: 8.7_
-
 
 - [ ] 28. Documentation
   - [x] 28.1 Create `README.md` in the repo root covering: project description, prerequisites (Docker, Node 18+, Python 3.11+), local setup steps, all required env variable names, `make up` / `make test-backend` / `make test-frontend` commands, and a screen-by-screen user guide (Login, Sign-Up, View/Search, Save, Edit, Delete, Admin pages, language toggle)
-  - [ ] 28.2 Create `ARCHITECTURE.md` in the repo root covering: system component diagram (Mermaid), encryption lifecycle (Save → Store → Retrieve → Display), authentication and session token flow, role and profile permission model, database schema overview, Fernet key management and rotation procedure, audit log structure
+  - [ ] 28.2 Create `ARCHITECTURE.md` in the repo root with the following sections:
+    - **System Component Diagram**: reproduce the Mermaid `graph TD` from the design showing Browser → Backend routers → Services → PostgreSQL
+    - **Encryption Lifecycle**: describe the Save → Store → Retrieve → Display flow with the Fernet key source and the guarantee that plaintext never touches the DB
+    - **Authentication and Session Token Flow**: reproduce the Mermaid `sequenceDiagram` for login; explain JWT claims (`user_id`, `role`, `exp`), 15-minute expiry, in-memory storage in React, and the redirect-on-401 behavior
+    - **Role and Profile Permission Model**: explain the two roles, the `profiles.permitted_screens` JSONB field, the backend `require_permission` dependency, and the frontend `ProtectedRoute` HOC
+    - **Database Schema Overview**: describe all five tables and the six audit columns; include the ERD Mermaid diagram from the design
+    - **Fernet Key Management and Rotation**: document how to generate a key with `Fernet.generate_key()`, how to store it in `FERNET_KEY` env var, and the rotation procedure (re-encrypt all `credentials.encrypted_password` rows with the new key before swapping the env var)
+    - **Audit Log Structure**: describe the `audit_log` table columns and the four logged events (INSERT/SELECT/UPDATE/DELETE) with their triggers
+    - _Requirements: 12.3_
   - _Requirements: 12.1–12.3_
 
 - [ ] 29. Final checkpoint — all tests pass end-to-end
@@ -271,8 +294,9 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
     { "id": 5, "tasks": ["11.3", "11.4", "11.5", "15.1", "17.1", "17.2"] },
     { "id": 6, "tasks": ["15.2", "15.3", "16.1", "16.2", "16.3", "16.4", "16.5", "16.6", "16.7"] },
     { "id": 7, "tasks": ["21.1", "21.2", "21.3", "21.4", "23.1", "23.2", "24.1"] },
-    { "id": 8, "tasks": ["24.2", "26.1", "26.2", "26.3", "26.4", "26.5", "26.6"] },
-    { "id": 9, "tasks": ["26.7", "27.1", "27.2", "27.3", "28.1", "28.2"] }
+    { "id": 8, "tasks": ["24.2", "26.1", "26.3", "26.4"] },
+    { "id": 9, "tasks": ["26.2", "26.5", "26.6", "27.3"] },
+    { "id": 10, "tasks": ["26.7", "27.1", "27.2", "28.2"] }
   ]
 }
 ```

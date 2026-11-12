@@ -1158,6 +1158,21 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714381606
+      },
+      {
+        "executionId": "9b6a53cd-3f68-4e99-99c8-50827cda9d54",
+        "chatSessionId": "sess_7f6a362e-3cac-4830-8129-a2f3d8641515",
+        "timestamp": 1794450494940
+      },
+      {
+        "executionId": "c649070d-4d82-4eca-9d04-096c406236f7",
+        "chatSessionId": "sess_38c05cc6-948a-4d62-ba43-da5921ca6ec6",
+        "timestamp": 1794451294687
+      },
+      {
+        "executionId": "c2b6c421-bd2e-4dea-81ee-f3b64a372f73",
+        "chatSessionId": "sess_38c05cc6-948a-4d62-ba43-da5921ca6ec6",
+        "timestamp": 1794452927836
       }
     ],
     "26.2 Write unit tests for `PasswordConfirmModal` — submit calls `onConfirm` with entered value; cancel calls `onCancel`": [
@@ -1170,6 +1185,11 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714381666
+      },
+      {
+        "executionId": "9b6a53cd-3f68-4e99-99c8-50827cda9d54",
+        "chatSessionId": "sess_7f6a362e-3cac-4830-8129-a2f3d8641515",
+        "timestamp": 1794450500963
       }
     ],
     "26.3 Write unit tests for `useVisibilityTimer` hook — after 60 s (mocked `vi.useFakeTimers`) `isVisible` becomes false; manual stop halts countdown immediately": [
@@ -1182,6 +1202,16 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714381721
+      },
+      {
+        "executionId": "9b6a53cd-3f68-4e99-99c8-50827cda9d54",
+        "chatSessionId": "sess_7f6a362e-3cac-4830-8129-a2f3d8641515",
+        "timestamp": 1794450507540
+      },
+      {
+        "executionId": "a5c73a6e-825e-47cc-9ad4-74bfdcd85731",
+        "chatSessionId": "sess_5e2c4634-0f6e-4ea2-b7fb-1e2e5fa417d9",
+        "timestamp": 1794455016003
       }
     ],
     "26.4 Write unit tests for `AlreadyVisibleModal` — \"Continue\" callback fires and \"Cancel\" callback fires independently": [
@@ -1194,6 +1224,16 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714381783
+      },
+      {
+        "executionId": "9b6a53cd-3f68-4e99-99c8-50827cda9d54",
+        "chatSessionId": "sess_7f6a362e-3cac-4830-8129-a2f3d8641515",
+        "timestamp": 1794450512927
+      },
+      {
+        "executionId": "6a8057b5-5aa0-4016-9aa2-6f8c003ff5ae",
+        "chatSessionId": "sess_d69fe3f3-5a00-4980-bf35-87e6b9494873",
+        "timestamp": 1794455047383
       }
     ],
     "26.5 Write unit tests for `ProtectedRoute` — non-authenticated user redirects to `/login`; User with missing screen permission redirects to `/403`; Admin always renders children": [
@@ -1206,6 +1246,21 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714381841
+      },
+      {
+        "executionId": "9b6a53cd-3f68-4e99-99c8-50827cda9d54",
+        "chatSessionId": "sess_7f6a362e-3cac-4830-8129-a2f3d8641515",
+        "timestamp": 1794450520118
+      },
+      {
+        "executionId": "8c61d531-1728-4f4d-ad56-11fac7ac5c55",
+        "chatSessionId": "sess_37972329-b245-421e-b276-906761599ab2",
+        "timestamp": 1794455086407
+      },
+      {
+        "executionId": "8c61d531-1728-4f4d-ad56-11fac7ac5c55",
+        "chatSessionId": "sess_37972329-b245-421e-b276-906761599ab2",
+        "timestamp": 1794455136782
       }
     ],
     "26.6 Write unit tests for `LanguageToggle` — clicking ES changes all `t()` output to Spanish strings; clicking EN reverts; no page reload": [
@@ -1218,6 +1273,21 @@
         "executionId": "26e06f0a-f965-4dd3-85c9-da77379b17f3",
         "chatSessionId": "sess_19db9288-de2b-4776-94ee-1209896b1918",
         "timestamp": 1788714381898
+      },
+      {
+        "executionId": "9b6a53cd-3f68-4e99-99c8-50827cda9d54",
+        "chatSessionId": "sess_7f6a362e-3cac-4830-8129-a2f3d8641515",
+        "timestamp": 1794450527520
+      },
+      {
+        "executionId": "56626695-58d2-46d2-8aee-a5cbe747c46b",
+        "chatSessionId": "sess_ec70cf58-53f4-4fb8-bd4c-98e137c0e997",
+        "timestamp": 1794455206222
+      },
+      {
+        "executionId": "56626695-58d2-46d2-8aee-a5cbe747c46b",
+        "chatSessionId": "sess_ec70cf58-53f4-4fb8-bd4c-98e137c0e997",
+        "timestamp": 1794455263022
       }
     ],
     "26.7 Write unit tests for `ViewSearchPage` — search input with query `\"git\"` triggers `GET /api/credentials?q=git`; password column shows masked value by default; property test for Password_Confirmation_Prompt always shown on Eye_Toggle (Property 12, **Validates: Requirements 5.13**)": [
@@ -1411,6 +1481,37 @@
         "executionId": "fb7c204a-2750-46b6-9e97-078bc973e42a",
         "chatSessionId": "sess_26336103-d69d-4b80-8001-b5ef45f67ee9",
         "timestamp": 1791492142297
+      }
+    ],
+    "26. Frontend component tests (Vitest + React Testing Library)": [
+      {
+        "executionId": "c2b6c421-bd2e-4dea-81ee-f3b64a372f73",
+        "chatSessionId": "sess_38c05cc6-948a-4d62-ba43-da5921ca6ec6",
+        "timestamp": 1794452929288
+      }
+    ],
+    "26.2 Write unit tests for `PasswordConfirmModal` — submit calls `onConfirm` with entered value; cancel calls `onCancel`; password field uses `PasswordInput` with working Eye_Toggle": [
+      {
+        "executionId": "92ed9da4-3b98-4862-bca7-1d82a013c509",
+        "chatSessionId": "sess_7e677139-1350-481e-8d49-4e28a7dae59e",
+        "timestamp": 1794454014446
+      },
+      {
+        "executionId": "92ed9da4-3b98-4862-bca7-1d82a013c509",
+        "chatSessionId": "sess_7e677139-1350-481e-8d49-4e28a7dae59e",
+        "timestamp": 1794454070354
+      }
+    ],
+    "26.7 Write unit tests for `ViewSearchPage` — search input with query `\"git\"` triggers `GET /api/credentials?q=git`; password column shows masked value by default": [
+      {
+        "executionId": "232beafc-b55a-4f39-a6cf-9db81e5d8ef0",
+        "chatSessionId": "sess_d1c6b4e7-53ca-49ab-be78-afea2708d74a",
+        "timestamp": 1794455315715
+      },
+      {
+        "executionId": "232beafc-b55a-4f39-a6cf-9db81e5d8ef0",
+        "chatSessionId": "sess_d1c6b4e7-53ca-49ab-be78-afea2708d74a",
+        "timestamp": 1794455694134
       }
     ]
   }

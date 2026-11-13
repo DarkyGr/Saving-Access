@@ -1,5 +1,6 @@
 {
   "nav": {
+    "main": "Navegación principal",
     "credentials": "Mis Credenciales",
     "saveCredential": "Guardar Credencial",
     "adminUsers": "Administrar Usuarios",

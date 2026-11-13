@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import apiClient from "../api/apiClient";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -7,29 +9,6 @@ interface Profile {
   profile_name: string;
   permitted_screens: string[];
 }
-
-// ── Seed data ────────────────────────────────────────────────────────────────
-// There is no dedicated list-profiles API endpoint. The available profiles
-// are defined by the database seed and surfaced here as static reference data.
-// (Req 3.2, 3.3, 3.5, 3.7)
-
-const PROFILES: Profile[] = [
-  {
-    profile_id: 1,
-    profile_name: "Basic",
-    permitted_screens: ["credentials"],
-  },
-  {
-    profile_id: 2,
-    profile_name: "Full",
-    permitted_screens: [
-      "credentials",
-      "credentials.new",
-      "credentials.edit",
-      "credentials.delete",
-    ],
-  },
-];
 
 // ── Screen badge ─────────────────────────────────────────────────────────────
 
@@ -115,6 +94,23 @@ function ProfileCard({ profile }: ProfileCardProps) {
  */
 export default function AdminProfilesPage() {
   const { t } = useTranslation();
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [loadError, setLoadError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiClient
+      .get<Profile[]>("/api/admin/profiles")
+      .then((res) => {
+        if (!cancelled) setProfiles(res.data);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <main className="min-h-screen bg-gray-50 px-4 py-8 sm:py-12">
@@ -138,11 +134,13 @@ export default function AdminProfilesPage() {
         </div>
 
         {/* ── Profile cards ── */}
-        {PROFILES.length === 0 ? (
+        {loadError ? (
+          <p role="alert" className="text-sm text-red-700">{t("errors.generic")}</p>
+        ) : profiles.length === 0 ? (
           <p className="text-sm text-gray-500">{t("admin.noProfiles")}</p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {PROFILES.map((profile) => (
+            {profiles.map((profile) => (
               <ProfileCard key={profile.profile_id} profile={profile} />
             ))}
           </div>

@@ -49,6 +49,12 @@ htmlcov/
 nosetests.xml
 test-results/
 
+# Playwright E2E — throwaway DB and reports
+backend/e2e.sqlite3
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+
 # Hypothesis (property testing) — bases de datos de ejemplos generados
 # Se ignoran porque son artefactos locales de ejecucion
 .hypothesis/

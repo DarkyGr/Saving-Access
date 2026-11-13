@@ -1,6 +1,7 @@
 import React, { Suspense } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
+import AppLayout from "./components/AppLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
@@ -33,67 +34,73 @@ const ForbiddenPage = React.lazy(() => import("./pages/ForbiddenPage"));
  */
 const router = createBrowserRouter([
   {
-    path: "/login",
-    element: <LoginPage />,
-  },
-  {
-    path: "/signup",
-    element: <SignUpPage />,
-  },
-  {
-    path: "/credentials",
-    element: (
-      <ProtectedRoute screen="credentials">
-        <ViewSearchPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/credentials/new",
-    element: (
-      <ProtectedRoute screen="credentials.new">
-        <SaveCredentialPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/credentials/:id/edit",
-    element: (
-      <ProtectedRoute screen="credentials.edit">
-        <EditCredentialPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/admin/users",
-    element: (
-      <ProtectedRoute screen="admin.users">
-        <AdminUsersPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/admin/profiles",
-    element: (
-      <ProtectedRoute screen="admin.profiles">
-        <AdminProfilesPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/403",
-    // Suspense boundary required for React.lazy; fallback renders nothing
-    // while the chunk loads (the page is tiny so the flash is imperceptible).
-    element: (
-      <Suspense fallback={null}>
-        <ForbiddenPage />
-      </Suspense>
-    ),
-  },
-  {
-    // Catch-all: redirect any unrecognised path to /login (Req 2.5, 3.4)
-    path: "*",
-    element: <Navigate to="/login" replace />,
+    // Shell with header (language toggle, nav, logout) around every page.
+    element: <AppLayout />,
+    children: [
+      {
+        path: "/login",
+        element: <LoginPage />,
+      },
+      {
+        path: "/signup",
+        element: <SignUpPage />,
+      },
+      {
+        path: "/credentials",
+        element: (
+          <ProtectedRoute screen="credentials">
+            <ViewSearchPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/credentials/new",
+        element: (
+          <ProtectedRoute screen="credentials.new">
+            <SaveCredentialPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/credentials/:id/edit",
+        element: (
+          <ProtectedRoute screen="credentials.edit">
+            <EditCredentialPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/admin/users",
+        element: (
+          <ProtectedRoute screen="admin.users">
+            <AdminUsersPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/admin/profiles",
+        element: (
+          <ProtectedRoute screen="admin.profiles">
+            <AdminProfilesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/403",
+        // Suspense boundary required for React.lazy; fallback renders nothing
+        // while the chunk loads (the page is tiny so the flash is imperceptible).
+        element: (
+          <Suspense fallback={null}>
+            <ForbiddenPage />
+          </Suspense>
+        ),
+      },
+      {
+        // Catch-all: redirect any unrecognised path to /login (Req 2.5, 3.4)
+        path: "*",
+        element: <Navigate to="/login" replace />,
+      },
+    ],
   },
 ]);
 

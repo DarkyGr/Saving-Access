@@ -29,9 +29,6 @@ describe("PasswordInput — Eye_Toggle", () => {
   it("1. renders with type='password' by default (password is masked)", () => {
     render(<PasswordInput />);
 
-    const input = screen.getByRole<HTMLInputElement>("textbox", { hidden: true }) ??
-      document.querySelector("input")!;
-
     // Use querySelector because input[type=password] is not a "textbox" role
     const passwordInput = document.querySelector("input") as HTMLInputElement;
     expect(passwordInput).not.toBeNull();

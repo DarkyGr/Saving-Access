@@ -177,6 +177,18 @@ async def on_startup() -> None:
             "Environment='production' — skipping automatic table creation."
         )
 
+    # Seed default profiles in every environment (idempotent).
+    from app.database import SessionLocal
+    from app.seed import seed_default_profiles
+
+    db = SessionLocal()
+    try:
+        seed_default_profiles(db)
+    except Exception:  # noqa: BLE001 — never block startup on seeding
+        logger.exception("Could not seed default profiles.")
+    finally:
+        db.close()
+
 
 # ---------------------------------------------------------------------------
 # Routers
@@ -185,7 +197,9 @@ async def on_startup() -> None:
 from app.routers.admin_router import router as admin_router  # noqa: E402
 from app.routers.auth_router import router as auth_router  # noqa: E402
 from app.routers.credentials_router import router as credentials_router  # noqa: E402
+from app.routers.profile_router import router as profile_router  # noqa: E402
 
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(credentials_router, prefix="/api/credentials", tags=["credentials"])
 app.include_router(admin_router, prefix="/api/admin", tags=["admin"])
+app.include_router(profile_router, prefix="/api/profile", tags=["profile"])

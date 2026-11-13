@@ -5,10 +5,8 @@ Endpoints:
   GET /api/admin/users                         → list all users with their assigned profile
   PUT /api/admin/users/{user_id}/profile       → assign a profile to a user
 
-Both endpoints require ``require_permission("admin.users")``.  Because Admin role
-bypasses the profile check unconditionally (Requirement 3.5), only Admin-role
-tokens can reach these handlers in practice; any User-role JWT receives a 403
-from the middleware before the handler is invoked.
+All endpoints require ``require_admin``: only Admin-role tokens reach these
+handlers, regardless of profile contents (Property 7).
 
 Security notes:
   - Ownership check is not applicable here (Admin has full access — Requirement 3.5).
@@ -26,7 +24,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.middleware.permissions import require_permission
+from app.middleware.permissions import require_admin
 from app.models import Profile, User, UserProfile
 from app.services.profile_service import ProfileService
 
@@ -65,6 +63,14 @@ class UserListItem(BaseModel):
         from_attributes = True
 
 
+class ProfileDetail(BaseModel):
+    """Profile entry returned by GET /api/admin/profiles."""
+
+    profile_id: int
+    profile_name: str
+    permitted_screens: list[str]
+
+
 class AssignProfileRequest(BaseModel):
     """Request body for PUT /api/admin/users/{user_id}/profile."""
 
@@ -90,7 +96,7 @@ class AssignProfileResponse(BaseModel):
     summary="List all users with their assigned profile",
 )
 def list_users(
-    claims: dict = Depends(require_permission("admin.users")),
+    claims: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> list[UserListItem]:
     """Return every user in the system together with their assigned profile.
@@ -143,6 +149,33 @@ def list_users(
 
 
 # ---------------------------------------------------------------------------
+# GET /api/admin/profiles
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/profiles",
+    response_model=list[ProfileDetail],
+    status_code=status.HTTP_200_OK,
+    summary="List all profiles and their permitted screens",
+)
+def list_profiles(
+    claims: dict = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[ProfileDetail]:
+    """Return every profile (Requirements 3.2, 3.7)."""
+    rows = db.query(Profile).order_by(Profile.profile_id).all()
+    return [
+        ProfileDetail(
+            profile_id=p.profile_id,
+            profile_name=p.profile_name,
+            permitted_screens=list(p.permitted_screens or []),
+        )
+        for p in rows
+    ]
+
+
+# ---------------------------------------------------------------------------
 # PUT /api/admin/users/{user_id}/profile
 # ---------------------------------------------------------------------------
 
@@ -156,7 +189,7 @@ def list_users(
 def assign_user_profile(
     user_id: int,
     body: AssignProfileRequest,
-    claims: dict = Depends(require_permission("admin.users")),
+    claims: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> AssignProfileResponse:
     """Assign (or update) the profile for the given user.

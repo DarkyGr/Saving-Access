@@ -74,6 +74,9 @@ def _make_test_engine():
     User.__table__.create(bind=engine, checkfirst=True)
     Credential.__table__.create(bind=engine, checkfirst=True)
     AuditLog.__table__.create(bind=engine, checkfirst=True)
+    from app.models import Profile as _Pf, UserProfile as _UPf  # noqa: E402
+    _Pf.__table__.create(bind=engine, checkfirst=True)
+    _UPf.__table__.create(bind=engine, checkfirst=True)
 
     return engine
 

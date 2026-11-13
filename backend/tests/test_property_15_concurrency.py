@@ -119,6 +119,9 @@ def _disable_fk(dbapi_conn, _record):  # pragma: no cover
 User.__table__.create(bind=_ENGINE, checkfirst=True)
 Credential.__table__.create(bind=_ENGINE, checkfirst=True)
 AuditLog.__table__.create(bind=_ENGINE, checkfirst=True)
+from app.models import Profile as _Pf, UserProfile as _UPf  # noqa: E402
+_Pf.__table__.create(bind=_ENGINE, checkfirst=True)
+_UPf.__table__.create(bind=_ENGINE, checkfirst=True)
 
 _TestingSessionLocal = sessionmaker(
     bind=_ENGINE,

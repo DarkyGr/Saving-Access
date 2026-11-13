@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
 // Initialize i18n before importing the component so useTranslation() resolves
@@ -18,8 +18,8 @@ function renderModal(onContinue: () => void, onCancel: () => void) {
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe("AlreadyVisibleModal", () => {
-  let onContinue: ReturnType<typeof vi.fn>;
-  let onCancel: ReturnType<typeof vi.fn>;
+  let onContinue: Mock<() => void>;
+  let onCancel: Mock<() => void>;
 
   beforeEach(() => {
     onContinue = vi.fn();

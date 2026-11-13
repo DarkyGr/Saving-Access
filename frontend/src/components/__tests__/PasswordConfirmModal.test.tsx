@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
@@ -29,8 +29,8 @@ function renderModal(
 describe("PasswordConfirmModal", () => {
   const user = userEvent.setup();
 
-  let onConfirm: ReturnType<typeof vi.fn>;
-  let onCancel: ReturnType<typeof vi.fn>;
+  let onConfirm: Mock<(password: string) => void>;
+  let onCancel: Mock<() => void>;
 
   beforeEach(() => {
     onConfirm = vi.fn();

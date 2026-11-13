@@ -37,6 +37,18 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+// Detail string the backend returns when the re-entered account password is
+// wrong (design.md › Error Handling). Kept in one place so pages can share it.
+export const ACCOUNT_PASSWORD_ERROR = "Account password verification failed.";
+
+export function isAccountPasswordError(data: unknown): boolean {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    (data as { detail?: unknown }).detail === ACCOUNT_PASSWORD_ERROR
+  );
+}
+
 // ── Response interceptor: handle 401 → redirect to login ────────────────────
 apiClient.interceptors.response.use(
   (response) => response,
@@ -44,6 +56,9 @@ apiClient.interceptors.response.use(
     if (
       axios.isAxiosError(error) &&
       error.response?.status === 401 &&
+      // A wrong *account* password in the confirmation modal is a user typo,
+      // not an expired session: let the page show its inline error.
+      !isAccountPasswordError(error.response?.data) &&
       // Avoid redirect loops on the login page itself
       !window.location.pathname.startsWith("/login")
     ) {

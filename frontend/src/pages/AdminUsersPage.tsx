@@ -42,7 +42,7 @@ export default function AdminUsersPage() {
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   // ── Profiles (available options for the dropdown) ───────────────────────
-  // Fetched from /api/admin/profiles if available; falls back to seed data.
+  // Fetched from /api/admin/profiles.
 
   const [profiles, setProfiles] = useState<Profile[]>([]);
 
@@ -93,11 +93,8 @@ export default function AdminUsersPage() {
       const response = await apiClient.get<Profile[]>("/api/admin/profiles");
       setProfiles(response.data);
     } catch {
-      // Fall back to seed data so the dropdown always has options
-      setProfiles([
-        { profile_id: 1, profile_name: "Basic" },
-        { profile_id: 2, profile_name: "Full" },
-      ]);
+      // Never guess profile ids: an empty list disables reassignment.
+      setProfiles([]);
     }
   }, []);
 

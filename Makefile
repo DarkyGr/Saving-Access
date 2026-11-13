@@ -1,7 +1,7 @@
 # Save Pass — Password Manager
 # Makefile for common development tasks
 
-.PHONY: up down test-backend test-frontend install-backend install-frontend help
+.PHONY: up down test-backend test-frontend test-e2e seed create-admin install-backend install-frontend help
 
 # Default target
 help:
@@ -10,6 +10,9 @@ help:
 	@echo "  down             - Stop and remove all containers"
 	@echo "  test-backend     - Run backend pytest suite"
 	@echo "  test-frontend    - Run frontend Vitest suite"
+	@echo "  test-e2e         - Run Playwright end-to-end tests (starts its own servers)"
+	@echo "  seed             - Seed default profiles in the running backend container"
+	@echo "  create-admin     - Create an Admin account (USERNAME=.. EMAIL=..)"
 	@echo "  install-backend  - Install Python dependencies in a venv"
 	@echo "  install-frontend - Install Node.js dependencies"
 
@@ -28,6 +31,16 @@ test-backend:
 
 test-frontend:
 	cd frontend && npm run test
+
+test-e2e:
+	cd frontend && npx playwright test
+
+## Admin tasks (Docker)
+seed:
+	docker compose exec backend python -m app.cli seed
+
+create-admin:
+	docker compose exec backend python -m app.cli create-admin --username $(USERNAME) --email $(EMAIL)
 
 ## Local install targets (without Docker)
 

@@ -21,6 +21,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    JSON,
     LargeBinary,
     String,
     Time,
@@ -124,7 +125,10 @@ class Profile(AuditColumnsMixin, Base):
     profile_id = Column(Integer, primary_key=True, autoincrement=True)
     profile_name = Column(String(64), nullable=False, unique=True)
     # JSONB stores the list of permitted screen keys, e.g. ["credentials", "credentials.new"]
-    permitted_screens = Column(JSONB, nullable=False, default=list)
+    # JSON variant lets the same model run on SQLite in tests.
+    permitted_screens = Column(
+        JSONB().with_variant(JSON(), "sqlite"), nullable=False, default=list
+    )
 
     # Relationships
     user_profiles = relationship(

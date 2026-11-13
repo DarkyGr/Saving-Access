@@ -89,6 +89,19 @@ http://localhost:5173
 
 The backend API is available at `http://localhost:8000`. Interactive API docs at `http://localhost:8000/docs`.
 
+### 5. Create the first Admin
+
+On startup the backend seeds two permission profiles: **Basic** (view/search only) and **Full** (view, save, edit, delete). Every new sign-up gets **Full** by default (change with the `DEFAULT_PROFILE` env var).
+
+Admin accounts cannot be created from the sign-up page. Create the first one from the command line:
+
+```bash
+make create-admin USERNAME=admin EMAIL=admin@example.com
+# without Docker: cd backend && python -m app.cli create-admin --username admin --email admin@example.com
+```
+
+You will be asked for the password twice (or set `ADMIN_PASSWORD`). To give an existing account the Admin role: `python -m app.cli promote --username alice`.
+
 ### Stop
 
 ```bash
@@ -128,6 +141,7 @@ npm run dev
 | `JWT_ALGORITHM` | JWT signing algorithm | `HS256` |
 | `JWT_EXPIRE_MINUTES` | Token lifetime in minutes | `15` |
 | `CORS_ORIGINS` | Comma-separated list of allowed frontend origins | `http://localhost:5173` |
+| `DEFAULT_PROFILE` | Profile assigned to every new sign-up (empty = none) | `Full` |
 
 > **Never commit `.env`.** Only `.env.example` (without real values) belongs in version control.
 
@@ -159,7 +173,16 @@ make test-frontend
 # equivalent to: cd frontend && npm run test
 ```
 
-Covers: `PasswordInput` Eye_Toggle, `PasswordConfirmModal` callbacks, `useVisibilityTimer` with fake timers, `ProtectedRoute` redirects, `LanguageToggle` language switching.
+Covers: `PasswordInput` Eye_Toggle, `PasswordConfirmModal` callbacks, `useVisibilityTimer` with fake timers, `ProtectedRoute` redirects, `LanguageToggle` language switching, the `AppLayout` header.
+
+### End-to-end (Playwright)
+
+```bash
+make test-e2e
+# first time only: cd frontend && npx playwright install chromium
+```
+
+Playwright starts its own backend (port 8001, throwaway SQLite database) and frontend (port 5174), then drives a real browser through sign-up, login, save, search, reveal, edit, delete, language switch, logout and the admin profile assignment. No mocks and no Docker required.
 
 ---
 
@@ -283,6 +306,9 @@ A control in the application header switches between **English** (default) and *
 | `make down` | Stop and remove containers |
 | `make test-backend` | Run the full backend pytest suite |
 | `make test-frontend` | Run the frontend Vitest suite |
+| `make test-e2e` | Run the Playwright end-to-end tests |
+| `make seed` | Seed default profiles (Docker) |
+| `make create-admin USERNAME=.. EMAIL=..` | Create an Admin account (Docker) |
 | `make install-backend` | Install Python dependencies locally (no Docker) |
 | `make install-frontend` | Install Node.js dependencies locally (no Docker) |
 | `make help` | List all available commands |

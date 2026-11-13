@@ -270,6 +270,36 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
 - [ ] 29. Final checkpoint — all tests pass end-to-end
   - Run `pytest backend/` and `npx vitest --run` from the repo root; confirm zero failures across all unit, property-based, and integration tests. Ask the user if any questions arise.
 
+- [x] 30. Phase 1 — MVP unblock (Claude Code handover audit, 2026-11-12)
+  - Audit found the app unusable end-to-end although tasks 1–27 were checked: unit/integration tests mocked every frontend↔backend boundary and promoted test users to Admin, hiding missing endpoints and seed data.
+  - [x] 30.0 Fix backend test isolation: per-module `get_db` overrides collided at collection time (7 failures in the full suite); add `tests/conftest.py`; make `profiles.permitted_screens` JSON-portable so SQLite tests can create every table
+  - [x] 30.1 B1 — add `username` claim to the JWT (frontend `AuthContext` discarded tokens without it, so login always bounced back to `/login`)
+    - _Requirements: 2.2, 2.4_
+  - [x] 30.2 B2 — `GET /api/profile/permissions` (called by `ProtectedRoute`; missing → every User-role page redirected to `/403`)
+    - _Requirements: 3.4, 3.6_
+  - [x] 30.3 B3 — `GET /api/credentials/{id}` with ownership check and `password: null` (Edit page could not load)
+    - _Requirements: 6.2_
+  - [x] 30.4 B4 — `GET /api/admin/profiles`; Admin pages load real profiles instead of hard-coded ids; `/api/admin/*` restricted to Admin role via `require_admin`
+    - _Requirements: 3.2, 3.5, 3.7; Property 7_
+  - [x] 30.5 B5 — idempotent seed of profiles Basic/Full on startup, `DEFAULT_PROFILE` for new sign-ups, `python -m app.cli create-admin|promote|seed`
+    - _Requirements: 3.1–3.4_
+  - [x] 30.6 B6 — wrong account password in the confirmation modal no longer logs the user out (interceptor skips the documented 401 detail)
+    - _Requirements: 4.9, 5.5, 6.6, 7.5_
+  - [x] 30.7 B7 — `AppLayout` header: language toggle on every page, permission-filtered navigation, current user, logout
+    - _Requirements: 3.4, 10.2_
+  - [x] 30.8 Frontend build hygiene: 33 TypeScript errors in tests and the failing `PasswordInput` test fixed (`npm run build` runs `tsc`)
+  - [x] 30.9 Contract tests `backend/tests/test_mvp_contract.py`; frontend tests for `AppLayout` and `apiClient`
+  - [x] 30.10 Playwright E2E (`frontend/e2e/mvp.e2e.ts`, `make test-e2e`) against real uvicorn + Vite: user lifecycle and admin profile reassignment
+
+- [ ] 31. Phase 2 — Security hardening (see audit plan)
+  - [ ] 31.1 Fail fast on missing/weak `JWT_SECRET` and `FERNET_KEY`
+  - [ ] 31.2 Replace `python-jose` + `passlib` with PyJWT + `bcrypt`; constant-time login for unknown users
+  - [ ] 31.3 Rate limiting on login, register and account-password endpoints
+  - [ ] 31.4 Write mutation and `audit_log` row in one transaction
+  - [ ] 31.5 Refresh token in httpOnly cookie so a page reload keeps the session
+  - [ ] 31.6 Alembic migrations as the single source of the schema (replace `create_all` + drifting `schema.sql`)
+  - [ ] 31.7 Update vulnerable npm dependencies (axios, vite, follow-redirects…)
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for a faster MVP

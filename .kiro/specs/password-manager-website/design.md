@@ -404,6 +404,31 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
 { "user_id": 42, "profile_id": 2 }
 ```
 
+#### `GET /api/admin/profiles` *(added in task 30.4)*
+```json
+// Response 200 — Admin role only
+[
+  { "profile_id": 1, "profile_name": "Basic", "permitted_screens": ["credentials"] },
+  { "profile_id": 2, "profile_name": "Full",
+    "permitted_screens": ["credentials", "credentials.new", "credentials.edit", "credentials.delete"] }
+]
+```
+
+#### `GET /api/credentials/{id}` *(added in task 30.3)*
+```json
+// Response 200 — requires "credentials.edit"; password is always null
+{ "credential_id": 7, "website_name": "GitHub", "email_or_username": "alice@example.com",
+  "is_username_login": false, "password": null }
+// 403 if owned by another user, 404 if it does not exist
+```
+
+#### `GET /api/profile/permissions` *(added in task 30.2)*
+```json
+// Response 200 — any authenticated user
+{ "role": "User", "permissions": ["credentials", "credentials.new"] }
+// Admin: { "role": "Admin", "permissions": ["*"] }
+```
+
 ---
 
 ## Authentication and Session Management Flow
@@ -419,7 +444,7 @@ sequenceDiagram
     DB-->>BE: password_hash
     BE->>BE: bcrypt.verify(password, password_hash)
     alt valid
-        BE->>BE: JWT.sign({user_id, role}, exp=15min)
+        BE->>BE: JWT.sign({user_id, username, role}, exp=15min)
         BE-->>FE: { access_token, expires_in: 900 }
         FE->>FE: Store token in memory (not localStorage)
     else invalid
@@ -438,7 +463,9 @@ JWT Configuration:
 - Algorithm: HS256
 - Expiry: 15 minutes (access token)
 - Transmission: HTTPS only; `Authorization: Bearer` header; token stored in React memory state (not `localStorage` or cookies) to reduce XSS exposure
+- Claims: `user_id`, `username`, `role`, `exp`. The frontend `AuthContext` rejects a token missing any of the first three (task 30.1).
 - Refresh: not in Phase 1; user is redirected to login on expiry
+- A 401 whose detail is `"Account password verification failed."` is a wrong re-entered password, not an expired session: the frontend interceptor shows the inline error instead of redirecting (task 30.6).
 
 ---
 
@@ -451,6 +478,10 @@ Role: User   →  access determined by assigned Profile
 Profile row: { profile_id, profile_name, permitted_screens: ["credentials", "credentials.new", ...] }
 ```
 
+Seed data (task 30.5): on startup the backend idempotently creates the profiles **Basic** (`credentials`) and **Full** (`credentials`, `credentials.new`, `credentials.edit`, `credentials.delete`). Each new sign-up is linked to `DEFAULT_PROFILE` (default `Full`). The first Admin is created with `python -m app.cli create-admin`.
+
+Admin endpoints (`/api/admin/*`) use `require_admin`, which checks `role == "Admin"` only; profile contents can never grant them (Property 7).
+
 Backend middleware (`require_permission(screen: str)`):
 1. Decode JWT → `user_id`, `role`
 2. If `role == "Admin"` → allow
@@ -461,7 +492,7 @@ Backend middleware (`require_permission(screen: str)`):
 Frontend `ProtectedRoute`:
 1. Read JWT from memory → decode claims
 2. If role == "Admin" → render children
-3. Else call `ProfileService.getMyPermissions()` → check screen key
+3. Else call `GET /api/profile/permissions` → check screen key
 4. If allowed → render children
 5. Else → redirect to `/403`
 
@@ -597,7 +628,7 @@ Events logged:
 
 ### Property 6: JWT Issued on Successful Login
 
-*For any* successful login attempt, the response SHALL contain an `access_token` that is a structurally valid JWT with `user_id` and `role` claims and an `exp` claim set within 15 minutes of issue time.
+*For any* successful login attempt, the response SHALL contain an `access_token` that is a structurally valid JWT with `user_id`, `username` and `role` claims and an `exp` claim set within 15 minutes of issue time.
 
 **Validates: Requirements 2.4**
 

@@ -148,6 +148,11 @@ class AuthService:
 
         # Back-fill creation_user_id with the new user's own id
         user.creation_user_id = user.user_id
+        # Give the account a usable profile (Requirement 3.4); without one
+        # a new User could not open any screen.
+        from app.seed import assign_default_profile
+
+        assign_default_profile(self._db, user.user_id)
         self._db.commit()
         self._db.refresh(user)
 
@@ -190,8 +195,10 @@ class AuthService:
         # Issue JWT (Requirement 2.4)
         now = datetime.now(timezone.utc)
         exp = now + timedelta(minutes=self._expire_minutes)
+        # The frontend AuthContext requires user_id, username and role.
         token_data = {
             "user_id": user.user_id,
+            "username": user.username,
             "role": user.role,
             "exp": exp,
         }

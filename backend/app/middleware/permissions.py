@@ -38,6 +38,36 @@ from app.services.profile_service import ProfileService
 _bearer = HTTPBearer(auto_error=False)
 
 
+def get_current_claims(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Dependency: any authenticated user. Returns the decoded JWT payload.
+
+    :raises HTTPException 401: If the header is absent or the token invalid.
+    """
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated.",
+        )
+    return AuthService(db).verify_token(credentials.credentials)
+
+
+def require_admin(claims: dict = Depends(get_current_claims)) -> dict:
+    """Dependency: Admin role only, regardless of profile (Property 7).
+
+    A User-role account never reaches admin endpoints, even if an Admin
+    mistakenly puts an ``admin.*`` screen in one of its profiles.
+    """
+    if claims.get("role") != "Admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied.",
+        )
+    return claims
+
+
 def require_permission(screen: str) -> Callable:
     """Return a FastAPI dependency that enforces access to *screen*.
 

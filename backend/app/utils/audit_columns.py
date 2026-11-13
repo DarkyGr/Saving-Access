@@ -21,7 +21,7 @@ from datetime import date, datetime
 from typing import Any
 
 
-def set_creation_audit(record: Any, user_id: int) -> None:
+def set_creation_audit(record: Any, user_id: int | None) -> None:
     """
     Populate the three creation audit columns on a SQLAlchemy model instance.
 

@@ -234,6 +234,37 @@ def list_credentials(
 
 
 # ---------------------------------------------------------------------------
+# GET /api/credentials/{id}
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/{credential_id}",
+    response_model=CredentialListItem,
+    status_code=status.HTTP_200_OK,
+    summary="Get one credential (password always null)",
+)
+def get_credential(
+    credential_id: int,
+    claims: dict = Depends(require_permission("credentials.edit")),
+    db: Session = Depends(get_db),
+) -> CredentialListItem:
+    """Return a single owned credential for the Edit page (Requirement 6.2).
+
+    The password is never included; revealing it still requires the
+    dedicated ``/reveal`` endpoint and account-password confirmation.
+    """
+    row = _get_owned_credential(credential_id, claims["user_id"], db)
+    return CredentialListItem(
+        credential_id=row.credential_id,
+        website_name=row.website_name,
+        email_or_username=row.email_or_username,
+        is_username_login=row.is_username_login,
+        password=None,
+    )
+
+
+# ---------------------------------------------------------------------------
 # POST /api/credentials
 # ---------------------------------------------------------------------------
 

@@ -93,6 +93,9 @@ def _disable_fk(dbapi_conn, _record):  # pragma: no cover
 User.__table__.create(bind=_ENGINE, checkfirst=True)
 Credential.__table__.create(bind=_ENGINE, checkfirst=True)
 AuditLog.__table__.create(bind=_ENGINE, checkfirst=True)
+from app.models import Profile as _Pf, UserProfile as _UPf  # noqa: E402
+_Pf.__table__.create(bind=_ENGINE, checkfirst=True)
+_UPf.__table__.create(bind=_ENGINE, checkfirst=True)
 
 _TestingSessionLocal = sessionmaker(
     bind=_ENGINE,
@@ -642,6 +645,9 @@ def _disable_fk_admin(dbapi_conn, _record):  # pragma: no cover
 _User2.__table__.create(bind=_ADMIN_ENGINE, checkfirst=True)
 _Credential2.__table__.create(bind=_ADMIN_ENGINE, checkfirst=True)
 _AuditLog2.__table__.create(bind=_ADMIN_ENGINE, checkfirst=True)
+from app.models import Profile as _Pf, UserProfile as _UPf  # noqa: E402
+_Pf.__table__.create(bind=_ADMIN_ENGINE, checkfirst=True)
+_UPf.__table__.create(bind=_ADMIN_ENGINE, checkfirst=True)
 
 # Create ``profiles`` and ``user_profiles`` with TEXT instead of JSONB so
 # that SQLAlchemy's SQLite dialect can render them without errors.

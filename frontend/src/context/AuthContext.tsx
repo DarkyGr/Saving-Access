@@ -3,9 +3,10 @@ import {
   useContext,
   useState,
   useCallback,
+  useEffect,
   type ReactNode,
 } from "react";
-import { setAuthToken } from "../api/apiClient";
+import { registerSessionHandlers, revokeSession, setAuthToken } from "../api/apiClient";
 import { setAuthStateForProtectedRoute } from "../components/ProtectedRoute";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -115,7 +116,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setAuthStateForProtectedRoute({ token: newToken, user: decoded });
   }, []);
 
-  const logout = useCallback(() => {
+  // Local-only sign out (used when the server already rejected the session).
+  const clearSession = useCallback(() => {
     setToken(null);
     setUser(null);
 
@@ -125,6 +127,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Clear ProtectedRoute cache
     setAuthStateForProtectedRoute({ token: null, user: null });
   }, []);
+
+  // User-initiated logout: also revoke the httpOnly refresh cookie (task 31.5).
+  const logout = useCallback(() => {
+    clearSession();
+    void revokeSession();
+  }, [clearSession]);
+
+  // Let the axios interceptor store silently refreshed tokens / drop the session.
+  useEffect(() => {
+    registerSessionHandlers({ onTokenRefreshed: login, onSessionExpired: clearSession });
+  }, [login, clearSession]);
 
   return (
     <AuthContext.Provider value={{ token, user, login, logout }}>

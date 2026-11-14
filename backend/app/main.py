@@ -181,6 +181,27 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
 
 
 # ---------------------------------------------------------------------------
+# Health check (used by the production container healthcheck)
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/health", include_in_schema=False)
+def health() -> dict:
+    """Liveness + database reachability. Reveals nothing about the data."""
+    from sqlalchemy import text
+
+    from app.database import SessionLocal
+
+    try:
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+    except Exception:  # noqa: BLE001
+        logger.exception("Health check: database unreachable")
+        return JSONResponse(status_code=503, content={"status": "unavailable"})
+    return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
 # Routers
 # ---------------------------------------------------------------------------
 

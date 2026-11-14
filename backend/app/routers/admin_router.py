@@ -17,10 +17,9 @@ Security notes:
 Requirements: 3.2, 3.3, 3.5, 3.7
 """
 
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -42,8 +41,7 @@ class ProfileSummary(BaseModel):
     profile_id: int
     profile_name: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserListItem(BaseModel):
@@ -57,10 +55,9 @@ class UserListItem(BaseModel):
     username: str
     email: str
     role: str
-    profile: Optional[ProfileSummary] = None
+    profile: ProfileSummary | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProfileDetail(BaseModel):
@@ -125,7 +122,7 @@ def list_users(
     result: list[UserListItem] = []
     for user in users:
         profile_id = profile_ids_by_user.get(user.user_id)
-        profile_summary: Optional[ProfileSummary] = None
+        profile_summary: ProfileSummary | None = None
 
         if profile_id is not None:
             profile = profiles_by_id.get(profile_id)

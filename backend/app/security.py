@@ -64,12 +64,14 @@ def validate_settings() -> None:
             '(generate one with: python -c "import secrets; print(secrets.token_urlsafe(48))").'
         )
 
-    key = os.environ.get("FERNET_KEY", "")
-    if not key:
+    keys = [k.strip() for k in os.environ.get("FERNET_KEY", "").split(",") if k.strip()]
+    if not keys:
         problems.append("FERNET_KEY is not set.")
     else:
         try:
-            Fernet(key.encode())
+            # Several comma-separated keys are allowed during a rotation.
+            for key in keys:
+                Fernet(key.encode())
         except (ValueError, TypeError):
             problems.append(
                 "FERNET_KEY is not a valid Fernet key (generate one with: "

@@ -25,10 +25,9 @@ Security notes:
 Requirements: 4.1–4.12, 5.1–5.14, 6.1–6.9, 7.1–7.7, 8.1–8.7
 """
 
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -62,8 +61,7 @@ class CredentialListItem(BaseModel):
     is_username_login: bool
     password: None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CreateCredentialRequest(BaseModel):
@@ -195,7 +193,7 @@ def _get_owned_credential(
     summary="List / search credentials",
 )
 def list_credentials(
-    q: Optional[str] = None,
+    q: str | None = None,
     claims: dict = Depends(require_permission("credentials")),
     db: Session = Depends(get_db),
 ) -> list[CredentialListItem]:
@@ -214,10 +212,13 @@ def list_credentials(
     query = db.query(Credential).filter(Credential.user_id == user_id)
 
     if q:
-        pattern = f"%{q}%"
+        # Escape LIKE wildcards so "%" or "_" in the query are matched
+        # literally instead of matching everything (task 32.4).
+        escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        pattern = f"%{escaped}%"
         query = query.filter(
-            (Credential.website_name.ilike(pattern))
-            | (Credential.email_or_username.ilike(pattern))
+            (Credential.website_name.ilike(pattern, escape="\\"))
+            | (Credential.email_or_username.ilike(pattern, escape="\\"))
         )
 
     rows = query.all()

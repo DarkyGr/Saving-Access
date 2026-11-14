@@ -12,10 +12,9 @@ Properties tested:
 
 import os
 import string
-from datetime import date, time, datetime, timezone, timedelta
-from unittest.mock import MagicMock, patch, PropertyMock
+from datetime import date, time, datetime, timedelta, UTC
+from unittest.mock import MagicMock
 
-import pytest
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.testclient import TestClient
@@ -25,9 +24,9 @@ import jwt
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
 
-from app.models import Base, Profile, User, UserProfile
+from app.models import User
 from app.services.profile_service import ProfileService
-from app.utils.audit_columns import set_creation_audit, set_modification_audit
+from app.utils.audit_columns import set_creation_audit
 
 # ---------------------------------------------------------------------------
 # Environment defaults
@@ -102,7 +101,7 @@ def _require_admin(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated.",
-        )
+        ) from None
     role = payload.get("role", "")
     if role != "Admin":
         raise HTTPException(
@@ -134,7 +133,7 @@ _test_client = TestClient(_stub_app, raise_server_exceptions=True)
 
 def _make_jwt(role: str, user_id: int = 1, expire_minutes: int = 15) -> str:
     """Issue a signed JWT with the given role claim."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "user_id": user_id,
         "role": role,

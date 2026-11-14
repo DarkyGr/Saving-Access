@@ -6,7 +6,6 @@ Feature: password-manager-website, Property 9: Credential Encryption Invariant
 Validates: Requirements 4.10, 6.7, 8.1, 8.2, 8.3
 """
 
-import os
 
 import pytest
 from cryptography.fernet import Fernet

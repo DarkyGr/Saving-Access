@@ -17,43 +17,27 @@ Usage:
     set_modification_audit(record, user_id=requesting_user_id)
 """
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime, time
 from typing import Any
 
 
+def utc_date_time() -> tuple[date, time]:
+    """Current UTC date and time taken from the *same* instant.
+
+    Earlier code combined ``date.today()`` (server local date) with a UTC
+    time, which could disagree around midnight (task 32.3).
+    """
+    now = datetime.now(UTC).replace(tzinfo=None)
+    return now.date(), now.time()
+
+
 def set_creation_audit(record: Any, user_id: int | None) -> None:
-    """
-    Populate the three creation audit columns on a SQLAlchemy model instance.
-
-    Sets:
-      - record.creation_date       → date.today()
-      - record.creation_time       → datetime.utcnow().time()
-      - record.creation_user_id    → user_id
-
-    Args:
-        record:  Any SQLAlchemy mapped instance that has the three creation
-                 audit columns.
-        user_id: The primary key of the user performing the operation.
-    """
-    record.creation_date = date.today()
-    record.creation_time = datetime.utcnow().time()
+    """Populate creation_date / creation_time (UTC) and creation_user_id."""
+    record.creation_date, record.creation_time = utc_date_time()
     record.creation_user_id = user_id
 
 
 def set_modification_audit(record: Any, user_id: int) -> None:
-    """
-    Populate the three modification audit columns on a SQLAlchemy model instance.
-
-    Sets:
-      - record.modification_date       → date.today()
-      - record.modification_time       → datetime.utcnow().time()
-      - record.modification_user_id    → user_id
-
-    Args:
-        record:  Any SQLAlchemy mapped instance that has the three modification
-                 audit columns.
-        user_id: The primary key of the user performing the operation.
-    """
-    record.modification_date = date.today()
-    record.modification_time = datetime.utcnow().time()
+    """Populate modification_date / modification_time (UTC) and modification_user_id."""
+    record.modification_date, record.modification_time = utc_date_time()
     record.modification_user_id = user_id

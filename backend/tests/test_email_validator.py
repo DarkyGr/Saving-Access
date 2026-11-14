@@ -16,7 +16,7 @@ Design reference (design.md — Property 16):
 import string
 
 import pytest
-from hypothesis import assume, given, settings, HealthCheck
+from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 
 from app.utils.email_validator import validate_email, _load_blocklist

@@ -41,5 +41,5 @@ def get_my_permissions(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated.",
-        )
+        ) from None
     return PermissionsResponse(role=claims.get("role", ""), permissions=permissions)

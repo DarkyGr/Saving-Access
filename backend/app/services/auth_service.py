@@ -6,13 +6,14 @@ Requirements: 1.3–1.7, 2.2–2.4, 8.5
 """
 
 import os
-from datetime import date, datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models import User
+from app.utils.audit_columns import utc_date_time
 from app.security import (
     ExpiredSignatureError,
     InvalidTokenError,
@@ -133,8 +134,7 @@ class AuthService:
         password_hash: str = hash_password(password)
 
         # 7. Create user with audit columns (Requirement 1.8)
-        now_date = date.today()
-        now_time = datetime.now(timezone.utc).time().replace(tzinfo=None)
+        now_date, now_time = utc_date_time()
         user = User(
             username=username,
             email=email,
@@ -200,7 +200,7 @@ class AuthService:
         Claims (Requirement 2.4): ``user_id``, ``username`` and ``role`` (all
         required by the frontend AuthContext), ``type="access"`` and ``exp``.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         token_data = {
             "user_id": user.user_id,
             "username": user.username,
@@ -225,9 +225,9 @@ class AuthService:
         try:
             payload = decode_token(token)
         except ExpiredSignatureError:
-            raise HTTPException(status_code=401, detail="Token expired.")
+            raise HTTPException(status_code=401, detail="Token expired.") from None
         except InvalidTokenError:
-            raise HTTPException(status_code=401, detail="Not authenticated.")
+            raise HTTPException(status_code=401, detail="Not authenticated.") from None
         # Tokens issued before task 31.5 carry no "type"; accept them until
         # they expire (15 min), reject anything explicitly non-access.
         if payload.get("type", "access") != "access" or "user_id" not in payload:

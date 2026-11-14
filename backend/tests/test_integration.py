@@ -651,6 +651,7 @@ from app.models import Profile as _Pf, UserProfile as _UPf  # noqa: E402
 _Pf.__table__.create(bind=_ADMIN_ENGINE, checkfirst=True)
 _UPf.__table__.create(bind=_ADMIN_ENGINE, checkfirst=True)
 from app.models import RefreshToken as _RT  # noqa: E402
+from datetime import UTC
 _RT.__table__.create(bind=_ADMIN_ENGINE, checkfirst=True)
 
 # Create ``profiles`` and ``user_profiles`` with TEXT instead of JSONB so
@@ -746,10 +747,10 @@ class TestAdminProfileAssignment:
     @staticmethod
     def _seed_profile(db: Session, name: str, screens: list[str]) -> int:
         """Insert a profile row via raw SQL and return its profile_id."""
-        from datetime import date, datetime, timezone
+        from datetime import date, datetime
 
         now_date = str(date.today())
-        now_time = str(datetime.now(timezone.utc).time().replace(tzinfo=None))
+        now_time = str(datetime.now(UTC).time().replace(tzinfo=None))
         db.execute(
             _text(
                 "INSERT INTO profiles "

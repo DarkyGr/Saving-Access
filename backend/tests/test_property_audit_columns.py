@@ -7,13 +7,10 @@ Properties tested:
   Property 4: Audit Columns on Creation  — Validates: Requirements 1.8, 4.11, 9.8
 """
 
-import os
 from datetime import date, time
-from typing import Any
 from unittest.mock import MagicMock
 
-import pytest
-from hypothesis import given, settings, HealthCheck
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from app.utils.audit_columns import set_creation_audit, set_modification_audit

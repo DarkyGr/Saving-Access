@@ -11,7 +11,7 @@ Properties tested:
 from datetime import date, time
 
 import pytest
-from hypothesis import given, settings, assume, HealthCheck
+from hypothesis import given, settings
 from hypothesis import strategies as st
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session

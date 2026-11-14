@@ -56,6 +56,10 @@ def test_existing_create_all_database_can_be_adopted(db_url):
     engine = create_engine(db_url)
     old_tables = [t for name, t in Base.metadata.tables.items() if name != "refresh_tokens"]
     Base.metadata.create_all(bind=engine, tables=old_tables)
+    # The pre-Alembic schema had no trigram indexes (added in 0003).
+    with engine.begin() as conn:
+        conn.exec_driver_sql("DROP INDEX idx_credentials_website_name_trgm")
+        conn.exec_driver_sql("DROP INDEX idx_credentials_email_username_trgm")
     engine.dispose()
 
     assert _alembic(db_url, "stamp", "0001_baseline").returncode == 0

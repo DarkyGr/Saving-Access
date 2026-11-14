@@ -13,7 +13,7 @@ Properties tested:
 
 import os
 import string
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, UTC
 
 import pytest
 from fastapi import HTTPException
@@ -24,7 +24,7 @@ from app.security import verify_password
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
-from app.models import Base, User
+from app.models import User
 from app.services.auth_service import AuthService, validate_password_strength
 
 # ---------------------------------------------------------------------------
@@ -559,9 +559,9 @@ class TestJWTIssuedOnSuccessfulLogin:
             "password_confirmation": password,
         })
 
-        before_login = datetime.now(timezone.utc)
+        before_login = datetime.now(UTC)
         result = svc.login({"username": username, "password": password})
-        after_login = datetime.now(timezone.utc)
+        after_login = datetime.now(UTC)
 
         # 1. Response structure
         assert "access_token" in result, "Response missing 'access_token'"
@@ -588,7 +588,7 @@ class TestJWTIssuedOnSuccessfulLogin:
         )
 
         # 3. Expiry must be within 15 minutes (+ 2 s buffer for test overhead)
-        exp_dt = datetime.fromtimestamp(decoded["exp"], tz=timezone.utc)
+        exp_dt = datetime.fromtimestamp(decoded["exp"], tz=UTC)
         max_exp = after_login + timedelta(minutes=15, seconds=2)
         min_exp = before_login + timedelta(minutes=14, seconds=58)
 

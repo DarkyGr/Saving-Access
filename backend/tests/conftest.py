@@ -56,3 +56,35 @@ def _activate_module_db_override(request):
                 os.environ.pop(k, None)
             else:
                 os.environ[k] = v
+
+
+def make_test_engine():
+    """Engine for tests that need the full schema.
+
+    Uses ``TEST_DATABASE_URL`` (e.g. a disposable PostgreSQL database in CI)
+    when set, so the same tests run against the production database engine;
+    otherwise an in-memory SQLite shared across threads.
+
+    The schema is (re)created with Alembic's migrations-equivalent metadata.
+    The target database must be disposable: all tables are dropped first.
+    """
+    from sqlalchemy import create_engine
+    from sqlalchemy.pool import StaticPool
+
+    from app.models import Base
+
+    url = os.environ.get("TEST_DATABASE_URL")
+    if url:
+        engine = create_engine(url, pool_pre_ping=True)
+        Base.metadata.drop_all(bind=engine)
+        # Migration 0003 installs pg_trgm; create_all needs it for the GIN indexes.
+        with engine.begin() as conn:
+            conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+    else:
+        engine = create_engine(
+            "sqlite:///:memory:",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+    Base.metadata.create_all(bind=engine)
+    return engine

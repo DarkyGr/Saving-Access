@@ -9,11 +9,11 @@ audit row in one transaction (task 31.4): either both persist or neither.
 Requirements: 1.8, 4.11, 4.12, 5.14, 6.8, 6.9, 7.7, 9.5, 9.8
 """
 
-from datetime import date, datetime, timezone
 
 from sqlalchemy.orm import Session
 
 from app.models import AuditLog
+from app.utils.audit_columns import utc_date_time
 
 # Valid operation values mirror the CHECK constraint defined in the DDL and
 # the AuditLog ORM model.
@@ -52,12 +52,13 @@ class AuditService:
                 f"Must be one of: {', '.join(sorted(_VALID_OPERATIONS))}."
             )
 
+        op_date, op_time = utc_date_time()
         entry = AuditLog(
             user_id=user_id,
             operation=operation,
             affected_record_id=affected_record_id,
-            operation_date=date.today(),
-            operation_time=datetime.now(timezone.utc).time().replace(tzinfo=None),
+            operation_date=op_date,
+            operation_time=op_time,
         )
 
         self._db.add(entry)

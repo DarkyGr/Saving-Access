@@ -36,7 +36,7 @@ import atexit
 import os
 import string
 import tempfile
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 
 from cryptography.fernet import Fernet
 from hypothesis import HealthCheck, assume, given, settings
@@ -160,7 +160,7 @@ _CRED_PASSWORD_B = "CredentialB1@pw"
 
 def _make_jwt(user_id: int, role: str = "Admin") -> str:
     """Issue a signed Admin JWT for the given user_id."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "user_id": user_id,
         "role": role,

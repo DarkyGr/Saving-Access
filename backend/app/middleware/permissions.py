@@ -22,7 +22,7 @@ Error shapes match the design's Error Handling table:
   - Missing screen permission → 403 ``{"detail": "Access denied."}``
 """
 
-from typing import Callable
+from collections.abc import Callable
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -128,7 +128,7 @@ def require_permission(screen: str) -> Callable:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Not authenticated.",
-            )
+            ) from None
 
         # Step 5: check if the requested screen is permitted
         if screen in permissions:

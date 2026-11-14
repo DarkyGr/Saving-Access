@@ -19,10 +19,9 @@ over-restrictive.
 
 import os
 import string
-from datetime import date, datetime, timezone, timedelta
-from typing import Generator
+from datetime import date, datetime, timedelta, UTC
+from collections.abc import Generator
 
-import pytest
 from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 from hypothesis import HealthCheck, given, settings, assume
@@ -54,9 +53,8 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 from app.database import get_db  # noqa: E402
 from app.main import app  # noqa: E402
-from app.models import Base, Credential, User  # noqa: E402
+from app.models import Credential, User  # noqa: E402
 from app.services.encryptor_service import EncryptorService  # noqa: E402
-from app.utils.audit_columns import set_creation_audit  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Strategies
@@ -145,10 +143,9 @@ def _create_test_user(db: Session, suffix: str = "") -> User:
     """Insert a User row directly (bypass HTTP layer to keep tests fast)."""
     from app.security import hash_password
 
-    rounds = int(os.environ.get("BCRYPT_ROUNDS", "4"))
     password_hash = hash_password("TestPass1@xyz")
     now_date = date.today()
-    now_time = datetime.now(timezone.utc).time().replace(tzinfo=None)
+    now_time = datetime.now(UTC).time().replace(tzinfo=None)
 
     username = f"search_user_{suffix}"
     email = f"search_user_{suffix}@example.com"
@@ -184,7 +181,7 @@ def _issue_jwt(user: User) -> str:
     algorithm = os.environ.get("JWT_ALGORITHM", "HS256")
     expire_minutes = int(os.environ.get("JWT_EXPIRE_MINUTES", "15"))
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     exp = now + timedelta(minutes=expire_minutes)
     payload = {
         "user_id": user.user_id,
@@ -202,7 +199,7 @@ def _seed_credentials(
     """Insert Credential rows for *user_id* directly, bypassing the HTTP layer."""
     encryptor = EncryptorService()
     now_date = date.today()
-    now_time = datetime.now(timezone.utc).time().replace(tzinfo=None)
+    now_time = datetime.now(UTC).time().replace(tzinfo=None)
 
     rows: list[Credential] = []
     for website_name, email_or_username in credential_pairs:

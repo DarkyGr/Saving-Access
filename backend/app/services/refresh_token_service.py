@@ -19,7 +19,7 @@ from __future__ import annotations
 import hashlib
 import os
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 
 from sqlalchemy.orm import Session
 
@@ -29,7 +29,7 @@ from app.utils.audit_columns import set_creation_audit, set_modification_audit
 
 def _now() -> datetime:
     # Naive UTC: portable across PostgreSQL TIMESTAMP and SQLite.
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _hash(token: str) -> str:

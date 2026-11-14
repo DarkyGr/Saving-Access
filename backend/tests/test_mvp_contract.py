@@ -24,21 +24,14 @@ os.environ["ENVIRONMENT"] = "test"
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 import jwt  # noqa: E402
-from sqlalchemy import create_engine  # noqa: E402
 from sqlalchemy.orm import Session, sessionmaker  # noqa: E402
-from sqlalchemy.pool import StaticPool  # noqa: E402
 
-from app.database import get_db  # noqa: E402
+from tests.conftest import make_test_engine  # noqa: E402
 from app.main import app  # noqa: E402
-from app.models import Base, Profile, User, UserProfile  # noqa: E402
+from app.models import AuditLog, Credential, Profile, RefreshToken, User, UserProfile  # noqa: E402
 from app.seed import seed_default_profiles  # noqa: E402
 
-_ENGINE = create_engine(
-    "sqlite:///:memory:",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-Base.metadata.create_all(bind=_ENGINE)
+_ENGINE = make_test_engine()  # PostgreSQL when TEST_DATABASE_URL is set
 _Session = sessionmaker(bind=_ENGINE, autocommit=False, autoflush=False)
 
 
@@ -58,7 +51,8 @@ _PW = "Str0ngPassw0rd!"
 @pytest.fixture(autouse=True)
 def _clean_db():
     with _Session() as db:
-        for model in (UserProfile, Profile, User):
+        # Children first: PostgreSQL enforces the foreign keys.
+        for model in (RefreshToken, AuditLog, Credential, UserProfile, Profile, User):
             db.query(model).delete()
         db.commit()
         seed_default_profiles(db)
@@ -247,3 +241,31 @@ def test_wrong_account_password_detail_matches_frontend_constant():
     # Must equal ACCOUNT_PASSWORD_ERROR in frontend/src/api/apiClient.ts so
     # the interceptor does not log the user out on a typo.
     assert r.json() == {"detail": "Account password verification failed."}
+
+
+# ── Task 32.4: search treats LIKE wildcards literally ───────────────────────
+
+
+def test_search_escapes_like_wildcards():
+    _register("hugo")
+    headers = _login("hugo")
+    _create_credential(headers, site="GitHub")
+    _create_credential(headers, site="50%_off_store")
+
+    def sites(q: str) -> list[str]:
+        r = _client.get("/api/credentials", headers=headers, params={"q": q})
+        assert r.status_code == 200
+        return sorted(c["website_name"] for c in r.json())
+
+    assert sites("%") == ["50%_off_store"]
+    assert sites("_") == ["50%_off_store"]
+    assert sites("0%_o") == ["50%_off_store"]
+    assert sites("git") == ["GitHub"]  # case-insensitive partial match still works
+    assert sites("\\") == []
+
+
+def test_health_endpoint(monkeypatch):
+    from app import database
+
+    monkeypatch.setattr(database, "SessionLocal", _Session)
+    assert _client.get("/api/health").json() == {"status": "ok"}

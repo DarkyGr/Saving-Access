@@ -20,7 +20,7 @@ user) or 404 (not found), never 200/204.
 
 import os
 import string
-from datetime import date, datetime, timezone, timedelta
+from datetime import date, datetime, timedelta, UTC
 
 from cryptography.fernet import Fernet
 from hypothesis import given, settings, assume, HealthCheck
@@ -137,14 +137,12 @@ def _make_jwt(user_id: int, role: str = "Admin") -> str:
     the token is always signed with the same secret that AuthService.verify_token
     will use — even when another test file changes JWT_SECRET between test runs.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "user_id": user_id,
         "role": role,
         "exp": now + timedelta(minutes=15),
     }
-    secret = os.environ.get("JWT_SECRET", _TEST_JWT_SECRET)
-    algorithm = os.environ.get("JWT_ALGORITHM", _TEST_JWT_ALGORITHM)
     # Restore the known test secret so AuthService decodes with the same key.
     os.environ["JWT_SECRET"] = _TEST_JWT_SECRET
     os.environ["JWT_ALGORITHM"] = _TEST_JWT_ALGORITHM
@@ -167,7 +165,7 @@ def _create_user(username: str, email: str) -> User:
     JSONB-backed profiles or user_profiles tables.
     """
     now_date = date.today()
-    now_time = datetime.now(timezone.utc).time().replace(tzinfo=None)
+    now_time = datetime.now(UTC).time().replace(tzinfo=None)
     # A static bcrypt hash (rounds=4) avoids live hashing overhead.
     # This hash was pre-computed for "TestPass1@2024" at rounds=4.
     password_hash = (
@@ -212,10 +210,19 @@ def _create_credential(owner_id: int, website: str) -> Credential:
 
 
 def _reset_db() -> None:
-    """Delete all rows from test tables to reset state between iterations."""
-    _DB.query(AuditLog).delete()
-    _DB.query(Credential).delete()
-    _DB.query(User).delete()
+    """Delete all rows from test tables to reset state between iterations.
+
+    Request handlers delete rows through their own sessions, so objects in
+    this long-lived session's identity map can be stale. Drop them before
+    deleting, and skip the ORM's in-memory sync of the bulk deletes; with
+    newer Starlette/SQLAlchemy that sync intermittently hit those stale
+    objects ("'NoneType' object has no attribute '__dict__'").
+    """
+    _DB.rollback()
+    _DB.expunge_all()
+    _DB.query(AuditLog).delete(synchronize_session=False)
+    _DB.query(Credential).delete(synchronize_session=False)
+    _DB.query(User).delete(synchronize_session=False)
     _DB.commit()
 
 

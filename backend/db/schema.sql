@@ -135,6 +135,16 @@ CREATE INDEX idx_refresh_tokens_family_id ON refresh_tokens (family_id);
 
 UPDATE alembic_version SET version_num='0002_refresh_tokens' WHERE alembic_version.version_num = '0001_baseline';
 
+-- Running upgrade 0002_refresh_tokens -> 0003_search_trgm
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+CREATE INDEX idx_credentials_website_name_trgm ON credentials USING gin (website_name gin_trgm_ops);
+
+CREATE INDEX idx_credentials_email_username_trgm ON credentials USING gin (email_or_username gin_trgm_ops);
+
+UPDATE alembic_version SET version_num='0003_search_trgm' WHERE alembic_version.version_num = '0002_refresh_tokens';
+
 COMMIT;
 
 

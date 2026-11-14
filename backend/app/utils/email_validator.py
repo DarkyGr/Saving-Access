@@ -11,7 +11,6 @@ Requirements: 4.13
 from __future__ import annotations
 
 import logging
-import os
 import re
 from functools import lru_cache
 from pathlib import Path

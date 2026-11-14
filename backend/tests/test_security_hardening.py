@@ -17,29 +17,23 @@ os.environ["JWT_ALGORITHM"] = _TEST_JWT_ALGORITHM
 os.environ["BCRYPT_ROUNDS"] = "4"
 os.environ["ENVIRONMENT"] = "test"
 
-from datetime import datetime, timedelta, timezone  # noqa: E402
+from datetime import datetime, timedelta, UTC  # noqa: E402
 from unittest.mock import patch  # noqa: E402
 
 import jwt  # noqa: E402
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
-from sqlalchemy import create_engine  # noqa: E402
 from sqlalchemy.orm import Session, sessionmaker  # noqa: E402
-from sqlalchemy.pool import StaticPool  # noqa: E402
 
 from app import security  # noqa: E402
+from tests.conftest import make_test_engine  # noqa: E402
 from app.main import app  # noqa: E402
-from app.models import AuditLog, Base, Credential, Profile, RefreshToken, User, UserProfile  # noqa: E402
+from app.models import AuditLog, Credential, Profile, RefreshToken, User, UserProfile  # noqa: E402
 from app.rate_limit import limiter  # noqa: E402
 from app.seed import seed_default_profiles  # noqa: E402
 from app.services.audit_service import AuditService  # noqa: E402
 
-_ENGINE = create_engine(
-    "sqlite:///:memory:",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-Base.metadata.create_all(bind=_ENGINE)
+_ENGINE = make_test_engine()  # PostgreSQL when TEST_DATABASE_URL is set
 _Session = sessionmaker(bind=_ENGINE, autocommit=False, autoflush=False)
 
 
@@ -122,7 +116,7 @@ def test_app_refuses_to_start_with_weak_secret(monkeypatch):
 def test_no_default_jwt_secret(monkeypatch):
     monkeypatch.delenv("JWT_SECRET")
     with pytest.raises(security.SettingsError):
-        security.encode_token({"user_id": 1, "exp": datetime.now(timezone.utc)})
+        security.encode_token({"user_id": 1, "exp": datetime.now(UTC)})
 
 
 # ── 31.2 Hashing and tokens ──────────────────────────────────────────────────
@@ -173,7 +167,7 @@ def test_non_access_token_type_is_rejected(client):
             "user_id": 1,
             "role": "Admin",
             "type": "refresh",
-            "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+            "exp": datetime.now(UTC) + timedelta(minutes=5),
         },
         _TEST_JWT_SECRET,
         algorithm="HS256",
@@ -184,7 +178,7 @@ def test_non_access_token_type_is_rejected(client):
 
 def test_none_algorithm_token_is_rejected(client):
     token = jwt.encode(
-        {"user_id": 1, "role": "Admin", "exp": datetime.now(timezone.utc) + timedelta(minutes=5)},
+        {"user_id": 1, "role": "Admin", "exp": datetime.now(UTC) + timedelta(minutes=5)},
         None,
         algorithm="none",
     )
@@ -321,7 +315,7 @@ def test_expired_refresh_token_is_rejected(client):
     _register_and_login(client, "gus")
     with _Session() as db:
         row = db.query(RefreshToken).one()
-        row.expires_at = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=1)
+        row.expires_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(seconds=1)
         db.commit()
     assert client.post("/api/auth/refresh").status_code == 401
 

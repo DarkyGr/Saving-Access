@@ -11,12 +11,11 @@ Validates: Requirements 4.9, 6.6, 7.5
 """
 
 import os
-from datetime import date, datetime, timezone, timedelta
+from datetime import datetime, timedelta, UTC
 
-import pytest
 from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
-from hypothesis import HealthCheck, assume, given, settings
+from hypothesis import given, settings
 from hypothesis import strategies as st
 import jwt
 from sqlalchemy import create_engine, event
@@ -41,7 +40,7 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 from app.database import get_db  # noqa: E402
 from app.main import app  # noqa: E402
-from app.models import AuditLog, Base, Credential, Profile, User, UserProfile  # noqa: E402
+from app.models import AuditLog, Credential, User  # noqa: E402
 from app.services.auth_service import AuthService  # noqa: E402
 from app.utils.audit_columns import set_creation_audit  # noqa: E402
 
@@ -93,7 +92,7 @@ def _make_session_factory(engine):
 
 def _issue_jwt(user_id: int, role: str = "Admin") -> str:
     """Issue a valid JWT for use in Authorization headers."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "user_id": user_id,
         "role": role,

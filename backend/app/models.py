@@ -208,6 +208,20 @@ class Credential(AuditColumnsMixin, Base):
         Index("idx_credentials_user_id", "user_id"),
         Index("idx_credentials_website_name", "website_name"),
         Index("idx_credentials_email_username", "email_or_username"),
+        # Trigram GIN indexes let PostgreSQL serve ILIKE '%q%' searches
+        # (Requirement 5.2) from an index. Plain indexes on SQLite.
+        Index(
+            "idx_credentials_website_name_trgm",
+            "website_name",
+            postgresql_using="gin",
+            postgresql_ops={"website_name": "gin_trgm_ops"},
+        ),
+        Index(
+            "idx_credentials_email_username_trgm",
+            "email_or_username",
+            postgresql_using="gin",
+            postgresql_ops={"email_or_username": "gin_trgm_ops"},
+        ),
     )
 
     # Relationships

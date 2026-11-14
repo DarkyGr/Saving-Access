@@ -24,6 +24,7 @@ from datetime import datetime, timedelta, UTC
 from sqlalchemy.orm import Session
 
 from app.models import RefreshToken, User
+from app.phase2 import is_deactivated
 from app.utils.audit_columns import set_creation_audit, set_modification_audit
 
 
@@ -82,6 +83,11 @@ class RefreshTokenService:
 
         user = self._db.query(User).filter(User.user_id == row.user_id).first()
         if user is None:
+            return None
+        if is_deactivated(user, now.date()):
+            # Deadline passed during an open session (Requirement 2.9).
+            self._revoke_family(row.family_id, row.user_id)
+            self._db.commit()
             return None
 
         row.revoked_at = now

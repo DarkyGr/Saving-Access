@@ -83,6 +83,10 @@ def validate_settings() -> None:
     except SettingsError as exc:
         problems.append(str(exc))
 
+    from app.phase2 import settings_problems  # local import: phase2 imports models
+
+    problems.extend(settings_problems())
+
     if problems:
         raise SettingsError("Unsafe configuration:\n  - " + "\n  - ".join(problems))
 

@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 
 /**
  * Phase 1 acceptance test: the whole MVP works against the real backend.
@@ -21,12 +23,39 @@ async function signUp(page: Page, username: string) {
   await expect(page).toHaveURL(/\/login$/);
 }
 
-async function logIn(page: Page, username: string) {
+/**
+ * Log in. Email verification is on in E2E (spec Phase 2): accounts created
+ * through sign-up get the "verify your email" modal, which is closed here
+ * unless the caller wants to inspect it.
+ */
+async function logIn(
+  page: Page,
+  username: string,
+  { unverified = false, keepModal = false } = {}
+) {
   await page.goto("/login");
   await page.getByPlaceholder("Enter your username").fill(username);
   await page.getByPlaceholder("Enter your password").fill(ACCOUNT_PW);
   await page.getByRole("button", { name: "Log In", exact: true }).click();
   await expect(page).toHaveURL(/\/credentials$/);
+  const modal = page.getByRole("dialog", { name: "Verify your email" });
+  if (!unverified) {
+    await expect(modal).toHaveCount(0);
+  } else if (!keepModal) {
+    await modal.getByRole("button", { name: "Close" }).click();
+    await expect(modal).toHaveCount(0);
+  }
+}
+
+/** Verification links sent to *email*, oldest first (file email backend). */
+function verificationLinks(email: string): string[] {
+  const dir = process.env.E2E_OUTBOX_DIR!;
+  return readdirSync(dir)
+    .filter((f) => f.endsWith(".json"))
+    .sort()
+    .map((f) => JSON.parse(readFileSync(path.join(dir, f), "utf-8")) as { to: string; body: string })
+    .filter((m) => m.to === email)
+    .map((m) => /https?:\/\/\S+\/verify-email\?token=[\w-]+/.exec(m.body)![0]);
 }
 
 async function confirmAccountPassword(page: Page, password = ACCOUNT_PW) {
@@ -40,7 +69,7 @@ test("user lifecycle: sign up, log in, save, search, reveal, edit, delete, logou
 
   // B1: login lands on /credentials instead of bouncing back to /login.
   // B2 + B5: the new user has a default profile, so ProtectedRoute lets them in.
-  await logIn(page, user);
+  await logIn(page, user, { unverified: true });
   await expect(page.getByRole("heading", { name: "My Credentials" })).toBeVisible();
 
   // B7: header with user, language toggle and logout.
@@ -145,7 +174,7 @@ test("admin: create via CLI, see admin pages, reassign a user's profile", async 
   await page.getByRole("button", { name: "Log Out" }).click();
 
   // The user now only sees the list screen; /credentials/new is forbidden.
-  await logIn(page, user);
+  await logIn(page, user, { unverified: true });
   await expect(page.getByRole("link", { name: "Save Credential" })).toHaveCount(0);
   // Client-side navigation: a full page.goto would reload and drop the
   // in-memory token, which would prove nothing about permissions.
@@ -154,4 +183,76 @@ test("admin: create via CLI, see admin pages, reassign a user's profile", async 
     window.dispatchEvent(new PopStateEvent("popstate"));
   });
   await expect(page).toHaveURL(/\/403$/);
+});
+
+function backend(args: string[]) {
+  return execFileSync("python", args, {
+    cwd: process.env.E2E_BACKEND_DIR,
+    env: {
+      ...process.env,
+      DATABASE_URL: process.env.E2E_DATABASE_URL,
+      FERNET_KEY: process.env.E2E_FERNET_KEY,
+      JWT_SECRET: process.env.E2E_JWT_SECRET,
+    },
+  }).toString();
+}
+
+test("spec Phase 2: verify email, resend, deactivation and reactivation", async ({ page }) => {
+  const name = `verify_${run}`;
+  const email = `${name}@example.com`;
+
+  // 1.9 / 1.10: sign-up mentions the email and sends one link.
+  await signUp(page, name);
+  await expect(page.getByRole("status")).toContainText("verify your address");
+  await expect.poll(() => verificationLinks(email).length).toBe(1);
+
+  // 2.7: the modal shows the deadline 30 days ahead; 2.8: resend sends a new link.
+  await logIn(page, name, { unverified: true, keepModal: true });
+  const modal = page.getByRole("dialog", { name: "Verify your email" });
+  await expect(modal).toContainText("after that date the account will be deactivated");
+  await modal.getByRole("button", { name: "Resend email" }).click();
+  await expect(modal.getByRole("status")).toContainText("new verification email");
+  await expect.poll(() => verificationLinks(email).length).toBe(2);
+  await modal.getByRole("button", { name: "Close" }).click();
+  await page.getByRole("button", { name: "Log Out" }).click();
+
+  // 2.9: past the deadline and unverified → login refused with an explanation.
+  backend([
+    "-c",
+    [
+      "import datetime, os, sys",
+      "from sqlalchemy import create_engine, text",
+      "with create_engine(os.environ['DATABASE_URL']).begin() as c:",
+      "    c.execute(text('UPDATE users SET deactivation_deadline = :d WHERE username = :u'),",
+      "              {'d': datetime.date(2000, 1, 1), 'u': sys.argv[1]})",
+    ].join("\n"),
+    name,
+  ]);
+  await page.goto("/login");
+  await page.getByPlaceholder("Enter your username").fill(name);
+  await page.getByPlaceholder("Enter your password").fill(ACCOUNT_PW);
+  await page.getByRole("button", { name: "Log In", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("deactivated");
+  await expect(page).toHaveURL(/\/login$/);
+
+  // A link cannot reactivate it…
+  await page.goto(verificationLinks(email)[1]);
+  await expect(page.getByRole("alert")).toContainText("This account is deactivated");
+
+  // …the admin CLI can.
+  expect(backend(["-m", "app.cli", "verify-email", "--username", name])).toContain("verified");
+  await logIn(page, name);
+  await page.getByRole("button", { name: "Log Out" }).click();
+
+  // 1.10: a fresh account verifies through the emailed link, once.
+  const fresh = `fresh_${run}`;
+  await signUp(page, fresh);
+  await expect.poll(() => verificationLinks(`${fresh}@example.com`).length).toBe(1);
+  const link = verificationLinks(`${fresh}@example.com`)[0];
+  expect(link).toMatch(/^http:\/\/localhost:5174\/verify-email\?token=/);
+  await page.goto(link);
+  await expect(page.getByRole("alert")).toContainText("has been verified");
+  await page.goto(link);
+  await expect(page.getByRole("alert")).toContainText("already used");
+  await logIn(page, fresh); // no modal any more
 });

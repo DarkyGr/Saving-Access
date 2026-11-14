@@ -80,7 +80,7 @@ function buildPasswordRules(t: (key: string) => string): PasswordRule[] {
  *  1.8  Backend sets audit columns (handled server-side).
  */
 export default function SignUpPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
 
   const passwordRules = buildPasswordRules(t);
@@ -169,10 +169,12 @@ export default function SignUpPage() {
         email: fields.email.trim(),
         password: fields.password,
         password_confirmation: fields.password_confirmation,
+        // Language of the verification email (spec Phase 2, task 33).
+        language: i18n.language,
       });
 
       // 201 Created — redirect to /login (Requirement 1.1)
-      navigate("/login", { replace: true });
+      navigate("/login", { replace: true, state: { registered: true } });
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         const status = err.response?.status;

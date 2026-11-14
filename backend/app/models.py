@@ -309,3 +309,32 @@ class RefreshToken(AuditColumnsMixin, Base):
         Index("idx_refresh_tokens_user_id", "user_id"),
         Index("idx_refresh_tokens_family_id", "family_id"),
     )
+
+
+# ---------------------------------------------------------------------------
+# email_verification_tokens  (task 33.2)
+# ---------------------------------------------------------------------------
+
+class EmailVerificationToken(AuditColumnsMixin, Base):
+    """
+    One-time email verification link (Requirements 1.10, 2.8).
+
+    Only the SHA-256 of the token travels to the database. ``used_at`` is set
+    when the link is consumed; links also expire at ``expires_at``.
+    """
+
+    __tablename__ = "email_verification_tokens"
+
+    email_verification_token_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    token_hash = Column(String(64), nullable=False, unique=True)
+    expires_at = Column(DateTime, nullable=False)
+    used_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        Index("idx_email_verification_tokens_user_id", "user_id"),
+    )

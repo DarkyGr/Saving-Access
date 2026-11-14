@@ -9,13 +9,11 @@
     "login": "Log In",
     "signup": "Sign Up"
   },
-
   "language": {
     "toggle": "Language",
     "en": "English",
     "es": "Spanish"
   },
-
   "login": {
     "title": "Log In",
     "usernameLabel": "Username",
@@ -29,9 +27,15 @@
     "serverError": "An unexpected error occurred. Please try again.",
     "errorUsernameRequired": "Username is required.",
     "errorPasswordRequired": "Password is required.",
-    "sessionExpired": "Your session has expired. Please log in again."
+    "sessionExpired": "Your session has expired. Please log in again.",
+    "registered": "Account created. You can log in now.",
+    "registeredVerify": "Account created. We sent you an email to verify your address — please verify it within 30 days.",
+    "accountDeactivated": "This account is deactivated because its email was not verified within 30 days. Contact the administrator.",
+    "captchaRequired": "Please complete the CAPTCHA challenge.",
+    "captchaFailed": "The CAPTCHA check failed. Please try again.",
+    "captchaUnavailable": "The CAPTCHA could not be loaded. Check your connection or disable blockers for this site.",
+    "tooManyAttempts": "Too many attempts. Please wait a minute and try again."
   },
-
   "signup": {
     "title": "Create Account",
     "usernameLabel": "Username",
@@ -52,7 +56,6 @@
     "errorInvalidEmail": "Please enter a valid email address.",
     "errorDisposableEmail": "Disposable email addresses are not allowed."
   },
-
   "passwordRules": {
     "title": "Password Requirements",
     "minLength": "At least 12 characters",
@@ -62,7 +65,6 @@
     "symbol": "At least one symbol (@, $, or !)",
     "mismatch": "Passwords do not match"
   },
-
   "credentials": {
     "pageTitle": "My Credentials",
     "searchPlaceholder": "Search by website or email / username…",
@@ -78,14 +80,12 @@
     "hideButton": "Hide password",
     "addNew": "Save New Credential"
   },
-
   "visibilityTimer": {
     "label": "Auto-hides in",
     "seconds": "{{count}} second",
     "seconds_plural": "{{count}} seconds",
     "expired": "Password hidden"
   },
-
   "saveCredential": {
     "pageTitle": "Save Credential",
     "websiteLabel": "Website Name",
@@ -102,7 +102,6 @@
     "successMessage": "Credential saved successfully.",
     "errorSaveFailed": "Failed to save credential. Please try again."
   },
-
   "editCredential": {
     "pageTitle": "Edit Credential",
     "websiteLabel": "Website Name",
@@ -120,7 +119,6 @@
     "errorUpdateFailed": "Failed to update credential. Please try again.",
     "errorNotFound": "Credential not found."
   },
-
   "passwordConfirmModal": {
     "title": "Confirm Your Account Password",
     "description": "Enter your account password to continue.",
@@ -131,21 +129,18 @@
     "errorWrongPassword": "Incorrect account password.",
     "errorGeneric": "An error occurred. Please try again."
   },
-
   "confirmDeleteModal": {
     "title": "Delete Credential",
     "body": "Are you sure you want to permanently delete the credential for {{website}}? This action cannot be undone.",
     "confirmButton": "Delete",
     "cancelButton": "Cancel"
   },
-
   "alreadyVisibleModal": {
     "title": "Password Already Visible",
     "body": "Another password is currently visible. Do you want to hide it and reveal this one?",
     "continueButton": "Continue",
     "cancelButton": "Cancel"
   },
-
   "admin": {
     "usersPageTitle": "Manage Users",
     "profilesPageTitle": "Permission Profiles",
@@ -165,7 +160,6 @@
     "permittedScreensLabel": "Permitted Screens",
     "noProfiles": "No profiles defined."
   },
-
   "adminProfiles": {
     "description": "Profiles control which screens a User role can access. Assign a profile to a user on the Manage Users page.",
     "adminNote": "Admin accounts always have full access to every screen and are not subject to profile restrictions.",
@@ -183,13 +177,11 @@
       "admin.profiles": "Permission Profiles"
     }
   },
-
   "forbidden": {
     "title": "403 — Access Forbidden",
     "message": "You do not have permission to view this page.",
     "goHomeButton": "Go to My Credentials"
   },
-
   "errors": {
     "generic": "Something went wrong. Please try again.",
     "unauthorized": "You are not authorized to perform this action.",
@@ -199,7 +191,6 @@
     "validationError": "Please correct the errors in the form.",
     "serverError": "A server error occurred. Please try again later."
   },
-
   "common": {
     "loading": "Loading…",
     "save": "Save",
@@ -210,5 +201,23 @@
     "close": "Close",
     "back": "Back",
     "required": "Required"
+  },
+  "verifyEmail": {
+    "modalTitle": "Verify your email",
+    "modalBody": "Your email address is not verified yet. Open the link we sent you to verify it.",
+    "modalBodyDeadline": "Your email address is not verified yet. Open the link we sent you before {{date}}; after that date the account will be deactivated.",
+    "resend": "Resend email",
+    "resendSent": "We sent you a new verification email.",
+    "resendTooMany": "You have requested several emails already. Please try again later.",
+    "resendError": "The email could not be sent. Please try again.",
+    "alreadyVerified": "Your email is already verified.",
+    "close": "Close",
+    "pageTitle": "Email verification",
+    "verifying": "Verifying your email…",
+    "verified": "Your email has been verified. Thank you!",
+    "invalidLink": "This verification link is invalid, has expired or was already used. Log in to request a new one.",
+    "deactivated": "This account is deactivated. Contact the administrator.",
+    "serverError": "An unexpected error occurred. Please try again.",
+    "goToLogin": "Go to log in"
   }
 }

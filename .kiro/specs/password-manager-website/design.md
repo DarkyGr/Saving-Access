@@ -104,7 +104,7 @@ The `FERNET_KEY` is a 32-byte URL-safe base64 key read from a server-side enviro
 
 | Router | Base Path | Responsibilities |
 |--------|-----------|-----------------|
-| `auth_router` | `/api/auth` | Register, login, logout, token refresh, email verification (Phase 2) |
+| `auth_router` | `/api/auth` | Register, login, logout, token refresh, `GET /config` (CAPTCHA site key, verification on/off), `POST /verify-email` (Phase 2) |
 | `credentials_router` | `/api/credentials` | CRUD for credentials; reveal endpoint |
 | `admin_router` | `/api/admin` | User listing, profile assignment, audit log view |
 
@@ -471,6 +471,7 @@ JWT Configuration:
 - Algorithm: HS256
 - Expiry: 15 minutes (access token)
 - Transmission: HTTPS only; `Authorization: Bearer` header; token stored in React memory state (not `localStorage` or cookies) to reduce XSS exposure
+- Login / refresh body (task 33): also `email_verification_required` (bool) and `deactivation_deadline` (ISO date or null); the frontend shows the verification modal after a login when the first is true.
 - Claims: `user_id`, `username`, `role`, `exp`. The frontend `AuthContext` rejects a token missing any of the first three (task 30.1).
 - Refresh (task 31.5): login also sets an opaque refresh token in an `httpOnly; Secure; SameSite=Strict; Path=/api/auth` cookie (`sp_refresh`, lifetime `REFRESH_EXPIRE_HOURS`, default 8 h). Only its SHA-256 is stored in `refresh_tokens`. `POST /api/auth/refresh` rotates it and returns a new access token; reusing a rotated token revokes its whole family. `POST /api/auth/logout` revokes it. The SPA calls refresh once on page load (session restore) and once on an expired-token 401 before retrying the request; if refresh fails it goes to `/login`. The access token itself is still only in memory.
 - A 401 whose detail is `"Account password verification failed."` is a wrong re-entered password, not an expired session: the frontend interceptor shows the inline error instead of redirecting (task 30.6).
@@ -556,8 +557,8 @@ Implementation:
 | Brute-force | Per-IP limits on login/register/refresh and per-user limits on account-password checks (slowapi, task 31.3); unknown usernames still pay the bcrypt cost |
 | HTTPS | Production: Caddy terminates TLS (automatic certificates), redirects HTTP→HTTPS and sets HSTS, CSP and other security headers (task 32.6) |
 | CORS | FastAPI `CORSMiddleware` configured to allow only the known frontend origin |
-| Brute-force (Phase 2 of the spec) | hCaptcha on login form |
-| Email verification (Phase 2) | Unique token link; 30-day deactivation deadline |
+| Brute-force (Phase 2 of the spec) | hCaptcha on the login form when `HCAPTCHA_SITE_KEY`/`HCAPTCHA_SECRET` are set; verified server-side before the password, fails closed (task 33.4) |
+| Email verification (Phase 2) | `EMAIL_VERIFICATION_ENABLED`: one-time link (SHA-256 stored in `email_verification_tokens`, 48 h), deadline = creation + 30 days, login 403 after it; resend keeps the deadline; `app.cli verify-email` reactivates (task 33) |
 | Credential ownership | All credential queries include `WHERE user_id = <authenticated_user_id>` |
 | Fernet key rotation | `FERNET_KEY="<new>,<old>"` + `python -m app.cli rotate-fernet-key` re-encrypts every row in one transaction, no downtime (task 32.5, ARCHITECTURE.md §6) |
 | Database privileges | Production API connects as `app_user` (DML only); migrations run separately as the owner (task 32.6) |
@@ -737,7 +738,11 @@ Events logged:
 | Wrong account password on sensitive op | 401 | `{"detail": "Account password verification failed."}` |
 | Accessing another user's credential | 403 | `{"detail": "Forbidden."}` |
 | Missing profile permission | 403 | `{"detail": "Access denied."}` |
-| Resource not found | 404 | `{"detail": "Not found."}` |
+| Resource not found | 404 | `{"detail": "Not found."}` (also Phase 2 endpoints while the feature is off) |
+| Unverified account past its deadline (login, link) | 403 | `{"detail": "Account deactivated."}` |
+| CAPTCHA missing or rejected | 400 | `{"detail": "CAPTCHA verification failed."}` |
+| Unknown, used or expired verification link | 400 | `{"detail": "Invalid or expired verification link."}` |
+| Resend for an already verified email | 409 | `{"detail": "Email already verified."}` |
 | Validation error (pydantic) | 422 | Pydantic error detail |
 | Unexpected server error | 500 | `{"detail": "Internal server error."}` (no stack trace in production) |
 
@@ -788,7 +793,7 @@ Properties 8 (profile audit columns) and 15 (concurrent isolation) use mocked DB
 - Full login → create credential → reveal → edit → delete flow against a test PostgreSQL instance
 - Admin profile assignment and permission enforcement end-to-end
 - Concurrent writes from two simulated users verify row-level isolation
-- Phase 2: email dispatch mock, deactivation deadline enforcement
+- Phase 2 (`tests/test_phase2_verification.py`, also on PostgreSQL in CI): file/SMTP email backends, link lifecycle, resend keeps the deadline, deactivation at login/refresh/link, CLI reactivation, CAPTCHA (mocked hCaptcha, fails closed), settings validation; Playwright runs with verification on
 
 ### Contract, Security and Migration Tests (added in tasks 30–31)
 

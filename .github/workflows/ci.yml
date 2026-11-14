@@ -58,7 +58,7 @@ jobs:
       - name: API tests on PostgreSQL
         env:
           TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/savepass_test
-        run: pytest tests/test_mvp_contract.py tests/test_security_hardening.py tests/test_key_rotation.py -q
+        run: pytest tests/test_mvp_contract.py tests/test_security_hardening.py tests/test_key_rotation.py tests/test_phase2_verification.py -q
 
   frontend:
     name: Frontend (lint, types, unit tests, build, audit)

@@ -13,6 +13,12 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models import User
+from app.phase2 import (
+    deactivation_deadline_for,
+    email_verification_enabled,
+    is_deactivated,
+    verification_required,
+)
 from app.utils.audit_columns import utc_date_time
 from app.security import (
     ExpiredSignatureError,
@@ -29,6 +35,8 @@ from app.utils.email_validator import validate_email as _validate_email_format
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+ACCOUNT_DEACTIVATED = "Account deactivated."
 
 _REQUIRED_SYMBOLS = set("@$!")
 _MIN_LENGTH = 12
@@ -141,6 +149,10 @@ class AuthService:
             password_hash=password_hash,
             role="User",
             email_verified=False,
+            # Requirement 1.9 — only when spec Phase 2 is switched on.
+            deactivation_deadline=(
+                deactivation_deadline_for(now_date) if email_verification_enabled() else None
+            ),
             creation_date=now_date,
             creation_time=now_time,
             creation_user_id=None,  # self-referential; set after first commit
@@ -192,6 +204,11 @@ class AuthService:
         if not verify_password(password, user.password_hash):
             raise _generic
 
+        # Requirement 2.9 — checked only after the password matched, so it
+        # reveals nothing to someone who does not know the password.
+        if is_deactivated(user, utc_date_time()[0]):
+            raise HTTPException(status_code=403, detail=ACCOUNT_DEACTIVATED)
+
         return self.issue_access_token(user)
 
     def issue_access_token(self, user: User) -> dict:
@@ -213,6 +230,11 @@ class AuthService:
             "access_token": encode_token(token_data),
             "token_type": "bearer",
             "expires_in": self._expire_minutes * 60,
+            # Requirement 2.7 — the frontend shows the verification modal.
+            "email_verification_required": verification_required(user),
+            "deactivation_deadline": (
+                user.deactivation_deadline.isoformat() if user.deactivation_deadline else None
+            ),
         }
 
     def verify_token(self, token: str) -> dict:

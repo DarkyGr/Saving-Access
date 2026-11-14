@@ -7,6 +7,7 @@ Usage (from backend/ or inside the backend container), after
     python -m app.cli seed
     python -m app.cli create-admin --username admin --email admin@example.com
     python -m app.cli promote --username alice
+    python -m app.cli verify-email --username alice
     python -m app.cli rotate-fernet-key [--dry-run]
 
 ``create-admin`` reads the password from the ``ADMIN_PASSWORD`` env var, or
@@ -89,6 +90,20 @@ def cmd_promote(args: argparse.Namespace) -> None:
         print(f"'{user.username}' is now Admin.")
 
 
+def cmd_verify_email(args: argparse.Namespace) -> None:
+    """Mark a user's email as verified (support / reactivating a deactivated account)."""
+    from app.utils.audit_columns import set_modification_audit
+
+    with SessionLocal() as db:
+        user = db.query(User).filter(User.username == args.username).first()
+        if user is None:
+            sys.exit(f"User '{args.username}' not found.")
+        user.email_verified = True
+        set_modification_audit(user, user_id=user.user_id)
+        db.commit()
+        print(f"'{user.username}' email marked as verified; the account is active.")
+
+
 def cmd_rotate_fernet_key(args: argparse.Namespace) -> None:
     """Re-encrypt every saved credential with the first key in FERNET_KEY.
 
@@ -139,6 +154,12 @@ def main(argv: list[str] | None = None) -> None:
     p_promote = sub.add_parser("promote", help="Give an existing user the Admin role")
     p_promote.add_argument("--username", required=True)
     p_promote.set_defaults(func=cmd_promote)
+
+    p_verify = sub.add_parser(
+        "verify-email", help="Mark a user's email as verified (also reactivates the account)"
+    )
+    p_verify.add_argument("--username", required=True)
+    p_verify.set_defaults(func=cmd_verify_email)
 
     p_rotate = sub.add_parser(
         "rotate-fernet-key",

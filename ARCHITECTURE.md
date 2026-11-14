@@ -143,8 +143,28 @@ Details:
 | `POST /api/auth/register` | client IP | 5/minute |
 | `POST /api/auth/refresh` | client IP | 30/minute |
 | save / reveal / edit / delete credential | user id from the token | 10/minute |
+| `POST /api/auth/verify-email` | client IP | 10/minute |
+| `POST /api/profile/verification-email` (resend) | user id from the token | 3/hour |
 
 Exceeding a limit returns `429` with `Retry-After: 60`. Counters are in memory by default (`RATE_LIMIT_STORAGE=memory://`): with more than one worker or replica, point it to a shared store such as Redis.
+
+---
+
+### Email verification, deactivation and CAPTCHA (spec Phase 2, task 33)
+
+Both features are **off by default** and switched on by configuration; the backend refuses to start when they are half-configured.
+
+| Setting | Effect |
+|---|---|
+| `EMAIL_VERIFICATION_ENABLED=true` | Sign-up stores `deactivation_deadline = creation date + 30 days` and sends a verification email. |
+| `HCAPTCHA_SITE_KEY` + `HCAPTCHA_SECRET` | `POST /api/auth/login` requires a valid `captcha_token`, checked with hCaptcha before the password. |
+
+- **Links.** `secrets.token_urlsafe(32)`; only the SHA-256 is stored in `email_verification_tokens` (migration 0004). A link works once and expires after `VERIFICATION_TOKEN_HOURS` (48). The link points to the SPA (`APP_BASE_URL/verify-email?token=…`), which POSTs the token to `/api/auth/verify-email`, so mail scanners that only open the page do not consume it. The page sends `Referrer-Policy: no-referrer` (Caddy).
+- **Resend** (`POST /api/profile/verification-email`, logged-in user) issues a new link and never changes the deadline (Requirement 2.8). Earlier links keep working until they expire.
+- **Login.** `/api/auth/login` and `/api/auth/refresh` return `email_verification_required` and `deactivation_deadline`; the SPA shows the reminder modal after a login. Once the deadline has passed (the day after it) an unverified account gets `403 "Account deactivated."` — only after the password matched, so nothing leaks to someone without it. An open session ends at the next refresh. Verifying with an old link is refused too; `python -m app.cli verify-email --username X` reactivates the account.
+- Accounts without a deadline (created before the feature was switched on, or with `create-admin`) are never deactivated automatically.
+- **Email delivery** (`EMAIL_BACKEND`): `console` prints the email, `smtp` sends it (`SMTP_*`, STARTTLS by default), `file` writes JSON files (E2E tests). Sending runs after the response; a failure is logged and the user can resend.
+- **CAPTCHA** fails closed: missing token, rejected token or unreachable hCaptcha → `400 "CAPTCHA verification failed."`. The SPA loads `js.hcaptcha.com` only when `GET /api/auth/config` returns a site key; the production CSP allows `hcaptcha.com` for scripts, frames, styles and connections.
 
 ---
 
@@ -344,4 +364,4 @@ Frontend and API share one origin, so the refresh cookie (`SameSite=Strict`) and
 - **Rate-limit counters** live in each process's memory. Production runs a single uvicorn worker; scaling out needs `RATE_LIMIT_STORAGE` pointing to a shared store such as Redis.
 - **react-router 6** has a moderate open-redirect advisory fixed only in v7 (task 31.8); not reachable because the app navigates only to static paths.
 - **Backups** are not automated; schedule `pg_dump` of the `postgres_data` volume and keep the Fernet key stored separately.
-- **Spec Phase 2** (CAPTCHA, email verification, account deactivation) is not implemented.
+- **Deactivation** is evaluated at login/refresh time; there is no job that notifies users before their deadline or deletes deactivated accounts.

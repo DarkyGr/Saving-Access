@@ -30,6 +30,9 @@ process.env.E2E_JWT_SECRET ??= randomBytes(32).toString("hex");
 const postgresUrl = process.env.E2E_POSTGRES_URL;
 process.env.E2E_DATABASE_URL = postgresUrl ?? `sqlite:///${dbFile.replace(/\\/g, "/")}`;
 process.env.E2E_BACKEND_DIR = backendDir;
+// Spec Phase 2 is on in E2E: verification emails land here as JSON files.
+const outboxDir = path.join(backendDir, "e2e-outbox");
+process.env.E2E_OUTBOX_DIR = outboxDir;
 
 const backendEnv = {
   DATABASE_URL: process.env.E2E_DATABASE_URL,
@@ -40,6 +43,10 @@ const backendEnv = {
   BCRYPT_ROUNDS: "4",
   CORS_ORIGINS: `http://localhost:${WEB_PORT}`,
   ENVIRONMENT: "e2e",
+  EMAIL_VERIFICATION_ENABLED: "true",
+  APP_BASE_URL: `http://localhost:${WEB_PORT}`,
+  EMAIL_BACKEND: "file",
+  EMAIL_OUTBOX_DIR: outboxDir,
 };
 
 export default defineConfig({
@@ -61,6 +68,7 @@ export default defineConfig({
         (postgresUrl
           ? `python -m alembic downgrade base && `
           : `python -c "import pathlib; pathlib.Path(r'${dbFile}').unlink(missing_ok=True)" && `) +
+        `python -c "import shutil; shutil.rmtree(r'${outboxDir}', ignore_errors=True)" && ` +
         `python -m alembic upgrade head && ` +
         `python -m uvicorn app.main:app --port ${API_PORT}`,
       cwd: backendDir,

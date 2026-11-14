@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import apiClient from "../api/apiClient";
 import { useAuth } from "../context/AuthContext";
 import LanguageToggle from "./LanguageToggle";
+import VerifyEmailModal from "./VerifyEmailModal";
 
 /**
  * AppLayout — application shell rendered around every route.
@@ -57,7 +58,7 @@ function usePermissions(token: string | null, role: string | undefined): string[
 
 export default function AppLayout() {
   const { t } = useTranslation();
-  const { token, user, logout } = useAuth();
+  const { token, user, logout, verificationNotice, dismissVerificationNotice } = useAuth();
   const navigate = useNavigate();
   const permissions = usePermissions(token, user?.role);
 
@@ -111,6 +112,12 @@ export default function AppLayout() {
         </div>
       </header>
       <Outlet />
+      {token && verificationNotice && (
+        <VerifyEmailModal
+          deadline={verificationNotice.deadline}
+          onClose={dismissVerificationNotice}
+        />
+      )}
     </>
   );
 }

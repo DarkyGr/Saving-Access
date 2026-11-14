@@ -7,6 +7,8 @@ Endpoints:
                              + Set-Cookie refresh token (httpOnly)
   POST /api/auth/refresh   → 200 {access_token, ...} + rotated cookie, or 401
   POST /api/auth/logout    → 204, revokes the refresh token and clears the cookie
+  GET  /api/auth/config    → 200 {captcha_site_key, email_verification}
+  POST /api/auth/verify-email → 200, consumes a verification link (spec Phase 2)
 
 The access token is returned in the body and kept in React memory only. The
 refresh token travels exclusively in an httpOnly cookie scoped to
@@ -19,24 +21,34 @@ Cookie settings (env):
   COOKIE_SAMESITE  "strict" (default) | "lax" | "none" — use "none" (with
                    Secure) only if frontend and API are on different sites.
 
-Requirements: 1.1–1.8, 2.1–2.5
+Requirements: 1.1–1.10, 2.1–2.9
 """
 
 import os
 
-from fastapi import APIRouter, Cookie, Depends, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.rate_limit import LOGIN_LIMIT, REFRESH_LIMIT, REGISTER_LIMIT, limiter
+from app.phase2 import captcha_enabled, captcha_site_key, email_verification_enabled
+from app.rate_limit import LOGIN_LIMIT, REFRESH_LIMIT, REGISTER_LIMIT, VERIFY_EMAIL_LIMIT, limiter
 from app.services.auth_service import AuthService
+from app.services.captcha_service import verify_captcha
+from app.services.email_sender import send_email
+from app.services.email_verification_service import (
+    EmailVerificationService,
+    VerifyResult,
+    build_verification_email,
+)
 from app.services.refresh_token_service import RefreshTokenService, refresh_lifetime
 
 router = APIRouter()
 
 REFRESH_COOKIE = "sp_refresh"
+CAPTCHA_FAILED = "CAPTCHA verification failed."
+INVALID_VERIFICATION_LINK = "Invalid or expired verification link."
 _COOKIE_PATH = "/api/auth"
 
 
@@ -50,11 +62,24 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
     password_confirmation: str
+    # UI language for the verification email ("en" / "es").
+    language: str | None = Field(default=None, max_length=8)
 
 
 class LoginRequest(BaseModel):
     username: str
     password: str
+    # hCaptcha response token; required only when CAPTCHA is configured.
+    captcha_token: str | None = Field(default=None, max_length=4096)
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=256)
+
+
+class AuthConfigResponse(BaseModel):
+    captcha_site_key: str | None
+    email_verification: bool
 
 
 class RegisterResponse(BaseModel):
@@ -67,6 +92,8 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str
     expires_in: int
+    email_verification_required: bool = False
+    deactivation_deadline: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -105,10 +132,19 @@ def _clear_refresh_cookie(response: Response) -> None:
 def register(
     request: Request,
     body: RegisterRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> RegisterResponse:
-    """Create a new user account (400/422 on validation or uniqueness failure)."""
-    user = AuthService(db).register(body.model_dump())
+    """Create a new user account (400/422 on validation or uniqueness failure).
+
+    With email verification on, a verification email is sent after the
+    response (Requirement 1.10); a delivery failure does not undo sign-up.
+    """
+    user = AuthService(db).register(body.model_dump(exclude={"language"}))
+    if email_verification_enabled():
+        raw = EmailVerificationService(db).issue(user)
+        db.commit()
+        background_tasks.add_task(send_email, build_verification_email(user, raw, body.language))
     return RegisterResponse(user_id=user.user_id, username=user.username, role=user.role)
 
 
@@ -128,10 +164,16 @@ def login(
     """Authenticate with username and password.
 
     Returns a 15-minute access JWT and sets the refresh cookie. Any failure
-    returns the same generic 401 (Requirement 2.3).
+    returns the same generic 401 (Requirement 2.3). With CAPTCHA configured
+    the challenge must pass first (400, Requirement 2.6); an unverified
+    account past its deadline gets 403 (Requirement 2.9).
     """
+    if captcha_enabled() and not verify_captcha(
+        body.captcha_token, request.client.host if request.client else None
+    ):
+        raise HTTPException(status_code=400, detail=CAPTCHA_FAILED)
     service = AuthService(db)
-    token_data = service.login(body.model_dump())
+    token_data = service.login(body.model_dump(exclude={"captcha_token"}))
     user_id = service.verify_token(token_data["access_token"])["user_id"]
     raw_refresh = RefreshTokenService(db).issue(user_id)
     db.commit()
@@ -184,3 +226,38 @@ def logout(
     _clear_refresh_cookie(response)
     response.status_code = status.HTTP_204_NO_CONTENT
     return response
+
+
+@router.get(
+    "/config",
+    response_model=AuthConfigResponse,
+    summary="Public settings the login and sign-up pages need",
+)
+def auth_config() -> AuthConfigResponse:
+    return AuthConfigResponse(
+        captcha_site_key=captcha_site_key(),
+        email_verification=email_verification_enabled(),
+    )
+
+
+@router.post(
+    "/verify-email",
+    status_code=status.HTTP_200_OK,
+    summary="Consume an email verification link",
+)
+@limiter.limit(VERIFY_EMAIL_LIMIT)
+def verify_email(
+    request: Request,
+    body: VerifyEmailRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    """200 when verified; 400 for an unknown, used or expired link; 403 when
+    the account was already deactivated (Requirements 1.10, 2.9)."""
+    if not email_verification_enabled():
+        raise HTTPException(status_code=404, detail="Not found.")
+    result = EmailVerificationService(db).verify(body.token)
+    if result is VerifyResult.DEACTIVATED:
+        raise HTTPException(status_code=403, detail="Account deactivated.")
+    if result is VerifyResult.INVALID:
+        raise HTTPException(status_code=400, detail=INVALID_VERIFICATION_LINK)
+    return {"detail": "Email verified."}

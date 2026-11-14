@@ -1,11 +1,13 @@
-import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 
 import apiClient from "../api/apiClient";
 import { useAuth } from "../context/AuthContext";
 import PasswordInput from "../components/PasswordInput";
+import HCaptcha, { type HCaptchaHandle } from "../components/HCaptcha";
+import { getAuthConfig, type AuthConfig } from "../api/authConfig";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -13,6 +15,8 @@ interface LoginResponse {
   access_token: string;
   token_type: string;
   expires_in: number;
+  email_verification_required?: boolean;
+  deactivation_deadline?: string | null;
 }
 
 interface FormErrors {
@@ -34,11 +38,34 @@ interface FormErrors {
  *  2.3  Invalid credentials → generic error (no username/password hint).
  *  2.4  Backend issues JWT; stored in memory only.
  *  2.5  Expired token → redirect to /login (handled by apiClient interceptor).
+ *  2.6  hCaptcha challenge before submitting, when configured (task 33).
+ *  2.7  Unverified email → verification modal after login (AppLayout).
+ *  2.9  Deactivated account → explicit message (403).
  */
 export default function LoginPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const justRegistered = Boolean(
+    (location.state as { registered?: boolean } | null)?.registered
+  );
+
+  const [config, setConfig] = useState<AuthConfig | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<HCaptchaHandle>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getAuthConfig().then((c) => {
+      if (!cancelled) setConfig(c);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const siteKey = config?.captcha_site_key ?? null;
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -72,20 +99,40 @@ export default function LoginPage() {
     }
     setFieldErrors({});
 
+    if (siteKey && !captchaToken) {
+      setApiError(t("login.captchaRequired"));
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const { data } = await apiClient.post<LoginResponse>("/api/auth/login", {
         username: username.trim(),
         password,
+        ...(siteKey ? { captcha_token: captchaToken } : {}),
       });
 
-      login(data.access_token);
+      login(
+        data.access_token,
+        data.email_verification_required
+          ? { deadline: data.deactivation_deadline ?? null }
+          : null
+      );
       navigate("/credentials", { replace: true });
     } catch (err: unknown) {
+      // hCaptcha tokens are single-use: always ask for a new challenge.
+      captchaRef.current?.reset();
       if (axios.isAxiosError(err)) {
-        if (err.response?.status === 401) {
+        const status = err.response?.status;
+        if (status === 401) {
           // Requirement 2.3: generic error — no hint about which field was wrong
           setApiError(t("login.genericError"));
+        } else if (status === 403) {
+          setApiError(t("login.accountDeactivated"));
+        } else if (status === 400) {
+          setApiError(t("login.captchaFailed"));
+        } else if (status === 429) {
+          setApiError(t("login.tooManyAttempts"));
         } else {
           setApiError(t("login.serverError"));
         }
@@ -109,6 +156,17 @@ export default function LoginPage() {
           </h1>
 
           <form onSubmit={handleSubmit} noValidate aria-label={t("login.title")}>
+            {justRegistered && !apiError && (
+              <div
+                role="status"
+                className="mb-5 rounded-md bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800"
+              >
+                {config?.email_verification
+                  ? t("login.registeredVerify")
+                  : t("login.registered")}
+              </div>
+            )}
+
             {/* API-level error banner */}
             {apiError && (
               <div
@@ -176,6 +234,18 @@ export default function LoginPage() {
                 error={fieldErrors.password}
               />
             </div>
+
+            {siteKey && (
+              <div className="mb-6">
+                <HCaptcha
+                  ref={captchaRef}
+                  siteKey={siteKey}
+                  language={i18n.language}
+                  onToken={setCaptchaToken}
+                  onLoadError={() => setApiError(t("login.captchaUnavailable"))}
+                />
+              </div>
+            )}
 
             {/* Submit */}
             <button

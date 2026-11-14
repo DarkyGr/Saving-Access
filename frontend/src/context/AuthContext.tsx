@@ -18,15 +18,24 @@ export interface JwtUser {
   role: "User" | "Admin";
 }
 
+/** Shown once after logging in with an unverified email (Requirement 2.7). */
+export interface VerificationNotice {
+  /** ISO date (YYYY-MM-DD) after which the account is deactivated, or null. */
+  deadline: string | null;
+}
+
 export interface AuthContextValue {
   /** Raw JWT string, or null when logged out. Stored in React state only — never localStorage. */
   token: string | null;
   /** Decoded user claims derived from the JWT, or null when logged out. */
   user: JwtUser | null;
   /** Persist a new JWT (called after a successful login). */
-  login: (token: string) => void;
+  login: (token: string, notice?: VerificationNotice | null) => void;
   /** Clear all auth state (called on explicit logout or on 401). */
   logout: () => void;
+  /** Pending "verify your email" notice, or null. */
+  verificationNotice: VerificationNotice | null;
+  dismissVerificationNotice: () => void;
 }
 
 // ── Context ──────────────────────────────────────────────────────────────────
@@ -97,8 +106,11 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<JwtUser | null>(null);
+  const [verificationNotice, setVerificationNotice] = useState<VerificationNotice | null>(null);
 
-  const login = useCallback((newToken: string) => {
+  const dismissVerificationNotice = useCallback(() => setVerificationNotice(null), []);
+
+  const login = useCallback((newToken: string, notice?: VerificationNotice | null) => {
     const decoded = decodeJwtPayload(newToken);
     // If the token is structurally invalid we refuse to store it
     if (!decoded) {
@@ -108,6 +120,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     setToken(newToken);
     setUser(decoded);
+    // Silent refreshes pass no notice and keep whatever is showing.
+    if (notice !== undefined) setVerificationNotice(notice);
 
     // Keep axios interceptor in sync
     setAuthToken(newToken);
@@ -120,6 +134,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const clearSession = useCallback(() => {
     setToken(null);
     setUser(null);
+    setVerificationNotice(null);
 
     // Clear axios interceptor token
     setAuthToken(null);
@@ -136,11 +151,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Let the axios interceptor store silently refreshed tokens / drop the session.
   useEffect(() => {
-    registerSessionHandlers({ onTokenRefreshed: login, onSessionExpired: clearSession });
+    registerSessionHandlers({
+      onTokenRefreshed: (newToken: string) => login(newToken),
+      onSessionExpired: clearSession,
+    });
   }, [login, clearSession]);
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout }}>
+    <AuthContext.Provider value={{ token, user, login, logout, verificationNotice, dismissVerificationNotice }}>
       {children}
     </AuthContext.Provider>
   );

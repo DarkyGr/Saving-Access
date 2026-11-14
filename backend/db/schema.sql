@@ -145,6 +145,31 @@ CREATE INDEX idx_credentials_email_username_trgm ON credentials USING gin (email
 
 UPDATE alembic_version SET version_num='0003_search_trgm' WHERE alembic_version.version_num = '0002_refresh_tokens';
 
+-- Running upgrade 0003_search_trgm -> 0004_email_verification
+
+CREATE TABLE email_verification_tokens (
+    email_verification_token_id SERIAL NOT NULL, 
+    user_id INTEGER NOT NULL, 
+    token_hash VARCHAR(64) NOT NULL, 
+    expires_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
+    used_at TIMESTAMP WITHOUT TIME ZONE, 
+    creation_date DATE NOT NULL, 
+    creation_time TIME WITHOUT TIME ZONE NOT NULL, 
+    creation_user_id INTEGER, 
+    modification_date DATE, 
+    modification_time TIME WITHOUT TIME ZONE, 
+    modification_user_id INTEGER, 
+    PRIMARY KEY (email_verification_token_id), 
+    FOREIGN KEY(user_id) REFERENCES users (user_id) ON DELETE CASCADE, 
+    UNIQUE (token_hash), 
+    FOREIGN KEY(creation_user_id) REFERENCES users (user_id), 
+    FOREIGN KEY(modification_user_id) REFERENCES users (user_id)
+);
+
+CREATE INDEX idx_email_verification_tokens_user_id ON email_verification_tokens (user_id);
+
+UPDATE alembic_version SET version_num='0004_email_verification' WHERE alembic_version.version_num = '0003_search_trgm';
+
 COMMIT;
 
 

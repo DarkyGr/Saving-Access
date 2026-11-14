@@ -13,7 +13,8 @@ Configuration (env):
                        than one worker/process, otherwise each one counts
                        separately.
   RATE_LIMIT_LOGIN, RATE_LIMIT_REGISTER, RATE_LIMIT_REFRESH,
-  RATE_LIMIT_ACCOUNT_PASSWORD  override the defaults below.
+  RATE_LIMIT_ACCOUNT_PASSWORD, RATE_LIMIT_VERIFY_EMAIL,
+  RATE_LIMIT_RESEND_VERIFICATION  override the defaults below.
 """
 
 import os
@@ -29,6 +30,8 @@ LOGIN_LIMIT = os.environ.get("RATE_LIMIT_LOGIN", "10/minute")
 REGISTER_LIMIT = os.environ.get("RATE_LIMIT_REGISTER", "5/minute")
 REFRESH_LIMIT = os.environ.get("RATE_LIMIT_REFRESH", "30/minute")
 ACCOUNT_PASSWORD_LIMIT = os.environ.get("RATE_LIMIT_ACCOUNT_PASSWORD", "10/minute")
+VERIFY_EMAIL_LIMIT = os.environ.get("RATE_LIMIT_VERIFY_EMAIL", "10/minute")
+RESEND_VERIFICATION_LIMIT = os.environ.get("RATE_LIMIT_RESEND_VERIFICATION", "3/hour")
 
 
 def _enabled() -> bool:

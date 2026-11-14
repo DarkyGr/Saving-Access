@@ -55,6 +55,18 @@ services:
       # In-memory counters are per process: keep a single uvicorn worker
       # (the image default) or point this to a shared Redis.
       RATE_LIMIT_STORAGE: ${RATE_LIMIT_STORAGE:-memory://}
+      # Spec Phase 2 (task 33): off unless set in .env.prod.
+      EMAIL_VERIFICATION_ENABLED: ${EMAIL_VERIFICATION_ENABLED:-false}
+      APP_BASE_URL: https://${SITE_ADDRESS:-localhost}
+      EMAIL_BACKEND: ${EMAIL_BACKEND:-console}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURITY: ${SMTP_SECURITY:-starttls}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      HCAPTCHA_SITE_KEY: ${HCAPTCHA_SITE_KEY:-}
+      HCAPTCHA_SECRET: ${HCAPTCHA_SECRET:-}
     depends_on:
       migrate:
         condition: service_completed_successfully

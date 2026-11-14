@@ -53,6 +53,7 @@ test-results/
 
 # Playwright E2E — throwaway DB and reports
 backend/e2e.sqlite3
+backend/e2e-outbox/
 frontend/test-results/
 frontend/playwright-report/
 frontend/blob-report/

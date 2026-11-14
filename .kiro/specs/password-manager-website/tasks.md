@@ -323,6 +323,20 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - [x] 32.8 Python dependencies with known vulnerabilities upgraded (fastapi 0.162 / starlette 1.10, cryptography 50, PyJWT 2.15, python-multipart 0.0.32, python-dotenv 1.2.4, pytest 9.2, SQLAlchemy 2.0.55, psycopg2-binary 2.9.10): pip-audit clean
   - [x] 32.9 Fixed an intermittent failure in the Property 10 tests (stale objects in a long-lived test session)
 
+- [x] 33. Phase 5 — Spec Phase 2: email verification, deactivation and CAPTCHA
+  - [x] 33.1 Settings (`app/phase2.py`): `EMAIL_VERIFICATION_ENABLED`, `APP_BASE_URL`, `VERIFICATION_TOKEN_HOURS`, `EMAIL_BACKEND`, `SMTP_*`, `HCAPTCHA_SITE_KEY`/`HCAPTCHA_SECRET`; off by default, half-configured settings stop startup; `GET /api/auth/config`
+  - [x] 33.2 `email_verification_tokens` (migration 0004) and `EmailVerificationService`: one-time hashed links, 48 h; sign-up sets `deactivation_deadline` = creation + 30 days and sends the email; `POST /api/auth/verify-email`
+    - _Requirements: 1.9, 1.10_
+  - [x] 33.3 Email delivery (`email_sender.py`): console / SMTP (STARTTLS, SSL) / file backends, sent after the response, failures logged; English and Spanish texts
+    - _Requirements: 1.10_
+  - [x] 33.4 hCaptcha on login: widget loaded only when configured, `captcha_token` verified server-side before the password, fails closed; CSP allows hcaptcha.com
+    - _Requirements: 2.6_
+  - [x] 33.5 Frontend: verification modal after login with resend (`POST /api/profile/verification-email`, 3/hour), `/verify-email` page, deactivated-account and CAPTCHA messages, sign-up confirmation; EN/ES
+    - _Requirements: 2.7, 2.8_
+  - [x] 33.6 Deactivation: unverified past the deadline → login 403, refresh 401, link 403; resend never moves the deadline; `python -m app.cli verify-email` reactivates
+    - _Requirements: 2.8, 2.9_
+  - [x] 33.7 Tests: `test_phase2_verification.py` (43, also on PostgreSQL in CI), Vitest for login/modal/page, Playwright flow with verification on (email, resend, deactivation, CLI reactivation, one-time link)
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for a faster MVP

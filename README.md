@@ -183,8 +183,13 @@ alembic upgrade head
 | `REFRESH_EXPIRE_HOURS` | How long a login lasts without re-entering the password | `8` |
 | `COOKIE_SECURE` / `COOKIE_SAMESITE` | Refresh cookie flags | `true` / `strict` |
 | `RATE_LIMIT_ENABLED` / `RATE_LIMIT_STORAGE` | Rate limiting on/off and its store (use Redis with several workers) | `true` / `memory://` |
+| `EMAIL_VERIFICATION_ENABLED` | Require email verification within 30 days of sign-up (spec Phase 2) | `false` |
+| `APP_BASE_URL` | Public frontend URL used in verification links (required when verification is on; set automatically in production) | `http://localhost:5173` |
+| `EMAIL_BACKEND` | `console` (print), `smtp` or `file` (`EMAIL_OUTBOX_DIR`) | `console` |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURITY` / `SMTP_USERNAME` / `SMTP_PASSWORD` / `SMTP_FROM` | Mail server for `EMAIL_BACKEND=smtp` (`SMTP_SECURITY`: `starttls`, `ssl` or `none`) | `smtp.example.com` / `587` / `starttls` |
+| `HCAPTCHA_SITE_KEY` / `HCAPTCHA_SECRET` | hCaptcha on the login page; set both or neither | _(empty = off)_ |
 
-The backend **refuses to start** if `JWT_SECRET` is missing or shorter than 32 characters, or if `FERNET_KEY` is not a valid Fernet key. Generate a JWT secret with:
+The backend **refuses to start** if `JWT_SECRET` is missing or shorter than 32 characters, if `FERNET_KEY` is not a valid Fernet key, or if the optional email verification / CAPTCHA settings are incomplete. Generate a JWT secret with:
 
 ```bash
 python -c "import secrets; print(secrets.token_urlsafe(48))"
@@ -303,9 +308,15 @@ save-pass/
 
 The entry point. Enter username and password to authenticate. On success, a JWT is stored in React memory (not `localStorage`) and the user is redirected to the credentials screen. Expired tokens redirect back here automatically.
 
+When enabled: an hCaptcha challenge must be solved before logging in, and an account whose email is not verified gets a reminder (with **Resend email**) after logging in. Unverified accounts are deactivated 30 days after sign-up; an administrator reactivates them with `python -m app.cli verify-email --username <name>`.
+
 ### Sign Up (`/signup`)
 
 Create a new account. Password must be at least 12 characters and include at least one uppercase letter, one lowercase letter, one digit, and one symbol (`@`, `$`, or `!`). Password confirmation must match exactly.
+
+### Verify Email (`/verify-email?token=…`)
+
+Opened from the verification email. Each link works once and expires after 48 hours; log in to request a new one.
 
 ### View / Search Credentials (`/credentials`)
 
@@ -365,6 +376,7 @@ A control in the application header switches between **English** (default) and *
 - Repeated failed logins or wrong account passwords are **slowed down** (HTTP 429 after a few attempts per minute).
 - Every save, reveal, edit and delete is recorded in an **audit log**.
 - The server refuses to start without strong secrets.
+- Optional: hCaptcha on the login page and email verification (accounts not verified within 30 days are deactivated).
 - In production all traffic is HTTPS (HTTP redirects to HTTPS, HSTS enabled), and the application's database account cannot change or drop tables.
 
 Technical details: [`ARCHITECTURE.md`](ARCHITECTURE.md).

@@ -54,7 +54,8 @@ def test_existing_create_all_database_can_be_adopted(db_url):
     from app.models import Base
 
     engine = create_engine(db_url)
-    old_tables = [t for name, t in Base.metadata.tables.items() if name != "refresh_tokens"]
+    later = {"refresh_tokens", "email_verification_tokens"}  # added by 0002 / 0004
+    old_tables = [t for name, t in Base.metadata.tables.items() if name not in later]
     Base.metadata.create_all(bind=engine, tables=old_tables)
     # The pre-Alembic schema had no trigram indexes (added in 0003).
     with engine.begin() as conn:
@@ -67,5 +68,6 @@ def test_existing_create_all_database_can_be_adopted(db_url):
     assert up.returncode == 0, up.stderr
 
     engine = create_engine(db_url)
-    assert "refresh_tokens" in inspect(engine).get_table_names()
+    tables = inspect(engine).get_table_names()
+    assert "refresh_tokens" in tables and "email_verification_tokens" in tables
     engine.dispose()

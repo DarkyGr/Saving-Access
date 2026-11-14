@@ -10,6 +10,7 @@ import SaveCredentialPage from "./pages/SaveCredentialPage";
 import EditCredentialPage from "./pages/EditCredentialPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminProfilesPage from "./pages/AdminProfilesPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
 
 // ForbiddenPage is created in task 24.2. Lazy-loaded so this router file
 // compiles before that task completes; once the file exists it resolves
@@ -22,6 +23,7 @@ const ForbiddenPage = React.lazy(() => import("./pages/ForbiddenPage"));
  * Route structure:
  *  /login                  → LoginPage (public)
  *  /signup                 → SignUpPage (public)
+ *  /verify-email?token=…   → VerifyEmailPage (public, spec Phase 2)
  *  /credentials            → ProtectedRoute(screen="credentials")       → ViewSearchPage
  *  /credentials/new        → ProtectedRoute(screen="credentials.new")   → SaveCredentialPage
  *  /credentials/:id/edit   → ProtectedRoute(screen="credentials.edit")  → EditCredentialPage
@@ -44,6 +46,10 @@ const router = createBrowserRouter([
       {
         path: "/signup",
         element: <SignUpPage />,
+      },
+      {
+        path: "/verify-email",
+        element: <VerifyEmailPage />,
       },
       {
         path: "/credentials",

@@ -43,13 +43,14 @@ python db/generate_schema_sql.py          # regenera db/schema.sql
 # admin (desde backend/)
 python -m app.cli create-admin --username admin --email admin@example.com
 python -m app.cli promote --username alice
+python -m app.cli verify-email --username alice   # marca el email verificado / reactiva
 
 # lint
 cd backend && ruff check .            # 0 errores
 cd frontend && npm run lint           # 0 avisos
 
 # PostgreSQL (tests de API contra una BD desechable: se borra)
-TEST_DATABASE_URL=postgresql://... python -m pytest tests/test_mvp_contract.py tests/test_security_hardening.py tests/test_key_rotation.py -q
+TEST_DATABASE_URL=postgresql://... python -m pytest tests/test_mvp_contract.py tests/test_security_hardening.py tests/test_key_rotation.py tests/test_phase2_verification.py -q
 E2E_POSTGRES_URL=postgresql://... npx playwright test
 
 # producción
@@ -72,4 +73,5 @@ make up / make down / make test-backend / make test-frontend / make lint
 - Secretos: la app no arranca sin `JWT_SECRET` (≥ 32) y `FERNET_KEY` válidos; los tests desactivan el rate limit en `conftest.py`.
 - Dependencias: versiones exactas y publicadas hace ≥ 2 semanas; CI falla con vulnerabilidades (pip-audit, npm audit high).
 - Fechas y horas de auditoría en UTC desde un mismo instante (`utc_date_time()` en `app/utils/audit_columns.py`).
+- Fase 2 del spec (verificación de email, CAPTCHA) apagada por defecto: `EMAIL_VERIFICATION_ENABLED`, `HCAPTCHA_SITE_KEY`/`HCAPTCHA_SECRET`; la E2E la ejecuta encendida (emails en `backend/e2e-outbox/`).
 - No commitear `.env`, `.hypothesis/`, `.pytest_cache/`, `node_modules/`.

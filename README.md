@@ -223,37 +223,46 @@ save-pass/
 ├── .env.example               # Environment variable template
 ├── docker-compose.yml         # Orchestrates db, backend, frontend
 ├── Makefile                   # Common dev commands
+├── ARCHITECTURE.md            # Technical deep-dive (flows, schema, key rotation)
+├── CLAUDE.md                  # Working rules for the AI assistant on this repo
 │
 ├── backend/
 │   ├── app/
-│   │   ├── main.py            # FastAPI app, CORS, exception handlers
+│   │   ├── main.py            # FastAPI app, lifespan (settings check + seed), CORS, error handlers
+│   │   ├── security.py        # Settings validation, bcrypt hashing, PyJWT encode/decode
+│   │   ├── rate_limit.py      # slowapi limiter and limits
 │   │   ├── models.py          # SQLAlchemy ORM models
 │   │   ├── database.py        # Engine and session factory
-│   │   ├── routers/           # auth_router, credentials_router, admin_router
-│   │   ├── services/          # AuthService, EncryptorService, ProfileService, AuditService
-│   │   ├── middleware/        # require_permission dependency
-│   │   └── utils/             # audit_columns helpers
+│   │   ├── seed.py            # Default profiles (Basic, Full) + default profile on sign-up
+│   │   ├── cli.py             # python -m app.cli seed | create-admin | promote
+│   │   ├── routers/           # auth, credentials, admin, profile
+│   │   ├── services/          # Auth, Encryptor, Profile, Audit, RefreshToken services
+│   │   ├── middleware/        # require_permission / require_admin / get_current_claims
+│   │   └── utils/             # audit_columns helpers, email validator
+│   ├── migrations/            # Alembic migrations — the schema's source of truth
+│   ├── alembic.ini
 │   ├── db/
-│   │   └── schema.sql         # Full PostgreSQL DDL
-│   ├── tests/                 # pytest test suite
+│   │   ├── schema.sql         # PostgreSQL DDL generated from the migrations
+│   │   └── generate_schema_sql.py
+│   ├── tests/                 # pytest: unit, Hypothesis properties, integration, contract, migrations
 │   ├── requirements.txt
-│   ├── pytest.ini
 │   └── Dockerfile
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/             # LoginPage, SignUpPage, ViewSearchPage, SaveCredentialPage, EditCredentialPage, AdminUsersPage, AdminProfilesPage, ForbiddenPage
-│   │   ├── components/        # PasswordInput, PasswordConfirmModal, ConfirmDeleteModal, AlreadyVisibleModal, ProtectedRoute, LanguageToggle
+│   │   ├── pages/             # Login, SignUp, ViewSearch, SaveCredential, EditCredential, AdminUsers, AdminProfiles, Forbidden
+│   │   ├── components/        # AppLayout, SessionBootstrap, ProtectedRoute, PasswordInput, modals, LanguageToggle
 │   │   ├── hooks/             # useVisibilityTimer
-│   │   ├── context/           # AuthContext (token in memory, not localStorage)
-│   │   ├── api/               # apiClient (axios + JWT interceptor)
+│   │   ├── context/           # AuthContext (access token in memory only)
+│   │   ├── api/               # apiClient (axios, bearer token, silent refresh)
 │   │   ├── i18n/              # en.json, es.json, i18n.ts
-│   │   └── router.tsx         # React Router v6 route definitions
+│   │   └── router.tsx         # React Router v6 routes
+│   ├── e2e/                   # Playwright end-to-end tests
+│   ├── playwright.config.ts
 │   ├── package.json
-│   ├── vite.config.ts
 │   └── Dockerfile
 │
-└── .kiro/specs/               # Full feature specification (requirements, design, tasks)
+└── .kiro/specs/               # Specification: requirements, design, tasks
 ```
 
 ---
@@ -318,13 +327,16 @@ A control in the application header switches between **English** (default) and *
 
 ## Security Notes
 
-- All credential passwords are encrypted with **Fernet (AES-128-CBC + HMAC-SHA256)** before reaching the database.
-- The Fernet key lives exclusively in the server environment (`FERNET_KEY`). It is never sent to the frontend or written to logs.
-- Account passwords are stored as **bcrypt hashes** only. Plaintext account passwords are never persisted.
-- JWTs are kept in **React in-memory state**, not `localStorage` or cookies, to reduce XSS exposure.
-- Every mutation (save, edit, delete) and every password reveal requires the user to **re-enter their account password** — there is no session-level bypass.
-- Every credential query uses `WHERE user_id = <authenticated_user_id>`, enforcing strict **per-user data isolation**.
-- All database operations use **SQLAlchemy ORM parameterized queries** — no raw SQL string interpolation.
+- Saved passwords are encrypted with **Fernet (AES-128-CBC + HMAC-SHA256)** on the server before they reach the database. The key (`FERNET_KEY`) never leaves the server.
+- Your account password is stored only as a **bcrypt hash**.
+- Revealing, saving, editing or deleting a credential always asks for your **account password again**.
+- Each user can only ever see and change **their own** credentials.
+- A login lasts up to 8 hours. The short-lived access token is kept only in the page's memory; the session itself is renewed through a cookie that page scripts cannot read. **Log Out** ends the session on the server too.
+- Repeated failed logins or wrong account passwords are **slowed down** (HTTP 429 after a few attempts per minute).
+- Every save, reveal, edit and delete is recorded in an **audit log**.
+- The server refuses to start without strong secrets.
+
+Technical details: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ---
 
@@ -349,4 +361,5 @@ A control in the application header switches between **English** (default) and *
 
 - [`requirements.md`](.kiro/specs/password-manager-website/requirements.md) — Functional and non-functional requirements in EARS notation.
 - [`design.md`](.kiro/specs/password-manager-website/design.md) — Architecture, component design, data models, API shapes, security considerations, and correctness properties.
-- `ARCHITECTURE.md` — *(coming in task 28.2)* Technical deep-dive: encryption lifecycle, auth flow, schema overview, Fernet key rotation, audit log structure.
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — Technical deep-dive: components, encryption lifecycle, authentication and session refresh, permission model, schema and migrations, Fernet key rotation, audit log.
+- [`tasks.md`](.kiro/specs/password-manager-website/tasks.md) — Implementation plan and status (tasks 1–29 from Kiro, 30+ added afterwards).

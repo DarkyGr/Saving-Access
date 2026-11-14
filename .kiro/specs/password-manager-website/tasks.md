@@ -254,9 +254,9 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
     - Minimum 100 Hypothesis iterations
   - _Requirements: 8.7_
 
-- [ ] 28. Documentation
+- [x] 28. Documentation
   - [x] 28.1 Create `README.md` in the repo root covering: project description, prerequisites (Docker, Node 18+, Python 3.11+), local setup steps, all required env variable names, `make up` / `make test-backend` / `make test-frontend` commands, and a screen-by-screen user guide (Login, Sign-Up, View/Search, Save, Edit, Delete, Admin pages, language toggle)
-  - [ ] 28.2 Create `ARCHITECTURE.md` in the repo root with the following sections:
+  - [x] 28.2 Create `ARCHITECTURE.md` in the repo root with the following sections:
     - **System Component Diagram**: reproduce the Mermaid `graph TD` from the design showing Browser → Backend routers → Services → PostgreSQL
     - **Encryption Lifecycle**: describe the Save → Store → Retrieve → Display flow with the Fernet key source and the guarantee that plaintext never touches the DB
     - **Authentication and Session Token Flow**: reproduce the Mermaid `sequenceDiagram` for login; explain JWT claims (`user_id`, `role`, `exp`), 15-minute expiry, in-memory storage in React, and the redirect-on-401 behavior
@@ -267,8 +267,9 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
     - _Requirements: 12.3_
   - _Requirements: 12.1–12.3_
 
-- [ ] 29. Final checkpoint — all tests pass end-to-end
+- [x] 29. Final checkpoint — all tests pass end-to-end
   - Run `pytest backend/` and `npx vitest --run` from the repo root; confirm zero failures across all unit, property-based, and integration tests. Ask the user if any questions arise.
+  - Closed 2026-11-13 after tasks 30–31: backend 166/166, frontend 86/86, Playwright E2E 2/2 (`npx playwright test`). Not yet run against PostgreSQL/Docker.
 
 - [x] 30. Phase 1 — MVP unblock (Claude Code handover audit, 2026-11-12)
   - Audit found the app unusable end-to-end although tasks 1–27 were checked: unit/integration tests mocked every frontend↔backend boundary and promoted test users to Admin, hiding missing endpoints and seed data.

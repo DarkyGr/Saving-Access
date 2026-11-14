@@ -789,6 +789,16 @@ Properties 8 (profile audit columns) and 15 (concurrent isolation) use mocked DB
 - Concurrent writes from two simulated users verify row-level isolation
 - Phase 2: email dispatch mock, deactivation deadline enforcement
 
+### Contract, Security and Migration Tests (added in tasks 30–31)
+
+- `test_mvp_contract.py` — every endpoint and JWT claim the frontend relies on, against a full schema with seeded profiles (no Admin promotion shortcut)
+- `test_security_hardening.py` — settings validation, legacy hash compatibility, token type/`exp`/`alg=none` rejection, rate limits, atomic audit, refresh rotation / reuse detection / logout
+- `test_migrations.py` — `alembic upgrade head` matches the ORM (`alembic check`), downgrade works, a pre-Alembic database can be adopted
+
+### End-to-End Tests (Playwright, task 30.10)
+
+`frontend/e2e/mvp.e2e.ts` starts uvicorn (SQLite, migrations applied) and Vite, then drives Chromium through sign-up, login, save, search, reveal (wrong and right account password), edit, delete, language switch, page reload (session kept), logout (session revoked) and admin profile reassignment.
+
 ### Frontend Tests (Vitest + React Testing Library)
 
 - `PasswordInput` Eye_Toggle shows/hides value
@@ -797,6 +807,9 @@ Properties 8 (profile audit columns) and 15 (concurrent isolation) use mocked DB
 - `AlreadyVisibleModal` "Continue" and "Cancel" paths
 - `ProtectedRoute` redirects non-permitted users
 - `LanguageToggle` switches all `t()` calls without reload
+- `AppLayout` header: permission-filtered navigation, logout
+- `apiClient` silent refresh + retry; no refresh on wrong account password or failed login
+- `SessionBootstrap` restores the session after a reload
 
 ---
 
@@ -814,7 +827,7 @@ User-facing guide covering:
 - Language switching and responsive use on mobile
 
 ### `ARCHITECTURE.md`
-Technical reference covering:
+Technical reference (written in task 28.2, after tasks 30–31) covering:
 - System component diagram
 - Encryption lifecycle (Save → Store → Retrieve → Display)
 - Authentication and session token flow

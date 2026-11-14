@@ -404,6 +404,14 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
 { "user_id": 42, "profile_id": 2 }
 ```
 
+#### `POST /api/auth/refresh` / `POST /api/auth/logout` *(added in task 31.5)*
+```json
+// refresh — no body; uses the sp_refresh cookie. Response 200 (+ rotated cookie)
+{ "access_token": "<JWT>", "token_type": "bearer", "expires_in": 900 }
+// 401 { "detail": "Session expired." }
+// logout — no body; 204, cookie cleared and token revoked
+```
+
 #### `GET /api/admin/profiles` *(added in task 30.4)*
 ```json
 // Response 200 — Admin role only
@@ -464,7 +472,7 @@ JWT Configuration:
 - Expiry: 15 minutes (access token)
 - Transmission: HTTPS only; `Authorization: Bearer` header; token stored in React memory state (not `localStorage` or cookies) to reduce XSS exposure
 - Claims: `user_id`, `username`, `role`, `exp`. The frontend `AuthContext` rejects a token missing any of the first three (task 30.1).
-- Refresh: not in Phase 1; user is redirected to login on expiry
+- Refresh (task 31.5): login also sets an opaque refresh token in an `httpOnly; Secure; SameSite=Strict; Path=/api/auth` cookie (`sp_refresh`, lifetime `REFRESH_EXPIRE_HOURS`, default 8 h). Only its SHA-256 is stored in `refresh_tokens`. `POST /api/auth/refresh` rotates it and returns a new access token; reusing a rotated token revokes its whole family. `POST /api/auth/logout` revokes it. The SPA calls refresh once on page load (session restore) and once on an expired-token 401 before retrying the request; if refresh fails it goes to `/login`. The access token itself is still only in memory.
 - A 401 whose detail is `"Account password verification failed."` is a wrong re-entered password, not an expired session: the frontend interceptor shows the inline error instead of redirecting (task 30.6).
 
 ---
@@ -541,16 +549,19 @@ Implementation:
 | Concern | Mitigation |
 |---------|-----------|
 | SQL injection | SQLAlchemy ORM + parameterized queries exclusively; no raw string interpolation |
-| Password storage | bcrypt via `passlib[bcrypt]`; work factor ≥ 12 |
+| Password storage | bcrypt (`bcrypt` library; `passlib` removed in task 31.2); work factor ≥ 12 |
 | Credential encryption | Fernet (AES-128-CBC + HMAC-SHA256); key stored in env var, never in code or DB |
-| Token security | JWT in memory only (not `localStorage`); short 15-min expiry |
+| Token security | Access JWT (PyJWT) in memory only (not `localStorage`); 15-min expiry; `exp` and `type="access"` required. Refresh token only in an httpOnly cookie, rotated and revocable (task 31.5) |
+| Secrets | App refuses to start without a ≥ 32-char `JWT_SECRET` and a valid `FERNET_KEY` (task 31.1) |
+| Brute-force | Per-IP limits on login/register/refresh and per-user limits on account-password checks (slowapi, task 31.3); unknown usernames still pay the bcrypt cost |
 | HTTPS | All traffic over TLS; backend sets `Strict-Transport-Security` header |
 | CORS | FastAPI `CORSMiddleware` configured to allow only the known frontend origin |
-| Brute-force (Phase 2) | hCaptcha on login form |
+| Brute-force (Phase 2 of the spec) | hCaptcha on login form |
 | Email verification (Phase 2) | Unique token link; 30-day deactivation deadline |
 | Credential ownership | All credential queries include `WHERE user_id = <authenticated_user_id>` |
 | Fernet key rotation | Key rotation procedure: re-encrypt all credentials with new key, rotate env var (documented in ARCHITECTURE.md) |
-| Audit trail | Every mutation and every credential reveal is logged to `audit_log` |
+| Audit trail | Every mutation and every credential reveal is logged to `audit_log`, in the same transaction as the mutation (task 31.4) |
+| Schema changes | Alembic migrations only; CI fails on model/migration drift (task 31.6) |
 
 ---
 
@@ -720,6 +731,8 @@ Events logged:
 |----------|-------------|----------|
 | Invalid JWT or missing auth header | 401 | `{"detail": "Not authenticated."}` |
 | Expired JWT | 401 | `{"detail": "Token expired."}` |
+| Missing / invalid / reused refresh cookie | 401 | `{"detail": "Session expired."}` (cookie cleared) |
+| Too many attempts | 429 | `{"detail": "Too many attempts. Please wait a minute and try again."}` + `Retry-After` |
 | Wrong account password on sensitive op | 401 | `{"detail": "Account password verification failed."}` |
 | Accessing another user's credential | 403 | `{"detail": "Forbidden."}` |
 | Missing profile permission | 403 | `{"detail": "Access denied."}` |

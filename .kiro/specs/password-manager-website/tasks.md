@@ -291,14 +291,21 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - [x] 30.9 Contract tests `backend/tests/test_mvp_contract.py`; frontend tests for `AppLayout` and `apiClient`
   - [x] 30.10 Playwright E2E (`frontend/e2e/mvp.e2e.ts`, `make test-e2e`) against real uvicorn + Vite: user lifecycle and admin profile reassignment
 
-- [ ] 31. Phase 2 — Security hardening (see audit plan)
-  - [ ] 31.1 Fail fast on missing/weak `JWT_SECRET` and `FERNET_KEY`
-  - [ ] 31.2 Replace `python-jose` + `passlib` with PyJWT + `bcrypt`; constant-time login for unknown users
-  - [ ] 31.3 Rate limiting on login, register and account-password endpoints
-  - [ ] 31.4 Write mutation and `audit_log` row in one transaction
-  - [ ] 31.5 Refresh token in httpOnly cookie so a page reload keeps the session
-  - [ ] 31.6 Alembic migrations as the single source of the schema (replace `create_all` + drifting `schema.sql`)
-  - [ ] 31.7 Update vulnerable npm dependencies (axios, vite, follow-redirects…)
+- [x] 31. Phase 2 — Security hardening
+  - [x] 31.1 Fail fast on missing/weak `JWT_SECRET` (< 32 chars or known weak value) and invalid `FERNET_KEY` (`app/security.py › validate_settings`, run in the app lifespan); no more `"changeme"` fallback
+    - _Requirements: 8.1, 8.3_
+  - [x] 31.2 Replace unmaintained `python-jose` + `passlib` with PyJWT + `bcrypt`; existing `$2b$` hashes keep verifying; unknown usernames still run bcrypt (no timing enumeration); access tokens require `exp` and `type="access"`
+    - _Requirements: 1.7, 2.3, 2.4, 8.5_
+  - [x] 31.3 Rate limiting with slowapi: login 10/min, register 5/min, refresh 30/min per IP; save/reveal/edit/delete 10/min per user (account-password brute force); 429 `"Too many attempts…"`
+    - _Requirements: 2.3, 4.9, 5.5, 6.6, 7.5_
+  - [x] 31.4 Credential mutation and its `audit_log` row committed in one transaction (`AuditService.log(commit=False)`)
+    - _Requirements: 4.12, 6.9, 7.7, 8.7_
+  - [x] 31.5 Refresh token in an httpOnly, Secure, SameSite=Strict cookie scoped to `/api/auth`: `POST /api/auth/refresh` (rotation + reuse detection), `POST /api/auth/logout` (revocation); new `refresh_tokens` table (SHA-256 only); frontend silent refresh + retry and session restore after reload. Access token still lives only in memory
+    - _Requirements: 2.4, 2.5, 8.3_
+  - [x] 31.6 Alembic migrations (`backend/migrations`) are the schema source of truth; app no longer calls `create_all`; Docker/E2E run `alembic upgrade head`; `db/schema.sql` regenerated from migrations; `tests/test_migrations.py` fails on model/migration drift
+    - _Requirements: 9.1–9.9_
+  - [x] 31.7 npm dependencies updated (axios 1.21.0, vite 6.4.5, vitest 4.1.12, react-router-dom 6.30.6, @playwright/test 1.59.1): 0 high vulnerabilities
+  - [ ] 31.8 Upgrade react-router to v7 to clear the remaining moderate advisory (open redirect via backslash in `<Link>`/`useNavigate`; not reachable today — the app only navigates to static paths)
 
 ## Notes
 

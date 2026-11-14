@@ -11,9 +11,11 @@ A full-stack secure password manager web application. Users can store, search, r
 | Frontend | React 18 + TypeScript, Vite, Tailwind CSS, react-i18next |
 | Backend | Python 3.11, FastAPI, SQLAlchemy ORM |
 | Database | PostgreSQL 15 |
-| Auth | JWT (HS256, 15-minute expiry) |
+| Auth | JWT access token (HS256, 15 min, in memory) + rotating refresh token in an httpOnly cookie |
 | Encryption | Fernet / AES-128-CBC (`cryptography` library) |
-| Password hashing | bcrypt (`passlib`) |
+| Password hashing | bcrypt |
+| Migrations | Alembic |
+| Rate limiting | slowapi |
 | Containerization | Docker + Docker Compose |
 
 ---
@@ -118,6 +120,7 @@ make down
 make install-backend       # pip install -r backend/requirements.txt
 # start a local PostgreSQL instance and set DATABASE_URL in .env
 cd backend
+alembic upgrade head       # create / update the schema
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -127,6 +130,24 @@ uvicorn app.main:app --reload --port 8000
 make install-frontend      # npm install inside frontend/
 cd frontend
 npm run dev
+```
+
+### Database migrations
+
+The schema is managed only by Alembic (`backend/migrations`). Docker runs `alembic upgrade head` before starting the API.
+
+```bash
+cd backend
+alembic upgrade head                              # apply
+alembic revision --autogenerate -m "add x"        # after changing app/models.py
+python db/generate_schema_sql.py                  # refresh the reference db/schema.sql
+```
+
+**Database created before migrations existed** (tables made by the old automatic `create_all`): adopt it once, then upgrade as usual:
+
+```bash
+alembic stamp 0001_baseline
+alembic upgrade head
 ```
 
 ---
@@ -142,6 +163,15 @@ npm run dev
 | `JWT_EXPIRE_MINUTES` | Token lifetime in minutes | `15` |
 | `CORS_ORIGINS` | Comma-separated list of allowed frontend origins | `http://localhost:5173` |
 | `DEFAULT_PROFILE` | Profile assigned to every new sign-up (empty = none) | `Full` |
+| `REFRESH_EXPIRE_HOURS` | How long a login lasts without re-entering the password | `8` |
+| `COOKIE_SECURE` / `COOKIE_SAMESITE` | Refresh cookie flags | `true` / `strict` |
+| `RATE_LIMIT_ENABLED` / `RATE_LIMIT_STORAGE` | Rate limiting on/off and its store (use Redis with several workers) | `true` / `memory://` |
+
+The backend **refuses to start** if `JWT_SECRET` is missing or shorter than 32 characters, or if `FERNET_KEY` is not a valid Fernet key. Generate a JWT secret with:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
 
 > **Never commit `.env`.** Only `.env.example` (without real values) belongs in version control.
 

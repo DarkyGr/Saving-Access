@@ -16,7 +16,7 @@ Reglas:
 
 ## Stack
 
-- Backend: Python 3.11+ · FastAPI · SQLAlchemy 2 · Pydantic v2 · `cryptography` (Fernet) · bcrypt · JWT HS256
+- Backend: Python 3.11+ · FastAPI · SQLAlchemy 2 · Alembic · Pydantic v2 · `cryptography` (Fernet) · bcrypt · PyJWT (HS256) · slowapi
 - Frontend: React 18 · TypeScript · Vite · Tailwind 3 · react-i18next (EN/ES) · axios · react-router v6
 - DB: PostgreSQL 15 (tests usan SQLite en memoria)
 - Docker Compose: `db`, `backend` (:8000), `frontend` (:5173)
@@ -34,6 +34,11 @@ npx tsc --noEmit                      # debe quedar en 0 errores: `npm run build
 npm run build
 npx playwright test                   # E2E: levanta uvicorn :8001 (SQLite) + Vite :5174 solo
 
+# migraciones (desde backend/) — única fuente del esquema
+alembic upgrade head
+alembic revision --autogenerate -m "..."   # tras cambiar app/models.py
+python db/generate_schema_sql.py          # regenera db/schema.sql
+
 # admin (desde backend/)
 python -m app.cli create-admin --username admin --email admin@example.com
 python -m app.cli promote --username alice
@@ -49,4 +54,6 @@ make up / make down / make test-backend / make test-frontend
 - El JWT vive solo en memoria (nunca localStorage/cookies legibles por JS).
 - Todo texto de UI va por `t()`; cualquier clave nueva se añade a `en.json` y `es.json`.
 - Contratos de API: si el frontend llama a un endpoint, el backend debe tenerlo registrado y con test de integración.
+- Esquema: nunca `create_all` en la app; todo cambio de modelo va con su migración Alembic (`tests/test_migrations.py` lo exige).
+- Secretos: la app no arranca sin `JWT_SECRET` (≥ 32) y `FERNET_KEY` válidos; los tests desactivan el rate limit en `conftest.py`.
 - No commitear `.env`, `.hypothesis/`, `.pytest_cache/`, `node_modules/`.

@@ -7,7 +7,8 @@ import { fileURLToPath } from "node:url";
  * End-to-end tests against the real backend + frontend (no mocks).
  *
  * Playwright starts:
- *  - FastAPI (uvicorn) on :8001 with a throwaway SQLite file DB
+ *  - FastAPI (uvicorn) on :8001 with a throwaway SQLite file DB, or the
+ *    PostgreSQL database in E2E_POSTGRES_URL (it is wiped: use a disposable one)
  *  - Vite dev server on :5174 pointed at that backend
  *
  * Ports differ from `make up` (8000 / 5173) so both can run side by side.
@@ -24,7 +25,10 @@ const WEB_PORT = 5174;
 // backend and the tests (which call the admin CLI) share the same values.
 process.env.E2E_FERNET_KEY ??= randomBytes(32).toString("base64url") + "=";
 process.env.E2E_JWT_SECRET ??= randomBytes(32).toString("hex");
-process.env.E2E_DATABASE_URL = `sqlite:///${dbFile.replace(/\\/g, "/")}`;
+// E2E_POSTGRES_URL is the user/CI input; E2E_DATABASE_URL is what the backend
+// and the tests use (workers re-load this file, so keep the two apart).
+const postgresUrl = process.env.E2E_POSTGRES_URL;
+process.env.E2E_DATABASE_URL = postgresUrl ?? `sqlite:///${dbFile.replace(/\\/g, "/")}`;
 process.env.E2E_BACKEND_DIR = backendDir;
 
 const backendEnv = {
@@ -54,7 +58,9 @@ export default defineConfig({
     {
       // Fresh DB every run: migrations create the schema, startup seeds profiles.
       command:
-        `python -c "import pathlib; pathlib.Path(r'${dbFile}').unlink(missing_ok=True)" && ` +
+        (postgresUrl
+          ? `python -m alembic downgrade base && `
+          : `python -c "import pathlib; pathlib.Path(r'${dbFile}').unlink(missing_ok=True)" && `) +
         `python -m alembic upgrade head && ` +
         `python -m uvicorn app.main:app --port ${API_PORT}`,
       cwd: backendDir,

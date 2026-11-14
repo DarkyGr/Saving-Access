@@ -308,6 +308,21 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - [x] 31.7 npm dependencies updated (axios 1.21.0, vite 6.4.5, vitest 4.1.12, react-router-dom 6.30.6, @playwright/test 1.59.1): 0 high vulnerabilities
   - [ ] 31.8 Upgrade react-router to v7 to clear the remaining moderate advisory (open redirect via backslash in `<Link>`/`useNavigate`; not reachable today — the app only navigates to static paths)
 
+- [x] 32. Phase 4 — Deployment and continuous quality
+  - [x] 32.1 Linters: ruff (backend, `ruff.toml`) and ESLint 9 flat config with react-hooks rules (frontend); both clean
+  - [x] 32.2 GitHub Actions CI (`.github/workflows/ci.yml`): lint, pip-audit, npm audit, pytest (SQLite), migrations + API tests on PostgreSQL 15, Vitest, build, Playwright on PostgreSQL, production smoke test
+  - [x] 32.3 Deprecated APIs and timestamp consistency: Pydantic `ConfigDict`; audit dates and times both taken from one UTC instant (`utc_date_time`), previously local date + UTC time
+    - _Requirements: 9.8_
+  - [x] 32.4 Search: `pg_trgm` GIN indexes (migration 0003) serve `ILIKE '%q%'`; LIKE wildcards in the query are escaped
+    - _Requirements: 5.2, 9.7_
+  - [x] 32.5 Fernet key rotation without downtime: multi-key `FERNET_KEY` and `python -m app.cli rotate-fernet-key [--dry-run]` (all rows or none)
+    - _Requirements: 8.1_
+  - [x] 32.6 Production stack `docker-compose.prod.yml`: Caddy (TLS, HSTS, CSP), one-shot `migrate`, backend non-root as `app_user` (DML only), `/api/health`
+    - _Requirements: 8.4, 9.9_
+  - [x] 32.7 Verified against PostgreSQL (local 18 and CI 15): migrations, API/security/rotation tests, Playwright E2E, app_user privileges; `scripts/smoke-prod.sh` checks the Docker stack in CI
+  - [x] 32.8 Python dependencies with known vulnerabilities upgraded (fastapi 0.162 / starlette 1.10, cryptography 50, PyJWT 2.15, python-multipart 0.0.32, python-dotenv 1.2.4, pytest 9.2, SQLAlchemy 2.0.55, psycopg2-binary 2.9.10): pip-audit clean
+  - [x] 32.9 Fixed an intermittent failure in the Property 10 tests (stale objects in a long-lived test session)
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for a faster MVP

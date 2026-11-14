@@ -78,7 +78,7 @@ REVEAL
   browser: shows it for 60 s (useVisibilityTimer), then masks it; nothing is cached
 ```
 
-- The key comes from `FERNET_KEY` (server environment only). It is never returned by the API or logged.
+- The key comes from `FERNET_KEY` (server environment only; a comma-separated list during a rotation, section 6). It is never returned by the API or logged.
 - The backend refuses to start if `FERNET_KEY` is missing or not a valid Fernet key (`validate_settings`).
 - Every reveal requires the account password again; there is no "remember for this session".
 
@@ -227,7 +227,7 @@ erDiagram
 
 **Audit columns.** Every table except `audit_log` carries `creation_date`, `creation_time`, `creation_user_id`, `modification_date`, `modification_time`, `modification_user_id` (Requirement 9.8). Times are UTC.
 
-**Indexes.** `credentials(user_id)`, `credentials(website_name)`, `credentials(email_or_username)`, `audit_log(user_id)`, `refresh_tokens(user_id)`, `refresh_tokens(family_id)`.
+**Indexes.** `credentials(user_id)`, `credentials(website_name)`, `credentials(email_or_username)`, GIN trigram indexes on `credentials.website_name` and `credentials.email_or_username` (serve the `ILIKE '%q%'` search on PostgreSQL), `audit_log(user_id)`, `refresh_tokens(user_id)`, `refresh_tokens(family_id)`. Search input is escaped, so `%` and `_` match literally.
 
 **Migrations.** Alembic is the only way the schema changes:
 
@@ -235,8 +235,9 @@ erDiagram
 |---|---|
 | `0001_baseline` | users, profiles, user_profiles, credentials, audit_log |
 | `0002_refresh_tokens` | refresh_tokens |
+| `0003_search_trgm` | `pg_trgm` extension and GIN trigram indexes on `website_name` / `email_or_username` |
 
-- Docker and the E2E tests run `alembic upgrade head` before the API starts. The app never creates tables.
+- Docker (`migrate` service in production) and the E2E tests run `alembic upgrade head` before the API starts. The app never creates tables.
 - `backend/db/schema.sql` is **generated** from the migrations (`python db/generate_schema_sql.py`) and includes the `app_user` role with SELECT/INSERT/UPDATE/DELETE only (Requirement 9.9).
 - `tests/test_migrations.py` fails when the ORM models and migrations differ.
 - A database created before Alembic is adopted once with `alembic stamp 0001_baseline`, then `alembic upgrade head`.
@@ -253,27 +254,20 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 
 Losing the key makes every saved credential unrecoverable: back it up with the same care as the database backups, and store the two separately.
 
-**Rotate** (there is no automated command yet; run in a maintenance window, with a fresh database backup):
+**Rotate** without downtime (task 32.5). `FERNET_KEY` accepts several comma-separated keys: new data is encrypted with the **first** one and any listed key can decrypt.
 
-1. Generate the new key.
-2. Stop the backend so no credential is written during the rotation.
-3. Re-encrypt every row with the old and new keys available:
+1. Take a database backup and generate the new key.
+2. Set `FERNET_KEY="<new>,<old>"` and restart the backend. Everything keeps working; new saves already use the new key.
+3. Re-encrypt every stored credential with the new key, in one transaction (all rows or none):
 
-   ```python
-   # run from backend/ with DATABASE_URL set; OLD_FERNET_KEY / NEW_FERNET_KEY exported
-   import os
-   from cryptography.fernet import Fernet, MultiFernet
-   from app.database import SessionLocal
-   from app.models import Credential
-
-   keys = MultiFernet([Fernet(os.environ["NEW_FERNET_KEY"]), Fernet(os.environ["OLD_FERNET_KEY"])])
-   with SessionLocal() as db:
-       for c in db.query(Credential).yield_per(500):
-           c.encrypted_password = keys.rotate(c.encrypted_password)
-       db.commit()  # single transaction: all rows or none
+   ```bash
+   python -m app.cli rotate-fernet-key --dry-run   # checks every row decrypts, changes nothing
+   python -m app.cli rotate-fernet-key
+   # production: docker compose -f docker-compose.prod.yml exec backend python -m app.cli rotate-fernet-key
    ```
 
-4. Set `FERNET_KEY` to the new key and start the backend.
+   If any row cannot be decrypted with the listed keys, the command stops and changes nothing.
+4. Set `FERNET_KEY="<new>"` and restart.
 5. Reveal one known credential to confirm, then destroy the old key once backups encrypted with it have expired.
 
 ---
@@ -309,13 +303,45 @@ FROM audit_log WHERE operation = 'SELECT' AND affected_record_id = :credential_i
 
 ---
 
-## 8. Known gaps
+## 8. Deployment
 
-Tracked in `tasks.md` or the improvement plan:
+Production runs with [`docker-compose.prod.yml`](docker-compose.prod.yml) (task 32.6):
 
-- **HTTPS is not enforced by the app.** TLS and the `Strict-Transport-Security` header must come from a reverse proxy in front of the backend (planned: Caddy).
-- **Database role**: Docker Compose still connects as the database owner; production should connect as `app_user`.
-- **Key rotation** is a manual procedure (section 6); no CLI command yet.
+```mermaid
+graph LR
+    Internet -- "80 → 308, 443 TLS" --> Caddy["web (Caddy)<br/>static SPA + /api proxy<br/>HSTS, CSP, security headers"]
+    Caddy -- "/api/*" --> API["backend (uvicorn)<br/>non-root, DB role app_user"]
+    Migrate["migrate (one-shot)<br/>alembic upgrade head<br/>as DB owner"] --> PG[(PostgreSQL 15)]
+    API --> PG
+```
+
+| Service | Role |
+|---|---|
+| `web` | Caddy 2: serves the built SPA, proxies `/api/*`, obtains a Let's Encrypt certificate for `SITE_ADDRESS` (internal CA for `localhost`), redirects HTTP to HTTPS, sets HSTS, CSP, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`. The only published service. |
+| `migrate` | Runs `alembic upgrade head` as the database owner, then exits. The API starts only if it succeeded. |
+| `backend` | FastAPI as a non-root user, connected as **`app_user`** (SELECT/INSERT/UPDATE/DELETE and sequence usage only, Requirement 9.9). Trusts `X-Forwarded-For` from Caddy, so rate limits see client IPs. Health check: `GET /api/health`. |
+| `db` | PostgreSQL 15. `deploy/postgres/01-app-user.sh` creates `app_user` on first start, with default privileges so tables added by later migrations are covered. |
+
+Frontend and API share one origin, so the refresh cookie (`SameSite=Strict`) and CORS need no cross-site configuration.
+
+`scripts/smoke-prod.sh` builds and starts this stack with throwaway secrets and checks TLS, headers, a full API round trip through Caddy, audit rows, and that `app_user` cannot drop, create or truncate tables. CI runs it on every push.
+
+### Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and pull request:
+
+| Job | Checks |
+|---|---|
+| Backend | ruff, pip-audit, full pytest suite (SQLite), migrations upgrade/check/downgrade on PostgreSQL 15, API/security/key-rotation tests on PostgreSQL 15 |
+| Frontend | eslint, `tsc`, Vitest, production build, `npm audit --audit-level=high` |
+| End-to-end | Playwright against uvicorn + Vite with PostgreSQL 15 |
+| Production | `scripts/smoke-prod.sh` (Docker images, Caddy, app_user) |
+
+---
+
+## 9. Known gaps
+
+- **Rate-limit counters** live in each process's memory. Production runs a single uvicorn worker; scaling out needs `RATE_LIMIT_STORAGE` pointing to a shared store such as Redis.
 - **react-router 6** has a moderate open-redirect advisory fixed only in v7 (task 31.8); not reachable because the app navigates only to static paths.
-- **Search** uses `ILIKE '%q%'`, which cannot use the B-tree indexes; a `pg_trgm` GIN index is planned.
+- **Backups** are not automated; schedule `pg_dump` of the `postgres_data` volume and keep the Fernet key stored separately.
 - **Spec Phase 2** (CAPTCHA, email verification, account deactivation) is not implemented.

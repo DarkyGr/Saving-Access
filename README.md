@@ -112,6 +112,23 @@ make down
 
 ---
 
+## Production Deployment
+
+`docker-compose.prod.yml` runs the hardened stack: **Caddy** (HTTPS with automatic certificates, security headers, serves the built frontend and proxies `/api`), a one-shot **migrate** service, the **backend** connected as the least-privilege `app_user` database role, and **PostgreSQL**. Only ports 80/443 are published.
+
+```bash
+cp .env.prod.example .env.prod      # set SITE_ADDRESS, passwords, FERNET_KEY, JWT_SECRET
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+docker compose -f docker-compose.prod.yml --env-file .env.prod exec backend \
+  python -m app.cli create-admin --username admin --email admin@example.com
+```
+
+Point your domain's DNS to the server before starting so Caddy can obtain the certificate. Back up the `postgres_data` volume and keep `FERNET_KEY` stored separately: without the key, saved passwords cannot be recovered. Key rotation without downtime is described in [ARCHITECTURE.md](ARCHITECTURE.md#6-fernet-key-management-and-rotation).
+
+To try the production stack locally (self-signed certificate on `https://localhost`, everything removed afterwards): `make smoke-prod`.
+
+---
+
 ## Local Development (without Docker)
 
 ### Backend
@@ -157,7 +174,7 @@ alembic upgrade head
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@localhost:5432/savepass` |
-| `FERNET_KEY` | 32-byte URL-safe base64 key for credential encryption | _(generated)_ |
+| `FERNET_KEY` | 32-byte URL-safe base64 key for credential encryption (`"<new>,<old>"` during a key rotation) | _(generated)_ |
 | `JWT_SECRET` | Secret used to sign and verify JWTs | _(random string)_ |
 | `JWT_ALGORITHM` | JWT signing algorithm | `HS256` |
 | `JWT_EXPIRE_MINUTES` | Token lifetime in minutes | `15` |
@@ -183,6 +200,14 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 ---
 
 ## Running Tests
+
+All of the checks below run in GitHub Actions on every push (`.github/workflows/ci.yml`), plus migrations and API tests on PostgreSQL 15 and the production smoke test.
+
+### Lint
+
+```bash
+make lint      # ruff (backend) + eslint (frontend)
+```
 
 ### Backend (pytest + Hypothesis property tests)
 
@@ -212,7 +237,7 @@ make test-e2e
 # first time only: cd frontend && npx playwright install chromium
 ```
 
-Playwright starts its own backend (port 8001, throwaway SQLite database) and frontend (port 5174), then drives a real browser through sign-up, login, save, search, reveal, edit, delete, language switch, logout and the admin profile assignment. No mocks and no Docker required.
+Playwright starts its own backend (port 8001, throwaway SQLite database — or a disposable PostgreSQL database given in `E2E_POSTGRES_URL`) and frontend (port 5174), then drives a real browser through sign-up, login, save, search, reveal, edit, delete, language switch, logout and the admin profile assignment. No mocks and no Docker required.
 
 ---
 
@@ -221,7 +246,12 @@ Playwright starts its own backend (port 8001, throwaway SQLite database) and fro
 ```
 save-pass/
 ├── .env.example               # Environment variable template
-├── docker-compose.yml         # Orchestrates db, backend, frontend
+├── docker-compose.yml         # Development: db, backend, frontend
+├── docker-compose.prod.yml    # Production: Caddy (HTTPS), migrate, backend as app_user, db
+├── .env.prod.example          # Production settings template
+├── deploy/                    # Caddyfile + web image, PostgreSQL app_user init script
+├── scripts/smoke-prod.sh      # End-to-end check of the production stack
+├── .github/workflows/ci.yml   # CI: lint, audits, tests (SQLite + PostgreSQL), E2E, prod smoke
 ├── Makefile                   # Common dev commands
 ├── ARCHITECTURE.md            # Technical deep-dive (flows, schema, key rotation)
 ├── CLAUDE.md                  # Working rules for the AI assistant on this repo
@@ -335,6 +365,7 @@ A control in the application header switches between **English** (default) and *
 - Repeated failed logins or wrong account passwords are **slowed down** (HTTP 429 after a few attempts per minute).
 - Every save, reveal, edit and delete is recorded in an **audit log**.
 - The server refuses to start without strong secrets.
+- In production all traffic is HTTPS (HTTP redirects to HTTPS, HSTS enabled), and the application's database account cannot change or drop tables.
 
 Technical details: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
@@ -349,6 +380,8 @@ Technical details: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 | `make test-backend` | Run the full backend pytest suite |
 | `make test-frontend` | Run the frontend Vitest suite |
 | `make test-e2e` | Run the Playwright end-to-end tests |
+| `make lint` | ruff + eslint |
+| `make smoke-prod` | Build and smoke-test the production stack locally (Docker) |
 | `make seed` | Seed default profiles (Docker) |
 | `make create-admin USERNAME=.. EMAIL=..` | Create an Admin account (Docker) |
 | `make install-backend` | Install Python dependencies locally (no Docker) |

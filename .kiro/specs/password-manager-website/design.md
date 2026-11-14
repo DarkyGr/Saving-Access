@@ -554,12 +554,13 @@ Implementation:
 | Token security | Access JWT (PyJWT) in memory only (not `localStorage`); 15-min expiry; `exp` and `type="access"` required. Refresh token only in an httpOnly cookie, rotated and revocable (task 31.5) |
 | Secrets | App refuses to start without a ≥ 32-char `JWT_SECRET` and a valid `FERNET_KEY` (task 31.1) |
 | Brute-force | Per-IP limits on login/register/refresh and per-user limits on account-password checks (slowapi, task 31.3); unknown usernames still pay the bcrypt cost |
-| HTTPS | All traffic over TLS; backend sets `Strict-Transport-Security` header |
+| HTTPS | Production: Caddy terminates TLS (automatic certificates), redirects HTTP→HTTPS and sets HSTS, CSP and other security headers (task 32.6) |
 | CORS | FastAPI `CORSMiddleware` configured to allow only the known frontend origin |
 | Brute-force (Phase 2 of the spec) | hCaptcha on login form |
 | Email verification (Phase 2) | Unique token link; 30-day deactivation deadline |
 | Credential ownership | All credential queries include `WHERE user_id = <authenticated_user_id>` |
-| Fernet key rotation | Key rotation procedure: re-encrypt all credentials with new key, rotate env var (documented in ARCHITECTURE.md) |
+| Fernet key rotation | `FERNET_KEY="<new>,<old>"` + `python -m app.cli rotate-fernet-key` re-encrypts every row in one transaction, no downtime (task 32.5, ARCHITECTURE.md §6) |
+| Database privileges | Production API connects as `app_user` (DML only); migrations run separately as the owner (task 32.6) |
 | Audit trail | Every mutation and every credential reveal is logged to `audit_log`, in the same transaction as the mutation (task 31.4) |
 | Schema changes | Alembic migrations only; CI fails on model/migration drift (task 31.6) |
 

@@ -98,7 +98,12 @@ test("user lifecycle: sign up, log in, save, search, reveal, edit, delete, logou
   await page.getByRole("button", { name: "Inglés" }).or(page.getByRole("button", { name: "English" })).click();
   await expect(page.getByRole("heading", { name: "My Credentials" })).toBeVisible();
 
-  // Logout returns to login and protected pages are closed again.
+  // Task 31.5: a full page reload keeps the session (httpOnly refresh cookie).
+  await page.reload();
+  await expect(page).toHaveURL(/\/credentials$/);
+  await expect(page.getByTestId("current-user")).toHaveText(user);
+
+  // Logout revokes the refresh cookie: a later reload cannot restore the session.
   await page.getByRole("button", { name: "Log Out" }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.goto("/credentials");

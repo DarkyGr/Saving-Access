@@ -52,9 +52,10 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [
     {
-      // Fresh DB every run; startup creates tables and seeds profiles.
+      // Fresh DB every run: migrations create the schema, startup seeds profiles.
       command:
         `python -c "import pathlib; pathlib.Path(r'${dbFile}').unlink(missing_ok=True)" && ` +
+        `python -m alembic upgrade head && ` +
         `python -m uvicorn app.main:app --port ${API_PORT}`,
       cwd: backendDir,
       url: `http://localhost:${API_PORT}/docs`,

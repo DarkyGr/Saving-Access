@@ -306,7 +306,7 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - [x] 31.6 Alembic migrations (`backend/migrations`) are the schema source of truth; app no longer calls `create_all`; Docker/E2E run `alembic upgrade head`; `db/schema.sql` regenerated from migrations; `tests/test_migrations.py` fails on model/migration drift
     - _Requirements: 9.1–9.9_
   - [x] 31.7 npm dependencies updated (axios 1.21.0, vite 6.4.5, vitest 4.1.12, react-router-dom 6.30.6, @playwright/test 1.59.1): 0 high vulnerabilities
-  - [x] 31.8 Upgrade react-router to v7 to clear the remaining moderate advisory (open redirect via backslash in `<Link>`/`useNavigate`; not reachable today — the app only navigates to static paths)
+  - [x] 31.8 Upgrade react-router to v7 to clear the remaining moderate advisory (open redirect via backslash in `<Link>`/`useNavigate`; was not reachable — the app only navigates to static paths). Done in 34.1
 
 - [x] 32. Phase 4 — Deployment and continuous quality
   - [x] 32.1 Linters: ruff (backend, `ruff.toml`) and ESLint 9 flat config with react-hooks rules (frontend); both clean
@@ -346,6 +346,21 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - [x] 34.4 Verification deadline reminders: `send-verification-reminders` CLI run hourly by the `scheduler` service, 7 and 1 days before (`VERIFICATION_REMINDER_DAYS`), once each, in the user's language (migration 0005: `preferred_language`, `last_verification_reminder_days`)
     - _Requirements: 1.9, 1.10, 2.8_
   - [x] 34.5 Production smoke test extended: shared login limit through Redis, backup → data loss → restore → reveal, reminder sent by the scheduler as `app_user`
+  - [x] 34.6 Fix: the Redis rate-limit test and the smoke test looked for keys `LIMITER*`, but `limits` stores them as `LIMITS:LIMITER/…` (first CI run of 34 failed on that assertion; the limiter itself was correct)
+
+- [ ] 35. Backlog — pending after the 2026-11-14 review (not started)
+  - New features (35.5–35.8) are outside the Kiro requirements: add them to `requirements.md` / `design.md` before implementing.
+  - [ ] 35.1 First deployment on a real server: domain + DNS, `.env.prod`, `create-admin`, check HTTPS certificate, backups and emails live (needs a server and a domain)
+  - [ ] 35.2 Off-site, encrypted backup copies (e.g. restic or rclone to S3 / Backblaze B2); today the `backups` volume lives on the same server
+    - _Requirements: 9.9_
+  - [ ] 35.3 Monitoring and alerts: external check of `/api/health`, alert when a backup or reminder run fails, log retention
+  - [ ] 35.4 GitHub Actions: move `actions/checkout`, `setup-python`, `setup-node`, `upload-artifact` to releases that run on Node 24 (Node 20 is deprecated on the runners)
+  - [ ] 35.5 "Forgot password": email reset link (one-time, short-lived), revokes refresh tokens; works because credentials are encrypted with the server key, not with the account password
+  - [ ] 35.6 Two-factor authentication (TOTP) at login, with recovery codes
+  - [ ] 35.7 Password generator on the Save / Edit credential pages
+  - [ ] 35.8 Self-service: export my credentials (re-entering the account password, audited) and delete my account
+  - [ ] 35.9 Decide the encryption model: today the server decrypts with `FERNET_KEY` (database + key leak exposes every password). Client-side encryption with a key derived from the account password (zero-knowledge) would remove that risk but rules out 35.5 and needs a redesign — decide before real users
+  - [ ] 35.10 Lint tooling advisory: drop when `typescript-eslint` moves to `minimatch` 11 (moderate ReDoS, dev-only)
 
 ## Notes
 

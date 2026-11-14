@@ -13,6 +13,7 @@ Reglas:
 - Tareas nuevas que no estaban en Kiro van como secciones nuevas al final de `tasks.md` (numeración 30+), referenciando requisitos.
 - Si un cambio contradice `design.md`, actualiza `design.md` en el mismo commit y explica por qué en el mensaje.
 - `tasks.meta.json` y `.config.kiro` son metadatos de Kiro: no editarlos a mano.
+- Estado (2026-11-14): tareas 1–34 hechas; la tarea 35 es el backlog pendiente. Las funciones nuevas de 35.5–35.8 necesitan requisitos en `requirements.md` y diseño en `design.md` antes de implementarse.
 
 ## Stack
 

@@ -382,6 +382,13 @@ Dumps contain bcrypt hashes and Fernet-encrypted credentials: copy them to separ
 
 ## 9. Known gaps
 
-- **Off-site copies** of backups are not automated: the `backups` volume lives on the same server. Copy it elsewhere (e.g. a nightly `docker compose cp` + upload).
+Tracked as task 35 in [`tasks.md`](.kiro/specs/password-manager-website/tasks.md).
+
+- **Trust model**: the server holds `FERNET_KEY` and decrypts on request. Anyone who obtains both the database (or a backup) and the key can read every saved password. Client-side (zero-knowledge) encryption would remove that, at the cost of account-password recovery (task 35.9).
+- **Not yet run on a real server**: the production stack is verified by the CI smoke test in a throwaway environment only (task 35.1).
+- **Off-site copies** of backups are not automated: the `backups` volume lives on the same server (task 35.2).
+- **No monitoring or alerting**: a down API or a failed backup is only visible in `docker compose logs` (task 35.3).
+- **Account features**: no password reset, no second factor, no export, no self-service account deletion (tasks 35.5–35.8).
 - **Deactivated accounts** are kept (they can be reactivated); nothing deletes them automatically.
-- **Lint tooling**: `typescript-eslint` still depends on `minimatch` 10, which has a moderate ReDoS advisory fixed only in 11. It affects the developer's lint run, not the app; it clears when typescript-eslint moves to minimatch 11.
+- **CI**: some GitHub Actions still target Node 20, which the runners flag as deprecated (task 35.4).
+- **Lint tooling**: `typescript-eslint` still depends on `minimatch` 10, which has a moderate ReDoS advisory fixed only in 11. It affects the developer's lint run, not the app (task 35.10).

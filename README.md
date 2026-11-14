@@ -408,9 +408,38 @@ Technical details: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ---
 
+## Project Status
+
+All tasks from the Kiro plan (1–29) and the follow-up phases (30–34) are done; CI is green on every push. Details and history: [`tasks.md`](.kiro/specs/password-manager-website/tasks.md).
+
+**Fixed since the Kiro handover (2026-11-12)**
+
+| Area | Problem found | Fix |
+|---|---|---|
+| Login | Every login bounced back to `/login` (JWT lacked `username`) | Claim added (30.1) |
+| Permissions | Missing `/api/profile/permissions`, `/api/credentials/{id}`, `/api/admin/profiles`; new users had no profile; no way to create an Admin | Endpoints, seeded profiles, `create-admin` CLI (30.2–30.5) |
+| Sessions | A wrong account password logged the user out; reload lost the session | Interceptor fix; httpOnly refresh cookie with rotation (30.6, 31.5) |
+| UI | No language toggle, navigation or logout | `AppLayout` header (30.7) |
+| Build and tests | 33 TypeScript errors broke `npm run build`; 7 backend tests failing; one flaky property test | Fixed (30.0, 30.8, 32.9) |
+| Security | Weak-secret fallback, unmaintained JWT/hash libraries, no rate limits, ~40 vulnerable Python packages, react-router advisory | Fail-fast settings, PyJWT + bcrypt, slowapi + Redis, upgrades (31.x, 32.8, 34.1) |
+| Data | Audit date (local) and time (UTC) could disagree; searching `%` matched everything; schema built with `create_all` | One UTC instant, escaped LIKE + trigram indexes, Alembic migrations (32.3, 32.4, 31.6) |
+| Deployment | `.env.prod` not git-ignored; health check pointed to a missing endpoint; CI broke on Ubuntu 26 | Ignored, `/api/health` added, runners pinned (32.6, 32.2) |
+| Spec Phase 2 | Email verification, deactivation and CAPTCHA not implemented | Done, with reminders (33, 34.4) |
+| Operations | No backups; rate limits per process | Daily backups + restore script; Redis (34.2, 34.3) |
+
+**Pending** (task 35)
+
+- First deployment on a real server (needs a server and a domain).
+- Off-site encrypted backups, monitoring and alerts.
+- GitHub Actions on Node 24.
+- Password reset, two-factor authentication, password generator, export and account deletion — outside the original spec.
+- Decide whether to move to client-side (zero-knowledge) encryption before real users.
+
+---
+
 ## Documentation
 
 - [`requirements.md`](.kiro/specs/password-manager-website/requirements.md) — Functional and non-functional requirements in EARS notation.
 - [`design.md`](.kiro/specs/password-manager-website/design.md) — Architecture, component design, data models, API shapes, security considerations, and correctness properties.
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — Technical deep-dive: components, encryption lifecycle, authentication and session refresh, permission model, schema and migrations, Fernet key rotation, audit log.
-- [`tasks.md`](.kiro/specs/password-manager-website/tasks.md) — Implementation plan and status (tasks 1–29 from Kiro, 30+ added afterwards).
+- [`tasks.md`](.kiro/specs/password-manager-website/tasks.md) — Implementation plan and status (tasks 1–29 from Kiro, 30–34 done afterwards, 35 = backlog).

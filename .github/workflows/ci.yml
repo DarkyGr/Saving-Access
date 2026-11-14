@@ -1,4 +1,6 @@
 # Continuous integration (task 32.2).
+# Runners are pinned: ubuntu-latest moved to Ubuntu 26, which
+# "playwright install --with-deps" does not support yet.
 name: CI
 
 on:
@@ -17,7 +19,7 @@ permissions:
 jobs:
   backend:
     name: Backend (lint, audit, tests on SQLite + PostgreSQL)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:15
@@ -60,7 +62,7 @@ jobs:
 
   frontend:
     name: Frontend (lint, types, unit tests, build, audit)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: frontend
@@ -85,7 +87,7 @@ jobs:
 
   e2e:
     name: End-to-end (Playwright on PostgreSQL)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [backend, frontend]
     services:
       postgres:
@@ -129,7 +131,7 @@ jobs:
 
   production:
     name: Production stack smoke test (Docker, Caddy, app_user)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [backend, frontend]
     steps:
       - uses: actions/checkout@v4

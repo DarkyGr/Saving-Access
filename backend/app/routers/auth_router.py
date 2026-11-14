@@ -32,7 +32,12 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.phase2 import captcha_enabled, captcha_site_key, email_verification_enabled
+from app.phase2 import (
+    captcha_enabled,
+    captcha_site_key,
+    email_verification_enabled,
+    normalize_language,
+)
 from app.rate_limit import LOGIN_LIMIT, REFRESH_LIMIT, REGISTER_LIMIT, VERIFY_EMAIL_LIMIT, limiter
 from app.services.auth_service import AuthService
 from app.services.captcha_service import verify_captcha
@@ -141,6 +146,10 @@ def register(
     response (Requirement 1.10); a delivery failure does not undo sign-up.
     """
     user = AuthService(db).register(body.model_dump(exclude={"language"}))
+    language = normalize_language(body.language)
+    if language:
+        user.preferred_language = language
+        db.commit()
     if email_verification_enabled():
         raw = EmailVerificationService(db).issue(user)
         db.commit()

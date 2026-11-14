@@ -50,7 +50,7 @@ graph TD
 
 | Layer | Technology | Notes |
 |---|---|---|
-| Frontend | React 18, TypeScript, Vite, Tailwind, react-i18next, axios, React Router 6 | `AppLayout` header, `SessionBootstrap`, `ProtectedRoute` |
+| Frontend | React 18, TypeScript, Vite, Tailwind, react-i18next, axios, React Router 7 | `AppLayout` header, `SessionBootstrap`, `ProtectedRoute` |
 | Backend | FastAPI, SQLAlchemy 2, Pydantic 2 | Startup (`lifespan`) validates secrets and seeds profiles |
 | Security libs | `cryptography` (Fernet), `bcrypt`, PyJWT, slowapi | `app/security.py`, `app/rate_limit.py` |
 | Database | PostgreSQL 15; SQLite in tests | Alembic migrations in `backend/migrations` |
@@ -150,7 +150,7 @@ Exceeding a limit returns `429` with `Retry-After: 60`. Counters are in memory b
 
 ---
 
-### Email verification, deactivation and CAPTCHA (spec Phase 2, task 33)
+### Email verification, deactivation and CAPTCHA (spec Phase 2, tasks 33–34)
 
 Both features are **off by default** and switched on by configuration; the backend refuses to start when they are half-configured.
 
@@ -163,6 +163,7 @@ Both features are **off by default** and switched on by configuration; the backe
 - **Resend** (`POST /api/profile/verification-email`, logged-in user) issues a new link and never changes the deadline (Requirement 2.8). Earlier links keep working until they expire.
 - **Login.** `/api/auth/login` and `/api/auth/refresh` return `email_verification_required` and `deactivation_deadline`; the SPA shows the reminder modal after a login. Once the deadline has passed (the day after it) an unverified account gets `403 "Account deactivated."` — only after the password matched, so nothing leaks to someone without it. An open session ends at the next refresh. Verifying with an old link is refused too; `python -m app.cli verify-email --username X` reactivates the account.
 - Accounts without a deadline (created before the feature was switched on, or with `create-admin`) are never deactivated automatically.
+- **Reminders** (task 34.4): `python -m app.cli send-verification-reminders` (hourly in the `scheduler` service) emails a new link `VERIFICATION_REMINDER_DAYS` before the deadline (default 7 and 1 days), each at most once; if a run was missed only the latest one goes out. `users.last_verification_reminder_days` records what was sent; emails use `users.preferred_language` (stored at sign-up and on resend).
 - **Email delivery** (`EMAIL_BACKEND`): `console` prints the email, `smtp` sends it (`SMTP_*`, STARTTLS by default), `file` writes JSON files (E2E tests). Sending runs after the response; a failure is logged and the user can resend.
 - **CAPTCHA** fails closed: missing token, rejected token or unreachable hCaptcha → `400 "CAPTCHA verification failed."`. The SPA loads `js.hcaptcha.com` only when `GET /api/auth/config` returns a site key; the production CSP allows `hcaptcha.com` for scripts, frames, styles and connections.
 
@@ -333,6 +334,9 @@ graph LR
     Caddy -- "/api/*" --> API["backend (uvicorn)<br/>non-root, DB role app_user"]
     Migrate["migrate (one-shot)<br/>alembic upgrade head<br/>as DB owner"] --> PG[(PostgreSQL 15)]
     API --> PG
+    API --> Redis[(Redis<br/>rate-limit counters)]
+    Scheduler["scheduler (hourly)<br/>verification reminders"] --> PG
+    Backup["backup (daily)<br/>pg_dump → backups volume"] --> PG
 ```
 
 | Service | Role |
@@ -341,10 +345,27 @@ graph LR
 | `migrate` | Runs `alembic upgrade head` as the database owner, then exits. The API starts only if it succeeded. |
 | `backend` | FastAPI as a non-root user, connected as **`app_user`** (SELECT/INSERT/UPDATE/DELETE and sequence usage only, Requirement 9.9). Trusts `X-Forwarded-For` from Caddy, so rate limits see client IPs. Health check: `GET /api/health`. |
 | `db` | PostgreSQL 15. `deploy/postgres/01-app-user.sh` creates `app_user` on first start, with default privileges so tables added by later migrations are covered. |
+| `redis` | Rate-limit counters shared by the API workers (`WEB_CONCURRENCY`, default 2). Nothing persisted. If Redis is unreachable each worker falls back to an in-memory per-IP limit (`RATE_LIMIT_FALLBACK`, default 60/minute) instead of failing requests. |
+| `backup` | `deploy/backup/backup.sh`: a `pg_dump --format=custom` every `BACKUP_INTERVAL_HOURS` (24) into the `backups` volume, checked with `pg_restore --list`, kept `BACKUP_RETENTION_DAYS` (14). |
+| `scheduler` | Runs `python -m app.cli send-verification-reminders` every hour as `app_user` (does nothing while email verification is off). |
 
 Frontend and API share one origin, so the refresh cookie (`SameSite=Strict`) and CORS need no cross-site configuration.
 
-`scripts/smoke-prod.sh` builds and starts this stack with throwaway secrets and checks TLS, headers, a full API round trip through Caddy, audit rows, and that `app_user` cannot drop, create or truncate tables. CI runs it on every push.
+`scripts/smoke-prod.sh` builds and starts this stack with throwaway secrets and checks TLS, headers, a full API round trip through Caddy, that the login limit is shared through Redis, audit rows, a backup → data loss → restore cycle, a reminder sent by the scheduler, and that `app_user` cannot drop, create or truncate tables. CI runs it on every push.
+
+### Backups and restore
+
+```bash
+# One backup now / list / copy off the server
+docker compose -f docker-compose.prod.yml --env-file .env.prod exec backup sh /usr/local/bin/backup.sh once
+./scripts/restore-backup.sh --list
+docker compose -f docker-compose.prod.yml --env-file .env.prod cp backup:/backups ./offsite
+
+# Restore (stops the API, replaces the database in one transaction, starts the API)
+./scripts/restore-backup.sh savepass-20261114T030000Z.dump
+```
+
+Dumps contain bcrypt hashes and Fernet-encrypted credentials: copy them to separate, access-controlled storage. A dump can only be decrypted with the `FERNET_KEY` in use when it was taken, so keep every key that backups still depend on (section 6). Restoring keeps `app_user`'s grants and the Alembic version, so the API starts on the restored schema directly.
 
 ### Continuous integration
 
@@ -352,16 +373,15 @@ Frontend and API share one origin, so the refresh cookie (`SameSite=Strict`) and
 
 | Job | Checks |
 |---|---|
-| Backend | ruff, pip-audit, full pytest suite (SQLite), migrations upgrade/check/downgrade on PostgreSQL 15, API/security/key-rotation tests on PostgreSQL 15 |
+| Backend | ruff, pip-audit, full pytest suite (SQLite), migrations upgrade/check/downgrade on PostgreSQL 15, API/security/key-rotation/Phase 2 tests on PostgreSQL 15, rate-limit tests on Redis |
 | Frontend | eslint, `tsc`, Vitest, production build, `npm audit --audit-level=high` |
 | End-to-end | Playwright against uvicorn + Vite with PostgreSQL 15 |
-| Production | `scripts/smoke-prod.sh` (Docker images, Caddy, app_user) |
+| Production | `scripts/smoke-prod.sh` (Docker images, Caddy, Redis, backup/restore, scheduler, app_user) |
 
 ---
 
 ## 9. Known gaps
 
-- **Rate-limit counters** live in each process's memory. Production runs a single uvicorn worker; scaling out needs `RATE_LIMIT_STORAGE` pointing to a shared store such as Redis.
-- **react-router 6** has a moderate open-redirect advisory fixed only in v7 (task 31.8); not reachable because the app navigates only to static paths.
-- **Backups** are not automated; schedule `pg_dump` of the `postgres_data` volume and keep the Fernet key stored separately.
-- **Deactivation** is evaluated at login/refresh time; there is no job that notifies users before their deadline or deletes deactivated accounts.
+- **Off-site copies** of backups are not automated: the `backups` volume lives on the same server. Copy it elsewhere (e.g. a nightly `docker compose cp` + upload).
+- **Deactivated accounts** are kept (they can be reactivated); nothing deletes them automatically.
+- **Lint tooling**: `typescript-eslint` still depends on `minimatch` 10, which has a moderate ReDoS advisory fixed only in 11. It affects the developer's lint run, not the app; it clears when typescript-eslint moves to minimatch 11.

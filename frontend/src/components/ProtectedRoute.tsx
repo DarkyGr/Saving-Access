@@ -1,5 +1,5 @@
 import { JSX, useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate } from "react-router";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // AuthContext stub — will be fulfilled by the real module in task 17.2.

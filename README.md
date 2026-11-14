@@ -114,7 +114,7 @@ make down
 
 ## Production Deployment
 
-`docker-compose.prod.yml` runs the hardened stack: **Caddy** (HTTPS with automatic certificates, security headers, serves the built frontend and proxies `/api`), a one-shot **migrate** service, the **backend** connected as the least-privilege `app_user` database role, and **PostgreSQL**. Only ports 80/443 are published.
+`docker-compose.prod.yml` runs the hardened stack: **Caddy** (HTTPS with automatic certificates, security headers, serves the built frontend and proxies `/api`), a one-shot **migrate** service, the **backend** (2 workers) connected as the least-privilege `app_user` database role, **Redis** for shared rate-limit counters, **PostgreSQL**, a **backup** service (daily `pg_dump`, kept 14 days) and a **scheduler** for verification reminders. Only ports 80/443 are published.
 
 ```bash
 cp .env.prod.example .env.prod      # set SITE_ADDRESS, passwords, FERNET_KEY, JWT_SECRET
@@ -123,7 +123,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod exec backend \
   python -m app.cli create-admin --username admin --email admin@example.com
 ```
 
-Point your domain's DNS to the server before starting so Caddy can obtain the certificate. Back up the `postgres_data` volume and keep `FERNET_KEY` stored separately: without the key, saved passwords cannot be recovered. Key rotation without downtime is described in [ARCHITECTURE.md](ARCHITECTURE.md#6-fernet-key-management-and-rotation).
+Point your domain's DNS to the server before starting so Caddy can obtain the certificate. Backups are written to the `backups` volume; copy them off the server and keep `FERNET_KEY` stored separately: without the key, saved passwords cannot be recovered. `make backup` takes one now and `./scripts/restore-backup.sh <dump>` restores one ([details](ARCHITECTURE.md#backups-and-restore)). Key rotation without downtime is described in [ARCHITECTURE.md](ARCHITECTURE.md#6-fernet-key-management-and-rotation).
 
 To try the production stack locally (self-signed certificate on `https://localhost`, everything removed afterwards): `make smoke-prod`.
 
@@ -182,7 +182,11 @@ alembic upgrade head
 | `DEFAULT_PROFILE` | Profile assigned to every new sign-up (empty = none) | `Full` |
 | `REFRESH_EXPIRE_HOURS` | How long a login lasts without re-entering the password | `8` |
 | `COOKIE_SECURE` / `COOKIE_SAMESITE` | Refresh cookie flags | `true` / `strict` |
-| `RATE_LIMIT_ENABLED` / `RATE_LIMIT_STORAGE` | Rate limiting on/off and its store (use Redis with several workers) | `true` / `memory://` |
+| `RATE_LIMIT_ENABLED` / `RATE_LIMIT_STORAGE` | Rate limiting on/off and its store (Redis in production, shared by all workers) | `true` / `memory://` |
+| `RATE_LIMIT_FALLBACK` | Per-IP limit used in memory while Redis is unreachable | `60/minute` |
+| `WEB_CONCURRENCY` | API worker processes (production) | `2` |
+| `BACKUP_INTERVAL_HOURS` / `BACKUP_RETENTION_DAYS` | Production backup schedule | `24` / `14` |
+| `VERIFICATION_REMINDER_DAYS` | Reminder emails N days before the deactivation deadline (empty = none) | `7,1` |
 | `EMAIL_VERIFICATION_ENABLED` | Require email verification within 30 days of sign-up (spec Phase 2) | `false` |
 | `APP_BASE_URL` | Public frontend URL used in verification links (required when verification is on; set automatically in production) | `http://localhost:5173` |
 | `EMAIL_BACKEND` | `console` (print), `smtp` or `file` (`EMAIL_OUTBOX_DIR`) | `console` |
@@ -291,7 +295,7 @@ save-pass/
 │   │   ├── context/           # AuthContext (access token in memory only)
 │   │   ├── api/               # apiClient (axios, bearer token, silent refresh)
 │   │   ├── i18n/              # en.json, es.json, i18n.ts
-│   │   └── router.tsx         # React Router v6 routes
+│   │   └── router.tsx         # React Router v7 routes
 │   ├── e2e/                   # Playwright end-to-end tests
 │   ├── playwright.config.ts
 │   ├── package.json
@@ -376,7 +380,8 @@ A control in the application header switches between **English** (default) and *
 - Repeated failed logins or wrong account passwords are **slowed down** (HTTP 429 after a few attempts per minute).
 - Every save, reveal, edit and delete is recorded in an **audit log**.
 - The server refuses to start without strong secrets.
-- Optional: hCaptcha on the login page and email verification (accounts not verified within 30 days are deactivated).
+- Optional: hCaptcha on the login page and email verification (reminders 7 and 1 days before; accounts not verified within 30 days are deactivated).
+- In production the database is backed up daily; restoring a backup is a single command.
 - In production all traffic is HTTPS (HTTP redirects to HTTPS, HSTS enabled), and the application's database account cannot change or drop tables.
 
 Technical details: [`ARCHITECTURE.md`](ARCHITECTURE.md).
@@ -394,6 +399,7 @@ Technical details: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 | `make test-e2e` | Run the Playwright end-to-end tests |
 | `make lint` | ruff + eslint |
 | `make smoke-prod` | Build and smoke-test the production stack locally (Docker) |
+| `make backup` | Take a production backup now |
 | `make seed` | Seed default profiles (Docker) |
 | `make create-admin USERNAME=.. EMAIL=..` | Create an Admin account (Docker) |
 | `make install-backend` | Install Python dependencies locally (no Docker) |

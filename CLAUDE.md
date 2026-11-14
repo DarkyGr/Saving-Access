@@ -17,9 +17,9 @@ Reglas:
 ## Stack
 
 - Backend: Python 3.11+ · FastAPI · SQLAlchemy 2 · Alembic · Pydantic v2 · `cryptography` (Fernet) · bcrypt · PyJWT (HS256) · slowapi
-- Frontend: React 18 · TypeScript · Vite · Tailwind 3 · react-i18next (EN/ES) · axios · react-router v6
+- Frontend: React 18 · TypeScript · Vite · Tailwind 3 · react-i18next (EN/ES) · axios · react-router v7 (paquete `react-router`)
 - DB: PostgreSQL 15 (tests usan SQLite en memoria)
-- Docker Compose dev: `db`, `backend` (:8000), `frontend` (:5173). Prod: `docker-compose.prod.yml` (Caddy HTTPS, `migrate`, backend como `app_user`, db)
+- Docker Compose dev: `db`, `backend` (:8000), `frontend` (:5173). Prod: `docker-compose.prod.yml` (Caddy HTTPS, `migrate`, backend como `app_user` con 2 workers, Redis para rate limit, db, `backup` diario, `scheduler` de recordatorios)
 - CI: `.github/workflows/ci.yml`
 
 ## Comandos
@@ -57,6 +57,8 @@ E2E_POSTGRES_URL=postgresql://... npx playwright test
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 ./scripts/smoke-prod.sh               # requiere Docker; CI lo ejecuta en cada push
 python -m app.cli rotate-fernet-key   # con FERNET_KEY="<nueva>,<vieja>"
+make backup                          # backup ahora; ./scripts/restore-backup.sh <dump> restaura
+python -m app.cli send-verification-reminders [--dry-run]   # el servicio scheduler lo corre cada hora
 
 # todo
 make up / make down / make test-backend / make test-frontend / make lint

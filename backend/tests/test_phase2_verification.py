@@ -528,3 +528,111 @@ def test_console_backend_prints(monkeypatch, capsys):
     monkeypatch.delenv("EMAIL_BACKEND", raising=False)
     assert email_sender.send_email(OutgoingEmail("bob@example.com", "Hi", "Body")) is True
     assert "bob@example.com" in capsys.readouterr().out
+
+
+# ── 34.4 Deadline reminders ──────────────────────────────────────────────────
+
+from app.services.email_verification_service import EmailVerificationService  # noqa: E402
+
+
+def _remind(today: date | None = None, **kwargs) -> list[str]:
+    with _Session() as db:
+        return EmailVerificationService(db).send_due_reminders(today or date.today(), **kwargs)
+
+
+def test_signup_and_resend_store_the_ui_language(client, outbox):
+    _register(client, language="es-ES")
+    assert _user().preferred_language == "es"
+    client.post("/api/profile/verification-email", json={"language": "en"}, headers=_auth(client))
+    assert _user().preferred_language == "en"
+
+
+def test_reminders_at_seven_and_one_day_once_each(client, outbox):
+    _register(client, language="es")
+    deadline = _user().deactivation_deadline
+    sent = len(_emails(outbox))
+
+    assert _remind(deadline - timedelta(days=8)) == []
+    assert _remind(deadline - timedelta(days=7)) == ["alice"]
+    assert _user().last_verification_reminder_days == 7
+    assert _remind(deadline - timedelta(days=6)) == []  # same stage: once
+    assert _remind(deadline - timedelta(days=1)) == ["alice"]
+    assert _remind(deadline) == []
+    assert _user().last_verification_reminder_days == 1
+
+    reminders = _emails(outbox)[sent:]
+    assert len(reminders) == 2
+    assert all(e["subject"].startswith("Recordatorio") for e in reminders)
+    assert deadline.isoformat() in reminders[0]["body"]
+    # Each reminder carries a working link, and the deadline never moves.
+    assert client.post("/api/auth/verify-email", json={"token": _token_from(reminders[1])}).status_code == 200
+    assert _user().deactivation_deadline == deadline
+
+
+def test_missed_stage_sends_only_the_latest(client, outbox):
+    _register(client)
+    deadline = _user().deactivation_deadline
+    assert _remind(deadline) == ["alice"]  # job did not run at 7 days
+    assert _user().last_verification_reminder_days == 1
+    assert _emails(outbox)[-1]["subject"].startswith("Reminder")
+
+
+def test_no_reminders_for_verified_deactivated_or_grandfathered(client, outbox):
+    for name in ("verified", "expired", "legacy"):
+        _register(client, name)
+    client.post("/api/auth/verify-email", json={"token": _token_from(_emails(outbox)[0])})
+    _set_deadline(date.today() - timedelta(days=1), "expired")
+    _set_deadline(None, "legacy")
+    _set_deadline(date.today() + timedelta(days=1), "verified")
+    assert _remind() == []
+
+
+def test_dry_run_sends_and_changes_nothing(client, outbox):
+    _register(client)
+    _set_deadline(date.today() + timedelta(days=3))
+    sent = len(_emails(outbox))
+    assert _remind(dry_run=True) == ["alice"]
+    assert len(_emails(outbox)) == sent
+    assert _user().last_verification_reminder_days is None
+
+
+def test_failed_reminder_is_retried(client, outbox):
+    _register(client)
+    _set_deadline(date.today() + timedelta(days=3))
+    with patch("app.services.email_verification_service.send_email", return_value=False):
+        assert _remind() == []
+    assert _user().last_verification_reminder_days is None
+    assert _remind() == ["alice"]
+
+
+def test_reminders_off(client, outbox, monkeypatch):
+    _register(client)
+    _set_deadline(date.today() + timedelta(days=1))
+    monkeypatch.setenv("VERIFICATION_REMINDER_DAYS", "")
+    assert _remind() == []
+    monkeypatch.setenv("VERIFICATION_REMINDER_DAYS", "7,1")
+    monkeypatch.setenv("EMAIL_VERIFICATION_ENABLED", "false")
+    assert _remind() == []
+
+
+def test_invalid_reminder_days_stop_startup(monkeypatch, outbox):
+    monkeypatch.setenv("VERIFICATION_REMINDER_DAYS", "seven")
+    with pytest.raises(security.SettingsError, match="VERIFICATION_REMINDER_DAYS"):
+        security.validate_settings()
+
+
+def test_cli_send_verification_reminders(client, outbox, capsys):
+    _register(client)
+    _set_deadline(date.today() + timedelta(days=1))
+    with patch.object(cli, "SessionLocal", _Session):
+        cli.cmd_send_verification_reminders(argparse.Namespace(dry_run=True))
+        assert "Would remind 1 user(s): alice" in capsys.readouterr().out
+        cli.cmd_send_verification_reminders(argparse.Namespace(dry_run=False))
+        assert "Reminded 1 user(s): alice" in capsys.readouterr().out
+        cli.cmd_send_verification_reminders(argparse.Namespace(dry_run=False))
+        assert "Reminded 0 user(s)." in capsys.readouterr().out
+
+
+def test_cli_reminders_when_disabled(capsys):
+    cli.cmd_send_verification_reminders(argparse.Namespace(dry_run=False))
+    assert "off" in capsys.readouterr().out

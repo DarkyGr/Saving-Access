@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.middleware.permissions import get_current_claims
 from app.models import User
-from app.phase2 import email_verification_enabled, is_deactivated
+from app.phase2 import email_verification_enabled, is_deactivated, normalize_language
 from app.rate_limit import RESEND_VERIFICATION_LIMIT, limiter, user_or_ip_key
 from app.services.email_sender import send_email
 from app.services.email_verification_service import (
@@ -85,8 +85,10 @@ def resend_verification_email(
         raise HTTPException(status_code=409, detail="Email already verified.")
     if is_deactivated(user, utc_date_time()[0]):
         raise HTTPException(status_code=403, detail="Account deactivated.")
+    language = normalize_language(body.language if body else None)
+    if language:
+        user.preferred_language = language
     raw = EmailVerificationService(db).issue(user)
     db.commit()
-    language = body.language if body else None
     background_tasks.add_task(send_email, build_verification_email(user, raw, language))
     return {"detail": "Verification email sent."}

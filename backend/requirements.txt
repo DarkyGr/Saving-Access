@@ -16,6 +16,9 @@ PyJWT==2.15.1
 python-dotenv==1.2.4
 python-multipart==0.0.32
 slowapi==0.1.9
+limits==5.8.0
+# Shared rate-limit counters in production (limits requires redis < 8)
+redis==7.4.1
 email-validator==2.1.1
 
 # Testing

@@ -1,7 +1,7 @@
 # Save Pass — Password Manager
 # Makefile for common development tasks
 
-.PHONY: up down test-backend test-frontend test-e2e lint smoke-prod seed create-admin install-backend install-frontend help
+.PHONY: up down test-backend test-frontend test-e2e lint smoke-prod backup seed create-admin install-backend install-frontend help
 
 # Default target
 help:
@@ -13,6 +13,7 @@ help:
 	@echo "  test-e2e         - Run Playwright end-to-end tests (starts its own servers)"
 	@echo "  lint             - ruff (backend) + eslint (frontend)"
 	@echo "  smoke-prod       - Build and smoke-test the production stack (Docker)"
+	@echo "  backup           - Take a production backup now (restore: scripts/restore-backup.sh)"
 	@echo "  seed             - Seed default profiles in the running backend container"
 	@echo "  create-admin     - Create an Admin account (USERNAME=.. EMAIL=..)"
 	@echo "  install-backend  - Install Python dependencies in a venv"
@@ -43,6 +44,9 @@ lint:
 
 smoke-prod:
 	./scripts/smoke-prod.sh
+
+backup:
+	docker compose -f docker-compose.prod.yml --env-file .env.prod exec backup sh /usr/local/bin/backup.sh once
 
 ## Admin tasks (Docker)
 seed:

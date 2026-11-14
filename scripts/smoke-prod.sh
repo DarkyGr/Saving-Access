@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Smoke test of the production stack (docker-compose.prod.yml), task 32.7.
 # Builds and starts everything with throwaway secrets on https://localhost,
-# checks TLS + security headers, a full API round trip through Caddy, and that
-# the API's database role cannot change the schema. Tears everything down.
+# checks TLS + security headers, a full API round trip through Caddy, the
+# shared (Redis) rate limit, backup + restore, and that the API's database
+# role cannot change the schema. Tears everything down.
 #
 #   ./scripts/smoke-prod.sh
 set -euo pipefail
@@ -16,6 +17,7 @@ gen() { python3 -c "import secrets; print(secrets.token_urlsafe($1))"; }
   echo "DB_OWNER_PASSWORD=$(gen 24)"
   echo "APP_DB_PASSWORD=$(gen 24)"
   echo "JWT_SECRET=$(gen 48)"
+  echo "EMAIL_VERIFICATION_ENABLED=true"   # console email backend
   echo "FERNET_KEY=$(python3 -c 'import base64,os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())')"
 } > "$ENV_FILE"
 
@@ -65,9 +67,42 @@ CID=$("${CURL[@]}" "${AUTH[@]}" \
 "${CURL[@]}" -b "$JAR" -c "$JAR" -X POST "$BASE/api/auth/refresh" | grep -q access_token
 "${CURL[@]}" -b "$JAR" -X POST "$BASE/api/auth/logout" -o /dev/null
 
+echo "• login rate limit is shared by the API workers (Redis)"
+codes=""
+for _ in $(seq 1 12); do
+  codes+=$(curl -sk -o /dev/null -w '%{http_code} ' -H 'Content-Type: application/json' \
+    -d '{"username":"nobody","password":"wrong"}' "$BASE/api/auth/login")
+done
+echo "  $codes"
+# 10/minute per IP: with per-process counters and 2 workers, 12 attempts
+# could all pass; with Redis the 11th and 12th must be refused.
+[ "$(tr ' ' '\n' <<<"$codes" | grep -c '^429$')" -ge 2 ]
+"${COMPOSE[@]}" exec -T redis redis-cli --scan --pattern 'LIMITER*' | grep -q .
+
 echo "• audit rows written"
 "${COMPOSE[@]}" exec -T db psql -U savepass_owner -d savepass -tAc \
   "select string_agg(operation, ',' order by operation) from audit_log" | grep -qx 'INSERT,SELECT'
+
+echo "• backup, data loss, restore"
+"${COMPOSE[@]}" exec -T backup sh /usr/local/bin/backup.sh once
+DUMP=$("${COMPOSE[@]}" exec -T backup sh -c 'ls -t /backups/savepass-*.dump | head -1' | tr -d '\r')
+DUMP=$(basename "$DUMP")
+psql_owner() { "${COMPOSE[@]}" exec -T db psql -U savepass_owner -d savepass -tAc "$1"; }
+psql_owner "DELETE FROM credentials" >/dev/null
+[ "$(psql_owner 'select count(*) from credentials')" = "0" ]
+RESTORE_CONFIRM=yes COMPOSE_CMD="${COMPOSE[*]}" ./scripts/restore-backup.sh "$DUMP"
+[ "$(psql_owner 'select count(*) from credentials')" = "1" ]
+for _ in $(seq 1 60); do
+  if curl -fsk "$BASE/api/health" 2>/dev/null | grep -q '"ok"'; then break; fi
+  sleep 2
+done
+# The restored rows are readable by the API as app_user and still decrypt.
+"${CURL[@]}" "${AUTH[@]}" -d "{\"account_password\":\"$PW\"}" "$BASE/api/credentials/$CID/reveal" | grep -q gh-secret
+
+echo "• reminder scheduler runs as app_user"
+psql_owner "UPDATE users SET deactivation_deadline = current_date + 1 WHERE username = 'smoke'" >/dev/null
+"${COMPOSE[@]}" exec -T scheduler python -m app.cli send-verification-reminders | grep -q "Reminded 1 user(s): smoke"
+"${COMPOSE[@]}" exec -T scheduler python -m app.cli send-verification-reminders | grep -q "Reminded 0 user(s)"
 
 echo "• app_user cannot change the schema"
 for stmt in "DROP TABLE audit_log" "CREATE TABLE evil(id int)" "TRUNCATE users"; do

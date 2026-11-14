@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import apiClient from "../api/apiClient";
 import { useAuth } from "../context/AuthContext";

@@ -231,6 +231,8 @@ CREATE TABLE users (
     role                 VARCHAR(16)  NOT NULL CHECK (role IN ('User','Admin')),
     email_verified       BOOLEAN      NOT NULL DEFAULT FALSE,
     deactivation_deadline DATE,
+    preferred_language   VARCHAR(8),          -- task 34.4: language of later emails
+    last_verification_reminder_days SMALLINT, -- task 34.4: last reminder sent (days before deadline)
     -- Audit columns
     creation_date        DATE         NOT NULL,
     creation_time        TIME         NOT NULL,
@@ -554,11 +556,12 @@ Implementation:
 | Credential encryption | Fernet (AES-128-CBC + HMAC-SHA256); key stored in env var, never in code or DB |
 | Token security | Access JWT (PyJWT) in memory only (not `localStorage`); 15-min expiry; `exp` and `type="access"` required. Refresh token only in an httpOnly cookie, rotated and revocable (task 31.5) |
 | Secrets | App refuses to start without a ≥ 32-char `JWT_SECRET` and a valid `FERNET_KEY` (task 31.1) |
-| Brute-force | Per-IP limits on login/register/refresh and per-user limits on account-password checks (slowapi, task 31.3); unknown usernames still pay the bcrypt cost |
+| Brute-force | Per-IP limits on login/register/refresh and per-user limits on account-password checks (slowapi, task 31.3); unknown usernames still pay the bcrypt cost. Production counters live in Redis, shared by all workers, with an in-memory per-IP fallback if Redis is down (task 34.2) |
+| Backups | Daily `pg_dump` (custom format, verified, 14-day retention) by the `backup` service; `scripts/restore-backup.sh` restores in one transaction (task 34.3) |
 | HTTPS | Production: Caddy terminates TLS (automatic certificates), redirects HTTP→HTTPS and sets HSTS, CSP and other security headers (task 32.6) |
 | CORS | FastAPI `CORSMiddleware` configured to allow only the known frontend origin |
 | Brute-force (Phase 2 of the spec) | hCaptcha on the login form when `HCAPTCHA_SITE_KEY`/`HCAPTCHA_SECRET` are set; verified server-side before the password, fails closed (task 33.4) |
-| Email verification (Phase 2) | `EMAIL_VERIFICATION_ENABLED`: one-time link (SHA-256 stored in `email_verification_tokens`, 48 h), deadline = creation + 30 days, login 403 after it; resend keeps the deadline; `app.cli verify-email` reactivates (task 33) |
+| Email verification (Phase 2) | `EMAIL_VERIFICATION_ENABLED`: one-time link (SHA-256 stored in `email_verification_tokens`, 48 h), deadline = creation + 30 days, login 403 after it; resend keeps the deadline; `app.cli verify-email` reactivates (task 33); reminder emails 7 and 1 days before the deadline from the hourly scheduler (task 34.4) |
 | Credential ownership | All credential queries include `WHERE user_id = <authenticated_user_id>` |
 | Fernet key rotation | `FERNET_KEY="<new>,<old>"` + `python -m app.cli rotate-fernet-key` re-encrypts every row in one transaction, no downtime (task 32.5, ARCHITECTURE.md §6) |
 | Database privileges | Production API connects as `app_user` (DML only); migrations run separately as the owner (task 32.6) |

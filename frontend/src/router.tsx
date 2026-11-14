@@ -1,5 +1,5 @@
 import React, { Suspense } from "react";
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router";
 
 import AppLayout from "./components/AppLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -18,7 +18,7 @@ import VerifyEmailPage from "./pages/VerifyEmailPage";
 const ForbiddenPage = React.lazy(() => import("./pages/ForbiddenPage"));
 
 /**
- * Application router (react-router-dom v6 data router).
+ * Application router (react-router v7 data router).
  *
  * Route structure:
  *  /login                  → LoginPage (public)

@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 

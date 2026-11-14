@@ -170,6 +170,14 @@ CREATE INDEX idx_email_verification_tokens_user_id ON email_verification_tokens 
 
 UPDATE alembic_version SET version_num='0004_email_verification' WHERE alembic_version.version_num = '0003_search_trgm';
 
+-- Running upgrade 0004_email_verification -> 0005_verification_reminders
+
+ALTER TABLE users ADD COLUMN preferred_language VARCHAR(8);
+
+ALTER TABLE users ADD COLUMN last_verification_reminder_days SMALLINT;
+
+UPDATE alembic_version SET version_num='0005_verification_reminders' WHERE alembic_version.version_num = '0004_email_verification';
+
 COMMIT;
 
 

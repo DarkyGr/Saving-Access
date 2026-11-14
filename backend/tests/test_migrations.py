@@ -61,6 +61,9 @@ def test_existing_create_all_database_can_be_adopted(db_url):
     with engine.begin() as conn:
         conn.exec_driver_sql("DROP INDEX idx_credentials_website_name_trgm")
         conn.exec_driver_sql("DROP INDEX idx_credentials_email_username_trgm")
+        # Nor the reminder columns (added in 0005).
+        conn.exec_driver_sql("ALTER TABLE users DROP COLUMN preferred_language")
+        conn.exec_driver_sql("ALTER TABLE users DROP COLUMN last_verification_reminder_days")
     engine.dispose()
 
     assert _alembic(db_url, "stamp", "0001_baseline").returncode == 0

@@ -8,6 +8,7 @@ Usage (from backend/ or inside the backend container), after
     python -m app.cli create-admin --username admin --email admin@example.com
     python -m app.cli promote --username alice
     python -m app.cli verify-email --username alice
+    python -m app.cli send-verification-reminders [--dry-run]
     python -m app.cli rotate-fernet-key [--dry-run]
 
 ``create-admin`` reads the password from the ``ADMIN_PASSWORD`` env var, or
@@ -104,6 +105,23 @@ def cmd_verify_email(args: argparse.Namespace) -> None:
         print(f"'{user.username}' email marked as verified; the account is active.")
 
 
+def cmd_send_verification_reminders(args: argparse.Namespace) -> None:
+    """Email deadline reminders to unverified users (task 34.4). Idempotent."""
+    from app.phase2 import email_verification_enabled
+    from app.services.email_verification_service import EmailVerificationService
+    from app.utils.audit_columns import utc_date_time
+
+    if not email_verification_enabled():
+        print("Email verification is off; nothing to do.")
+        return
+    with SessionLocal() as db:
+        names = EmailVerificationService(db).send_due_reminders(
+            utc_date_time()[0], dry_run=args.dry_run
+        )
+    verb = "Would remind" if args.dry_run else "Reminded"
+    print(f"{verb} {len(names)} user(s)" + (": " + ", ".join(names) if names else "."))
+
+
 def cmd_rotate_fernet_key(args: argparse.Namespace) -> None:
     """Re-encrypt every saved credential with the first key in FERNET_KEY.
 
@@ -160,6 +178,13 @@ def main(argv: list[str] | None = None) -> None:
     )
     p_verify.add_argument("--username", required=True)
     p_verify.set_defaults(func=cmd_verify_email)
+
+    p_remind = sub.add_parser(
+        "send-verification-reminders",
+        help="Email unverified users whose deactivation deadline is near",
+    )
+    p_remind.add_argument("--dry-run", action="store_true", help="List users, send nothing")
+    p_remind.set_defaults(func=cmd_send_verification_reminders)
 
     p_rotate = sub.add_parser(
         "rotate-fernet-key",

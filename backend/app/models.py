@@ -24,6 +24,7 @@ from sqlalchemy import (
     Integer,
     JSON,
     LargeBinary,
+    SmallInteger,
     String,
     Time,
 )
@@ -84,6 +85,11 @@ class User(AuditColumnsMixin, Base):
     email_verified = Column(Boolean, nullable=False, default=False)
     # nullable — only relevant in Phase 2 (Requirement 1.9)
     deactivation_deadline = Column(Date, nullable=True)
+    # UI language at sign-up / last resend ("en" | "es"), for emails sent
+    # later without a request (deadline reminders, task 34.4).
+    preferred_language = Column(String(8), nullable=True)
+    # Days-before-deadline of the last reminder sent (e.g. 7, then 1).
+    last_verification_reminder_days = Column(SmallInteger, nullable=True)
 
     __table_args__ = (
         CheckConstraint("role IN ('User', 'Admin')", name="ck_users_role"),

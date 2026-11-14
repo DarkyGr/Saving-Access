@@ -9,9 +9,14 @@ Rate limiting (task 31.3) with slowapi.
 Configuration (env):
   RATE_LIMIT_ENABLED   "true" (default) / "false" — tests disable it
   RATE_LIMIT_STORAGE   limits storage URI, default "memory://". Use a shared
-                       store such as "redis://host:6379" when running more
+                       store such as "redis://host:6379/0" when running more
                        than one worker/process, otherwise each one counts
-                       separately.
+                       separately. Production uses the compose "redis"
+                       service (task 34.2).
+  RATE_LIMIT_FALLBACK  limit applied per client IP, in memory, while the
+                       shared store is unreachable (default "60/minute"), so
+                       a Redis outage neither takes the API down nor removes
+                       brute-force protection entirely.
   RATE_LIMIT_LOGIN, RATE_LIMIT_REGISTER, RATE_LIMIT_REFRESH,
   RATE_LIMIT_ACCOUNT_PASSWORD, RATE_LIMIT_VERIFY_EMAIL,
   RATE_LIMIT_RESEND_VERIFICATION  override the defaults below.
@@ -56,12 +61,24 @@ def user_or_ip_key(request: Request) -> str:
     return f"ip:{get_remote_address(request)}"
 
 
-limiter = Limiter(
-    key_func=get_remote_address,
-    storage_uri=os.environ.get("RATE_LIMIT_STORAGE", "memory://"),
-    enabled=_enabled(),
-    headers_enabled=False,
-)
+STORAGE_URI = os.environ.get("RATE_LIMIT_STORAGE", "memory://")
+FALLBACK_LIMIT = os.environ.get("RATE_LIMIT_FALLBACK", "60/minute")
+
+def build_limiter(storage_uri: str = STORAGE_URI, fallback: str = FALLBACK_LIMIT) -> Limiter:
+    """Limiter on *storage_uri*; a shared store falls back to memory when down."""
+    shared = not storage_uri.startswith("memory://")
+    # slowapi turns the fallback on whenever a fallback list is given.
+    return Limiter(
+        key_func=get_remote_address,
+        storage_uri=storage_uri,
+        enabled=_enabled(),
+        headers_enabled=False,
+        in_memory_fallback_enabled=shared,
+        in_memory_fallback=[fallback] if shared else [],
+    )
+
+
+limiter = build_limiter()
 
 
 def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:

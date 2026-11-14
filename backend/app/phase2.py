@@ -12,6 +12,9 @@ Environment:
   APP_BASE_URL                Public URL of the frontend, used to build the
                               verification link (required when enabled).
   VERIFICATION_TOKEN_HOURS    Lifetime of a verification link (default 48).
+  VERIFICATION_REMINDER_DAYS  Days before the deadline at which unverified
+                              users get a reminder with a new link
+                              (default "7,1"; empty = no reminders).
   EMAIL_BACKEND               "console" (default, prints the email), "file"
                               (one JSON file per email in EMAIL_OUTBOX_DIR)
                               or "smtp" (SMTP_* variables).
@@ -58,6 +61,20 @@ def app_base_url() -> str:
 
 def verification_token_lifetime() -> timedelta:
     return timedelta(hours=float(os.environ.get("VERIFICATION_TOKEN_HOURS", "48")))
+
+
+def reminder_days() -> list[int]:
+    """Reminder thresholds, largest first (e.g. [7, 1])."""
+    raw = os.environ.get("VERIFICATION_REMINDER_DAYS", "7,1")
+    days = {int(part) for part in raw.split(",") if part.strip()}
+    return sorted((d for d in days if 0 <= d < DEACTIVATION_DAYS), reverse=True)
+
+
+def normalize_language(language: str | None) -> str | None:
+    """Map a UI language tag ("es-ES", "en") to a supported one, or None."""
+    if not language:
+        return None
+    return "es" if language.strip().lower().startswith("es") else "en"
 
 
 def deactivation_deadline_for(created: date) -> date:
@@ -109,4 +126,8 @@ def settings_problems() -> list[str]:
             problems.append("SMTP_SECURITY must be starttls, ssl or none.")
     elif backend == "file" and not os.environ.get("EMAIL_OUTBOX_DIR", "").strip():
         problems.append("EMAIL_OUTBOX_DIR is required when EMAIL_BACKEND=file.")
+    try:
+        reminder_days()
+    except ValueError:
+        problems.append('VERIFICATION_REMINDER_DAYS must be comma-separated days, e.g. "7,1".')
     return problems

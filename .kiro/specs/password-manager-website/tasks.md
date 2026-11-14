@@ -306,7 +306,7 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - [x] 31.6 Alembic migrations (`backend/migrations`) are the schema source of truth; app no longer calls `create_all`; Docker/E2E run `alembic upgrade head`; `db/schema.sql` regenerated from migrations; `tests/test_migrations.py` fails on model/migration drift
     - _Requirements: 9.1–9.9_
   - [x] 31.7 npm dependencies updated (axios 1.21.0, vite 6.4.5, vitest 4.1.12, react-router-dom 6.30.6, @playwright/test 1.59.1): 0 high vulnerabilities
-  - [ ] 31.8 Upgrade react-router to v7 to clear the remaining moderate advisory (open redirect via backslash in `<Link>`/`useNavigate`; not reachable today — the app only navigates to static paths)
+  - [x] 31.8 Upgrade react-router to v7 to clear the remaining moderate advisory (open redirect via backslash in `<Link>`/`useNavigate`; not reachable today — the app only navigates to static paths)
 
 - [x] 32. Phase 4 — Deployment and continuous quality
   - [x] 32.1 Linters: ruff (backend, `ruff.toml`) and ESLint 9 flat config with react-hooks rules (frontend); both clean
@@ -336,6 +336,16 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - [x] 33.6 Deactivation: unverified past the deadline → login 403, refresh 401, link 403; resend never moves the deadline; `python -m app.cli verify-email` reactivates
     - _Requirements: 2.8, 2.9_
   - [x] 33.7 Tests: `test_phase2_verification.py` (43, also on PostgreSQL in CI), Vitest for login/modal/page, Playwright flow with verification on (email, resend, deactivation, CLI reactivation, one-time link)
+
+- [x] 34. Phase 6 — Operations: dependencies, shared rate limits, backups, reminders
+  - [x] 34.1 react-router 7.18.5 (package `react-router`, `RouterProvider` from `react-router/dom`) replaces react-router-dom 6 and clears its advisory (closes 31.8); ESLint 9.39 / typescript-eslint 8.72
+  - [x] 34.2 Redis for rate-limit counters in production (`redis` service, 2 uvicorn workers); in-memory per-IP fallback (`RATE_LIMIT_FALLBACK`) while Redis is unreachable; tests on Redis in CI
+    - _Requirements: 2.3, 8.1_
+  - [x] 34.3 Automated PostgreSQL backups (`backup` service: daily `pg_dump`, verified, 14-day retention) and `scripts/restore-backup.sh` (one transaction, keeps `app_user` grants); verified on PostgreSQL and in the production smoke test
+    - _Requirements: 9.9_
+  - [x] 34.4 Verification deadline reminders: `send-verification-reminders` CLI run hourly by the `scheduler` service, 7 and 1 days before (`VERIFICATION_REMINDER_DAYS`), once each, in the user's language (migration 0005: `preferred_language`, `last_verification_reminder_days`)
+    - _Requirements: 1.9, 1.10, 2.8_
+  - [x] 34.5 Production smoke test extended: shared login limit through Redis, backup → data loss → restore → reveal, reminder sent by the scheduler as `app_user`
 
 ## Notes
 

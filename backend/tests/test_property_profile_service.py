@@ -21,7 +21,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.testclient import TestClient
 from hypothesis import given, settings, HealthCheck
 from hypothesis import strategies as st
-from jose import jwt
+import jwt
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
 

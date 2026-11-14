@@ -18,6 +18,7 @@ from sqlalchemy import (
     CheckConstraint,
     Column,
     Date,
+    DateTime,
     ForeignKey,
     Index,
     Integer,
@@ -260,4 +261,37 @@ class AuditLog(Base):
         "User",
         back_populates="audit_logs",
         foreign_keys=[user_id],
+    )
+
+
+# ---------------------------------------------------------------------------
+# refresh_tokens (task 31.5)
+# ---------------------------------------------------------------------------
+
+class RefreshToken(AuditColumnsMixin, Base):
+    """
+    Server-side record of an issued refresh token.
+
+    Only the SHA-256 of the opaque token is stored, so a database leak does
+    not expose usable tokens. Rows are rotated on every refresh; ``revoked_at``
+    is set on logout or rotation. Reusing a revoked token revokes the whole
+    ``family_id`` (stolen-token detection).
+    """
+
+    __tablename__ = "refresh_tokens"
+
+    refresh_token_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    token_hash = Column(String(64), nullable=False, unique=True)
+    family_id = Column(String(32), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    revoked_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        Index("idx_refresh_tokens_user_id", "user_id"),
+        Index("idx_refresh_tokens_family_id", "family_id"),
     )

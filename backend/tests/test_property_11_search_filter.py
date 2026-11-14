@@ -27,7 +27,7 @@ from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 from hypothesis import HealthCheck, given, settings, assume
 from hypothesis import strategies as st
-from jose import jwt
+import jwt
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -143,10 +143,10 @@ def _cleanup(db: Session) -> None:
 
 def _create_test_user(db: Session, suffix: str = "") -> User:
     """Insert a User row directly (bypass HTTP layer to keep tests fast)."""
-    from passlib.hash import bcrypt as bcrypt_hasher
+    from app.security import hash_password
 
     rounds = int(os.environ.get("BCRYPT_ROUNDS", "4"))
-    password_hash = bcrypt_hasher.using(rounds=rounds).hash("TestPass1@xyz")
+    password_hash = hash_password("TestPass1@xyz")
     now_date = date.today()
     now_time = datetime.now(timezone.utc).time().replace(tzinfo=None)
 

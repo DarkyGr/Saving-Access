@@ -3,8 +3,8 @@ AuditService — writes immutable audit_log entries for every user-initiated
 data operation.
 
 AuditService.log() is called synchronously before the API response is
-returned so that the audit trail is always committed before the caller
-receives a success response.
+returned. Routers pass ``commit=False`` and commit the data change and the
+audit row in one transaction (task 31.4): either both persist or neither.
 
 Requirements: 1.8, 4.11, 4.12, 5.14, 6.8, 6.9, 7.7, 9.5, 9.8
 """
@@ -31,6 +31,8 @@ class AuditService:
         user_id: int,
         operation: str,
         affected_record_id: int | None = None,
+        *,
+        commit: bool = True,
     ) -> AuditLog:
         """Write an audit_log row and commit synchronously.
 
@@ -59,7 +61,12 @@ class AuditService:
         )
 
         self._db.add(entry)
-        self._db.commit()
-        self._db.refresh(entry)
+        if commit:
+            self._db.commit()
+            self._db.refresh(entry)
+        else:
+            # Caller commits the data change and this row together, so a
+            # mutation can never be persisted without its audit entry.
+            self._db.flush()
 
         return entry

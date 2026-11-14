@@ -96,6 +96,8 @@ AuditLog.__table__.create(bind=_ENGINE, checkfirst=True)
 from app.models import Profile as _Pf, UserProfile as _UPf  # noqa: E402
 _Pf.__table__.create(bind=_ENGINE, checkfirst=True)
 _UPf.__table__.create(bind=_ENGINE, checkfirst=True)
+from app.models import RefreshToken as _RT  # noqa: E402
+_RT.__table__.create(bind=_ENGINE, checkfirst=True)
 
 _TestingSessionLocal = sessionmaker(
     bind=_ENGINE,
@@ -648,6 +650,8 @@ _AuditLog2.__table__.create(bind=_ADMIN_ENGINE, checkfirst=True)
 from app.models import Profile as _Pf, UserProfile as _UPf  # noqa: E402
 _Pf.__table__.create(bind=_ADMIN_ENGINE, checkfirst=True)
 _UPf.__table__.create(bind=_ADMIN_ENGINE, checkfirst=True)
+from app.models import RefreshToken as _RT  # noqa: E402
+_RT.__table__.create(bind=_ADMIN_ENGINE, checkfirst=True)
 
 # Create ``profiles`` and ``user_profiles`` with TEXT instead of JSONB so
 # that SQLAlchemy's SQLite dialect can render them without errors.

@@ -18,7 +18,7 @@ from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
-from jose import jwt
+import jwt
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
 
@@ -77,6 +77,8 @@ def _make_test_engine():
     from app.models import Profile as _Pf, UserProfile as _UPf  # noqa: E402
     _Pf.__table__.create(bind=engine, checkfirst=True)
     _UPf.__table__.create(bind=engine, checkfirst=True)
+    from app.models import RefreshToken as _RT  # noqa: E402
+    _RT.__table__.create(bind=engine, checkfirst=True)
 
     return engine
 

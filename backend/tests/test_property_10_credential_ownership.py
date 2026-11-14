@@ -25,7 +25,7 @@ from datetime import date, datetime, timezone, timedelta
 from cryptography.fernet import Fernet
 from hypothesis import given, settings, assume, HealthCheck
 from hypothesis import strategies as st
-from jose import jwt
+import jwt
 
 # ---------------------------------------------------------------------------
 # Environment defaults — must be set before importing any app modules.

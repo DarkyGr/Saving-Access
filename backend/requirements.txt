@@ -5,15 +5,17 @@ uvicorn[standard]==0.29.0
 # Database
 sqlalchemy==2.0.30
 psycopg2-binary==2.9.9
+alembic==1.14.0
 
 # Encryption & security
 cryptography==42.0.7
-passlib[bcrypt]==1.7.4
-python-jose[cryptography]==3.3.0
+bcrypt==4.3.0
+PyJWT==2.10.1
 
 # Environment & utilities
 python-dotenv==1.0.1
 python-multipart==0.0.9
+slowapi==0.1.9
 email-validator==2.1.1
 
 # Testing

@@ -42,7 +42,7 @@ from cryptography.fernet import Fernet
 from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 from httpx import ASGITransport, AsyncClient
-from jose import jwt
+import jwt
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
@@ -122,6 +122,8 @@ AuditLog.__table__.create(bind=_ENGINE, checkfirst=True)
 from app.models import Profile as _Pf, UserProfile as _UPf  # noqa: E402
 _Pf.__table__.create(bind=_ENGINE, checkfirst=True)
 _UPf.__table__.create(bind=_ENGINE, checkfirst=True)
+from app.models import RefreshToken as _RT  # noqa: E402
+_RT.__table__.create(bind=_ENGINE, checkfirst=True)
 
 _TestingSessionLocal = sessionmaker(
     bind=_ENGINE,

@@ -14,6 +14,12 @@ collection order.
 
 import os
 
+# Rate limiting would make the Hypothesis suites (hundreds of logins) fail
+# with 429; tests that cover limits re-enable the limiter explicitly.
+os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
+
+
+
 import pytest
 
 

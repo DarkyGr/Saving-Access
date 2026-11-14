@@ -5,8 +5,8 @@ Responsibilities:
   - Instantiate the FastAPI app
   - Register CORSMiddleware with allowed origins from CORS_ORIGINS env var
   - Register global exception handlers for 401, 403, 404, 422, and 500
-  - On startup (non-production only) create all database tables via
-    Base.metadata.create_all so that a fresh environment bootstraps itself
+  - On startup validate security settings and seed default profiles
+    (the schema itself is managed by Alembic)
 
 Requirements 8.4 (HTTPS / CORS) and 8.6 (ORM / parameterized queries).
 """
@@ -14,6 +14,7 @@ Requirements 8.4 (HTTPS / CORS) and 8.6 (ORM / parameterized queries).
 import logging
 import os
 import traceback
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, status
@@ -35,7 +36,35 @@ logger = logging.getLogger(__name__)
 # Application instance
 # ---------------------------------------------------------------------------
 
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Startup checks and seed data.
+
+    - Refuse to start with missing or weak secrets (task 31.1).
+    - The schema is managed by Alembic (``alembic upgrade head``, task 31.6);
+      the app no longer creates tables itself.
+    - Seed the default profiles (idempotent).
+    """
+    from app.database import SessionLocal
+    from app.security import validate_settings
+    from app.seed import seed_default_profiles
+
+    validate_settings()
+
+    db = SessionLocal()
+    try:
+        seed_default_profiles(db)
+    except Exception:  # noqa: BLE001 — e.g. migrations not applied yet
+        logger.exception(
+            "Could not seed default profiles. Did you run 'alembic upgrade head'?"
+        )
+    finally:
+        db.close()
+    yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="Save-Pass Password Manager",
     version="1.0.0",
     # Disable automatic /docs and /redoc in production so internal API
@@ -56,6 +85,14 @@ _raw_origins: str = os.getenv("CORS_ORIGINS", "")
 CORS_ORIGINS: list[str] = [
     origin.strip() for origin in _raw_origins.split(",") if origin.strip()
 ]
+
+# Rate limiting (task 31.3)
+from slowapi.errors import RateLimitExceeded  # noqa: E402
+
+from app.rate_limit import limiter, rate_limit_exceeded_handler  # noqa: E402
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -141,53 +178,6 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Internal server error."},
     )
-
-
-# ---------------------------------------------------------------------------
-# Startup event — create DB tables in non-production environments
-# ---------------------------------------------------------------------------
-
-
-@app.on_event("startup")
-async def on_startup() -> None:
-    """
-    Automatically create all database tables on startup when the application
-    is NOT running in production.
-
-    This ensures that a fresh development/testing environment bootstraps
-    without requiring a manual migration step.  In production the tables are
-    expected to be managed by an explicit migration tool (e.g. Alembic) or
-    the DDL script at backend/db/schema.sql.
-    """
-    environment: str = os.getenv("ENVIRONMENT", "development").lower()
-
-    if environment != "production":
-        # Import here so that circular-import issues are avoided and so that
-        # database.py can be imported independently during testing without
-        # triggering table creation.
-        from app.database import engine
-        from app.models import Base
-
-        logger.info(
-            "Environment=%r — running Base.metadata.create_all()", environment
-        )
-        Base.metadata.create_all(bind=engine)
-    else:
-        logger.info(
-            "Environment='production' — skipping automatic table creation."
-        )
-
-    # Seed default profiles in every environment (idempotent).
-    from app.database import SessionLocal
-    from app.seed import seed_default_profiles
-
-    db = SessionLocal()
-    try:
-        seed_default_profiles(db)
-    except Exception:  # noqa: BLE001 — never block startup on seeding
-        logger.exception("Could not seed default profiles.")
-    finally:
-        db.close()
 
 
 # ---------------------------------------------------------------------------

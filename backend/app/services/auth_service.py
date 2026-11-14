@@ -10,11 +10,18 @@ from datetime import date, datetime, timezone, timedelta
 from typing import Any
 
 from fastapi import HTTPException
-from jose import ExpiredSignatureError, JWTError, jwt
-from passlib.hash import bcrypt as bcrypt_hasher
 from sqlalchemy.orm import Session
 
 from app.models import User
+from app.security import (
+    ExpiredSignatureError,
+    InvalidTokenError,
+    burn_password_check,
+    decode_token,
+    encode_token,
+    hash_password,
+    verify_password,
+)
 from app.utils.email_validator import validate_email as _validate_email_format
 
 
@@ -64,8 +71,6 @@ class AuthService:
 
     def __init__(self, db: Session) -> None:
         self._db = db
-        self._secret: str = os.environ.get("JWT_SECRET", "changeme")
-        self._algorithm: str = os.environ.get("JWT_ALGORITHM", "HS256")
         self._expire_minutes: int = int(
             os.environ.get("JWT_EXPIRE_MINUTES", "15")
         )
@@ -125,8 +130,7 @@ class AuthService:
             )
 
         # 6. Hash password (Requirement 1.7, 8.5)
-        rounds = int(os.environ.get("BCRYPT_ROUNDS", "12"))
-        password_hash: str = bcrypt_hasher.using(rounds=rounds).hash(password)
+        password_hash: str = hash_password(password)
 
         # 7. Create user with audit columns (Requirement 1.8)
         now_date = date.today()
@@ -181,55 +185,54 @@ class AuthService:
             self._db.query(User).filter(User.username == username).first()
         )
         if user is None:
+            # Same bcrypt cost as a real check: no username enumeration by timing.
+            burn_password_check(password)
             raise _generic
 
-        # Verify bcrypt hash; bcrypt.verify returns False on mismatch
-        try:
-            valid = bcrypt_hasher.verify(password, user.password_hash)
-        except Exception:
+        if not verify_password(password, user.password_hash):
             raise _generic
 
-        if not valid:
-            raise _generic
+        return self.issue_access_token(user)
 
-        # Issue JWT (Requirement 2.4)
+    def issue_access_token(self, user: User) -> dict:
+        """Return the login/refresh response body with a fresh access token.
+
+        Claims (Requirement 2.4): ``user_id``, ``username`` and ``role`` (all
+        required by the frontend AuthContext), ``type="access"`` and ``exp``.
+        """
         now = datetime.now(timezone.utc)
-        exp = now + timedelta(minutes=self._expire_minutes)
-        # The frontend AuthContext requires user_id, username and role.
         token_data = {
             "user_id": user.user_id,
             "username": user.username,
             "role": user.role,
-            "exp": exp,
+            "type": "access",
+            "iat": now,
+            "exp": now + timedelta(minutes=self._expire_minutes),
         }
-        access_token: str = jwt.encode(
-            token_data, self._secret, algorithm=self._algorithm
-        )
-
         return {
-            "access_token": access_token,
+            "access_token": encode_token(token_data),
             "token_type": "bearer",
             "expires_in": self._expire_minutes * 60,
         }
 
     def verify_token(self, token: str) -> dict:
-        """Decode and validate a JWT.
+        """Decode and validate an access JWT.
 
-        :param token: Raw JWT string from the ``Authorization: Bearer`` header.
-        :raises HTTPException 401: if the token is expired or has an invalid
-            signature / structure.
-        :returns: The decoded payload dict (includes ``user_id``, ``role``,
-            ``exp``).
+        :raises HTTPException 401: if the token is expired, has an invalid
+            signature / structure, or is not an access token.
+        :returns: The decoded payload dict.
         """
         try:
-            payload = jwt.decode(
-                token, self._secret, algorithms=[self._algorithm]
-            )
-            return payload
+            payload = decode_token(token)
         except ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="Token expired.")
-        except JWTError:
+        except InvalidTokenError:
             raise HTTPException(status_code=401, detail="Not authenticated.")
+        # Tokens issued before task 31.5 carry no "type"; accept them until
+        # they expire (15 min), reject anything explicitly non-access.
+        if payload.get("type", "access") != "access" or "user_id" not in payload:
+            raise HTTPException(status_code=401, detail="Not authenticated.")
+        return payload
 
     def check_account_password(self, user_id: int, raw: str) -> bool:
         """Verify that *raw* matches the stored bcrypt hash for *user_id*.
@@ -244,10 +247,7 @@ class AuthService:
         )
         if user is None:
             return False
-        try:
-            return bool(bcrypt_hasher.verify(raw, user.password_hash))
-        except Exception:
-            return False
+        return verify_password(raw, user.password_hash)
 
 
 # ---------------------------------------------------------------------------

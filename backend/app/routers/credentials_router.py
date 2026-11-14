@@ -27,13 +27,14 @@ Requirements: 4.1–4.12, 5.1–5.14, 6.1–6.9, 7.1–7.7, 8.1–8.7
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.middleware.permissions import require_permission
 from app.models import Credential
+from app.rate_limit import ACCOUNT_PASSWORD_LIMIT, limiter, user_or_ip_key
 from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
 from app.services.encryptor_service import EncryptorService
@@ -275,7 +276,9 @@ def get_credential(
     status_code=status.HTTP_201_CREATED,
     summary="Save a new credential",
 )
+@limiter.limit(ACCOUNT_PASSWORD_LIMIT, key_func=user_or_ip_key)
 def create_credential(
+    request: Request,
     body: CreateCredentialRequest,
     claims: dict = Depends(require_permission("credentials.new")),
     db: Session = Depends(get_db),
@@ -316,16 +319,16 @@ def create_credential(
     set_creation_audit(credential, user_id=user_id)
 
     db.add(credential)
-    db.commit()
-    db.refresh(credential)
+    db.flush()  # assigns credential_id
 
-    # 4. Log INSERT to audit_log
-    audit_svc = AuditService(db)
-    audit_svc.log(
+    # 4. Log INSERT to audit_log — same transaction as the insert (task 31.4)
+    AuditService(db).log(
         user_id=user_id,
         operation="INSERT",
         affected_record_id=credential.credential_id,
+        commit=False,
     )
+    db.commit()
 
     # 5. Return 201
     return CreateCredentialResponse(
@@ -345,7 +348,9 @@ def create_credential(
     status_code=status.HTTP_200_OK,
     summary="Update an existing credential",
 )
+@limiter.limit(ACCOUNT_PASSWORD_LIMIT, key_func=user_or_ip_key)
 def update_credential(
+    request: Request,
     credential_id: int,
     body: UpdateCredentialRequest,
     claims: dict = Depends(require_permission("credentials.edit")),
@@ -387,16 +392,14 @@ def update_credential(
     credential.encrypted_password = encrypted_password
     set_modification_audit(credential, user_id=user_id)
 
-    db.commit()
-    db.refresh(credential)
-
-    # 5. Log UPDATE to audit_log
-    audit_svc = AuditService(db)
-    audit_svc.log(
+    # 5. Log UPDATE to audit_log — same transaction as the update (task 31.4)
+    AuditService(db).log(
         user_id=user_id,
         operation="UPDATE",
         affected_record_id=credential.credential_id,
+        commit=False,
     )
+    db.commit()
 
     # 6. Return 200
     return UpdateCredentialResponse(credential_id=credential.credential_id)
@@ -412,7 +415,9 @@ def update_credential(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a credential",
 )
+@limiter.limit(ACCOUNT_PASSWORD_LIMIT, key_func=user_or_ip_key)
 def delete_credential(
+    request: Request,
     credential_id: int,
     body: DeleteCredentialRequest,
     claims: dict = Depends(require_permission("credentials.delete")),
@@ -440,15 +445,15 @@ def delete_credential(
 
     # 3. Hard-delete
     db.delete(credential)
-    db.commit()
 
-    # 4. Log DELETE to audit_log
-    audit_svc = AuditService(db)
-    audit_svc.log(
+    # 4. Log DELETE to audit_log — same transaction as the delete (task 31.4)
+    AuditService(db).log(
         user_id=user_id,
         operation="DELETE",
         affected_record_id=record_id,
+        commit=False,
     )
+    db.commit()
 
     # 5. Return 204 — FastAPI handles the empty body automatically
 
@@ -464,7 +469,9 @@ def delete_credential(
     status_code=status.HTTP_200_OK,
     summary="Reveal the plaintext password for a credential",
 )
+@limiter.limit(ACCOUNT_PASSWORD_LIMIT, key_func=user_or_ip_key)
 def reveal_credential(
+    request: Request,
     credential_id: int,
     body: RevealCredentialRequest,
     claims: dict = Depends(require_permission("credentials")),

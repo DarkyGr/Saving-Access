@@ -19,8 +19,8 @@ import pytest
 from fastapi import HTTPException
 from hypothesis import given, settings, assume, HealthCheck
 from hypothesis import strategies as st
-from jose import jwt
-from passlib.hash import bcrypt as bcrypt_hasher
+import jwt
+from app.security import verify_password
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
@@ -57,6 +57,8 @@ def _make_sqlite_session() -> Session:
     from app.models import Profile as _Pf, UserProfile as _UPf
     _Pf.__table__.create(bind=engine, checkfirst=True)
     _UPf.__table__.create(bind=engine, checkfirst=True)
+    from app.models import RefreshToken as _RT  # noqa: E402
+    _RT.__table__.create(bind=engine, checkfirst=True)
     TestSession = sessionmaker(bind=engine, autocommit=False, autoflush=False)
     return TestSession()
 
@@ -72,6 +74,8 @@ def sqlite_engine():
     from app.models import Profile as _Pf, UserProfile as _UPf
     _Pf.__table__.create(bind=engine, checkfirst=True)
     _UPf.__table__.create(bind=engine, checkfirst=True)
+    from app.models import RefreshToken as _RT  # noqa: E402
+    _RT.__table__.create(bind=engine, checkfirst=True)
     yield engine
     engine.dispose()
 
@@ -407,7 +411,7 @@ class TestAccountPasswordHashing:
         )
 
         # 3. bcrypt.verify must confirm the hash matches the original plaintext
-        assert bcrypt_hasher.verify(password, user.password_hash), (
+        assert verify_password(password, user.password_hash), (
             "bcrypt.verify failed — the stored hash does not match the plaintext."
         )
 

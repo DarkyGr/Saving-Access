@@ -1,0 +1,87 @@
+# Production stack (task 32.6).
+#
+#   cp .env.prod.example .env.prod   # fill in every value
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#
+# Only Caddy is published (80/443). PostgreSQL and the API stay on the
+# internal network. Migrations run as the database owner in the one-shot
+# "migrate" service; the API connects as the least-privilege app_user role.
+
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: savepass
+      POSTGRES_USER: savepass_owner
+      POSTGRES_PASSWORD: ${DB_OWNER_PASSWORD:?set DB_OWNER_PASSWORD}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set APP_DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/postgres/01-app-user.sh:/docker-entrypoint-initdb.d/01-app-user.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U savepass_owner -d savepass"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  migrate:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://savepass_owner:${DB_OWNER_PASSWORD}@db:5432/savepass
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql://app_user:${APP_DB_PASSWORD}@db:5432/savepass
+      FERNET_KEY: ${FERNET_KEY:?set FERNET_KEY}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRE_MINUTES: "15"
+      REFRESH_EXPIRE_HOURS: ${REFRESH_EXPIRE_HOURS:-8}
+      COOKIE_SECURE: "true"
+      COOKIE_SAMESITE: strict
+      # Frontend and API share Caddy's origin; CORS is only a safety net.
+      CORS_ORIGINS: https://${SITE_ADDRESS:-localhost}
+      DEFAULT_PROFILE: ${DEFAULT_PROFILE:-Full}
+      RATE_LIMIT_ENABLED: "true"
+      # In-memory counters are per process: keep a single uvicorn worker
+      # (the image default) or point this to a shared Redis.
+      RATE_LIMIT_STORAGE: ${RATE_LIMIT_STORAGE:-memory://}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/health').status == 200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/caddy/Dockerfile
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,11 @@
+# Build context of deploy/caddy/Dockerfile (repository root).
+.git
+.env
+.env.*
+**/node_modules
+frontend/dist
+frontend/test-results
+frontend/playwright-report
+backend
+.hypothesis
+.kiro

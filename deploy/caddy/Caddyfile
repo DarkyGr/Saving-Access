@@ -1,0 +1,33 @@
+# Save-Pass production entry point (task 32.6).
+#
+# SITE_ADDRESS: your domain (e.g. vault.example.com) → Caddy obtains a
+# Let's Encrypt certificate automatically. "localhost" (default) uses Caddy's
+# internal CA, handy for a local production smoke test.
+{$SITE_ADDRESS:localhost} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+		-Server
+	}
+
+	# API: never cached; interactive docs are disabled in production by the app.
+	handle /api/* {
+		header Cache-Control "no-store"
+		reverse_proxy backend:8000
+	}
+
+	# SPA: hashed assets cache forever, everything else falls back to index.html.
+	handle {
+		root * /srv
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		try_files {path} /index.html
+		file_server
+	}
+}

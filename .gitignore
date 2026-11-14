@@ -10,6 +10,8 @@
 .env
 .env.local
 .env.*.local
+.env.prod
+.env.production
 # El .env.example SI se sube (plantilla sin valores reales)
 
 # =============================================================================

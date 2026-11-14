@@ -61,4 +61,5 @@ def test_redis_counters_are_shared_between_workers():
     ]
     # 3/minute in total, not per worker.
     assert codes == [200, 200, 200, 429, 429]
-    assert redis.Redis.from_url(_STORAGE).keys("LIMITER*")
+    # limits stores keys as "LIMITS:LIMITER/..."
+    assert redis.Redis.from_url(_STORAGE).keys("LIMITS:*")

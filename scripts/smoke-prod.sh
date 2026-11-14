@@ -77,7 +77,7 @@ echo "  $codes"
 # 10/minute per IP: with per-process counters and 2 workers, 12 attempts
 # could all pass; with Redis the 11th and 12th must be refused.
 [ "$(tr ' ' '\n' <<<"$codes" | grep -c '^429$')" -ge 2 ]
-"${COMPOSE[@]}" exec -T redis redis-cli --scan --pattern 'LIMITER*' | grep -q .
+"${COMPOSE[@]}" exec -T redis redis-cli --scan --pattern 'LIMITS:*' | grep -q .
 
 echo "• audit rows written"
 "${COMPOSE[@]}" exec -T db psql -U savepass_owner -d savepass -tAc \

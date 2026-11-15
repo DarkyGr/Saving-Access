@@ -350,8 +350,8 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
 
 - [ ] 35. Backlog — pending after the 2026-11-14 review (not started)
   - New features (35.5–35.8) are outside the Kiro requirements: add them to `requirements.md` / `design.md` before implementing.
-  - [ ] 35.1 First deployment on a real server: domain + DNS, `.env.prod`, `create-admin`, check HTTPS certificate, backups and emails live (needs a server and a domain)
-  - [ ] 35.2 Off-site, encrypted backup copies (e.g. restic or rclone to S3 / Backblaze B2); today the `backups` volume lives on the same server
+  - [ ] 35.1 ~~First deployment on a real server~~ — omitted by the owner (2026-11-14); replaced by the local installation, task 36
+  - [ ] 35.2 ~~Off-site (cloud) backup copies~~ — omitted by the owner (2026-11-14); the local installation keeps encrypted backups in `Backup\db` (task 36.4)
     - _Requirements: 9.9_
   - [ ] 35.3 Monitoring and alerts: external check of `/api/health`, alert when a backup or reminder run fails, log retention
   - [ ] 35.4 GitHub Actions: move `actions/checkout`, `setup-python`, `setup-node`, `upload-artifact` to releases that run on Node 24 (Node 20 is deprecated on the runners)
@@ -361,6 +361,19 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - [ ] 35.8 Self-service: export my credentials (re-entering the account password, audited) and delete my account
   - [ ] 35.9 Decide the encryption model: today the server decrypts with `FERNET_KEY` (database + key leak exposes every password). Client-side encryption with a key derived from the account password (zero-knowledge) would remove that risk but rules out 35.5 and needs a redesign — decide before real users
   - [ ] 35.10 Lint tooling advisory: drop when `typescript-eslint` moves to `minimatch` 11 (moderate ReDoS, dev-only)
+
+- [ ] 36. Local installation on Windows — same model as Savings Tool phase 8 (`docs/local-install.md`)
+  - [x] 36.1 `scripts/release.py --to Y:\Apps\Save-Pass`: settings template with fresh secrets, private Python runtime (Network Service cannot use a per-user Python), same-origin frontend build, settings check, migrations as the migrator role, swap with `app.old`, web folder sync, jobs copied
+  - [x] 36.2 Own PostgreSQL 18 cluster `savepass-postgres` on 127.0.0.1:5435 with `savepass_migrator` / `savepass_app` (DML only) / `savepass_backup` roles (`ops/windows/01-postgres.ps1`)
+    - _Requirements: 9.9_
+  - [x] 36.3 IIS site on HTTPS 8443 (443 is Savings Tool) with URL Rewrite + ARR: `/api` proxy, SPA fallback, Caddy-equivalent security headers (`deploy/iis/web.config.template`); mkcert certificate from Savings Tool's authority; firewall Private only; power settings (`02`–`04`)
+    - _Requirements: 8.4_
+  - [x] 36.4 Scheduled tasks as Network Service (`05-tasks.ps1`): API at startup, encrypted daily backup (AES-256-GCM, 14 daily + 12 monthly), weekly restore test, verification reminders
+  - [x] 36.5 Per-device rate limits behind IIS: `CLIENT_IP_HEADER=X-Client-IP`, trusted only from 127.0.0.1
+    - _Requirements: 2.3_
+  - [x] 36.6 Tools: `update-ip.cmd`, `reset-postgres-password.cmd`, `with-production.ps1`, `00-check.ps1`; development start/stop with one double click (`ops/local`, auto-stop after 30 min); dev ports only on 127.0.0.1, database on 5436 (5432 is a native service)
+  - [x] 36.7 Rehearsed without administrator rights (two releases, API from the installed folder, privileges, backup + restore test, CLI); `tests/test_local_install.py`, client-IP tests
+  - [ ] 36.8 Owner runs the administrator steps on the laptop (01, 02–05) and tests on the laptop and the phone
 
 ## Notes
 

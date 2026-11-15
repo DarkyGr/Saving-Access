@@ -43,6 +43,28 @@ def _enabled() -> bool:
     return os.environ.get("RATE_LIMIT_ENABLED", "true").lower() not in {"0", "false", "no"}
 
 
+_LOOPBACK = {"127.0.0.1", "::1"}
+
+
+def client_ip(request: Request) -> str:
+    """The device's address, for per-IP limits.
+
+    Behind IIS on the same machine (local installation, task 36) every request
+    comes from 127.0.0.1 and ARR's X-Forwarded-For carries "ip:port", so the
+    site sets ``CLIENT_IP_HEADER`` (X-Client-IP) to the connection's address,
+    overwriting whatever the browser sent. The header is trusted only when the
+    peer is this machine; otherwise (Docker behind Caddy, which uses
+    --proxy-headers) the connection's address is used as before.
+    """
+    peer = get_remote_address(request)
+    header = os.environ.get("CLIENT_IP_HEADER", "").strip()
+    if header and peer in _LOOPBACK:
+        value = request.headers.get(header, "").strip()
+        if value:
+            return value
+    return peer
+
+
 def user_or_ip_key(request: Request) -> str:
     """Key by user_id from the bearer token when present, else by IP.
 
@@ -58,7 +80,7 @@ def user_or_ip_key(request: Request) -> str:
                 return f"user:{claims['user_id']}"
         except jwt.PyJWTError:
             pass
-    return f"ip:{get_remote_address(request)}"
+    return f"ip:{client_ip(request)}"
 
 
 STORAGE_URI = os.environ.get("RATE_LIMIT_STORAGE", "memory://")
@@ -69,7 +91,7 @@ def build_limiter(storage_uri: str = STORAGE_URI, fallback: str = FALLBACK_LIMIT
     shared = not storage_uri.startswith("memory://")
     # slowapi turns the fallback on whenever a fallback list is given.
     return Limiter(
-        key_func=get_remote_address,
+        key_func=client_ip,
         storage_uri=storage_uri,
         enabled=_enabled(),
         headers_enabled=False,

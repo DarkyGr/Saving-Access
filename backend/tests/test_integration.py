@@ -80,6 +80,12 @@ _ENGINE = create_engine(
     poolclass=StaticPool,
 )
 
+def utc_today():
+    """Today as the app records it: UTC (task 32.3), not the machine's local date."""
+    from app.utils.audit_columns import utc_date_time
+
+    return utc_date_time()[0]
+
 
 @event.listens_for(_ENGINE, "connect")
 def _disable_fk(dbapi_conn, _record):  # pragma: no cover
@@ -747,9 +753,9 @@ class TestAdminProfileAssignment:
     @staticmethod
     def _seed_profile(db: Session, name: str, screens: list[str]) -> int:
         """Insert a profile row via raw SQL and return its profile_id."""
-        from datetime import date, datetime
+        from datetime import datetime
 
-        now_date = str(date.today())
+        now_date = str(utc_today())
         now_time = str(datetime.now(UTC).time().replace(tzinfo=None))
         db.execute(
             _text(

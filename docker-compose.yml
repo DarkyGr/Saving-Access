@@ -7,7 +7,9 @@ services:
       POSTGRES_USER: savepass_user
       POSTGRES_PASSWORD: savepass_password
     ports:
-      - "5432:5432"
+      # Only this machine; 5436 because 5432 is a native PostgreSQL service,
+      # 5433/5434 are Savings Tool and 5435 is the installed Save-Pass (task 36).
+      - "127.0.0.1:5436:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -26,7 +28,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://savepass_user:savepass_password@db:5432/savepass
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -43,7 +45,7 @@ services:
     environment:
       - VITE_API_URL=http://localhost:8000
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     depends_on:
       - backend
     volumes:

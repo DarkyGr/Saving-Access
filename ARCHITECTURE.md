@@ -353,6 +353,10 @@ Frontend and API share one origin, so the refresh cookie (`SameSite=Strict`) and
 
 `scripts/smoke-prod.sh` builds and starts this stack with throwaway secrets and checks TLS, headers, a full API round trip through Caddy, that the login limit is shared through Redis, audit rows, a backup → data loss → restore cycle, a reminder sent by the scheduler, and that `app_user` cannot drop, create or truncate tables. CI runs it on every push.
 
+### Local installation on Windows
+
+Besides the Docker stack, Save-Pass runs permanently on the Windows laptop with the same model as Savings Tool: own PostgreSQL service (5435), the API as a Network Service scheduled task on 127.0.0.1:8010 with a private Python runtime, IIS + ARR on HTTPS 8443 with the Caddy-equivalent headers, encrypted daily backups and a weekly restore test. IIS passes the device address in `X-Client-IP`, which the API trusts only from 127.0.0.1 (`CLIENT_IP_HEADER`). Details: [`docs/local-install.md`](docs/local-install.md).
+
 ### Backups and restore
 
 ```bash
@@ -385,8 +389,7 @@ Dumps contain bcrypt hashes and Fernet-encrypted credentials: copy them to separ
 Tracked as task 35 in [`tasks.md`](.kiro/specs/password-manager-website/tasks.md).
 
 - **Trust model**: the server holds `FERNET_KEY` and decrypts on request. Anyone who obtains both the database (or a backup) and the key can read every saved password. Client-side (zero-knowledge) encryption would remove that, at the cost of account-password recovery (task 35.9).
-- **Not yet run on a real server**: the production stack is verified by the CI smoke test in a throwaway environment only (task 35.1).
-- **Off-site copies** of backups are not automated: the `backups` volume lives on the same server (task 35.2).
+- **Local installation**: rehearsed without administrator rights; the service, certificate, IIS site and scheduled tasks are verified when the owner runs the administrator steps (task 36.8). A real server and cloud backups were dropped (35.1, 35.2).
 - **No monitoring or alerting**: a down API or a failed backup is only visible in `docker compose logs` (task 35.3).
 - **Account features**: no password reset, no second factor, no export, no self-service account deletion (tasks 35.5–35.8).
 - **Deactivated accounts** are kept (they can be reactivated); nothing deletes them automatically.

@@ -49,7 +49,7 @@ jobs:
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r requirements.txt ruff==0.8.4 pip-audit==2.7.3
       - name: Lint (ruff)
-        run: ruff check .
+        run: ruff check . ../ops ../scripts
       - name: Dependency audit (pip-audit)
         run: pip-audit -r requirements.txt
       - name: Tests (SQLite)

@@ -32,6 +32,13 @@ from app.services.audit_service import AuditService
 # self-contained while still validating AuditService's own logic.
 # ---------------------------------------------------------------------------
 
+def utc_today():
+    """Today as the app records it: UTC (task 32.3), not the machine's local date."""
+    from app.utils.audit_columns import utc_date_time
+
+    return utc_date_time()[0]
+
+
 def _make_sqlite_session() -> Session:
     """Return a fresh in-memory SQLite session with only the tables we need."""
     engine = create_engine(
@@ -151,7 +158,7 @@ class TestAuditServiceUnit:
         db = _make_sqlite_session()
         svc = AuditService(db)
         entry = svc.log(user_id=1, operation="SELECT")
-        assert entry.operation_date == date.today()
+        assert entry.operation_date == utc_today()
         db.close()
 
 
@@ -225,8 +232,8 @@ class TestAuditLogEntryOnEveryOperation:
 
         # 5. operation_date is non-null and equals today.
         assert entry.operation_date is not None, "operation_date must not be None"
-        assert entry.operation_date == date.today(), (
-            f"Expected operation_date={date.today()}, got {entry.operation_date}"
+        assert entry.operation_date == utc_today(), (
+            f"Expected operation_date={utc_today()}, got {entry.operation_date}"
         )
 
         # 6. operation_time is non-null.

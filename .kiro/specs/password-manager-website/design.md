@@ -557,6 +557,7 @@ Implementation:
 | Token security | Access JWT (PyJWT) in memory only (not `localStorage`); 15-min expiry; `exp` and `type="access"` required. Refresh token only in an httpOnly cookie, rotated and revocable (task 31.5) |
 | Secrets | App refuses to start without a ≥ 32-char `JWT_SECRET` and a valid `FERNET_KEY` (task 31.1) |
 | Brute-force | Per-IP limits on login/register/refresh and per-user limits on account-password checks (slowapi, task 31.3); unknown usernames still pay the bcrypt cost. Production counters live in Redis, shared by all workers, with an in-memory per-IP fallback if Redis is down (task 34.2) |
+| Local installation | Windows laptop (task 36): IIS + ARR on HTTPS 8443 with the same headers as Caddy, API on 127.0.0.1 as Network Service with its own Python, own PostgreSQL service with migrator/app/backup roles, encrypted backups + weekly restore test; device IP via `X-Client-IP` trusted only from 127.0.0.1 |
 | Backups | Daily `pg_dump` (custom format, verified, 14-day retention) by the `backup` service; `scripts/restore-backup.sh` restores in one transaction (task 34.3) |
 | HTTPS | Production: Caddy terminates TLS (automatic certificates), redirects HTTP→HTTPS and sets HSTS, CSP and other security headers (task 32.6) |
 | CORS | FastAPI `CORSMiddleware` configured to allow only the known frontend origin |

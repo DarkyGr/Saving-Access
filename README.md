@@ -72,7 +72,7 @@ JWT_SECRET=<your-jwt-secret>
 JWT_ALGORITHM=HS256
 JWT_EXPIRE_MINUTES=15
 CORS_ORIGINS=http://localhost:5173
-DATABASE_URL=postgresql://savepass_user:savepass_password@localhost:5432/savepass
+DATABASE_URL=postgresql://savepass_user:savepass_password@localhost:5436/savepass
 ```
 
 ### 3. Start all services
@@ -126,6 +126,18 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod exec backend \
 Point your domain's DNS to the server before starting so Caddy can obtain the certificate. Backups are written to the `backups` volume; copy them off the server and keep `FERNET_KEY` stored separately: without the key, saved passwords cannot be recovered. `make backup` takes one now and `./scripts/restore-backup.sh <dump>` restores one ([details](ARCHITECTURE.md#backups-and-restore)). Key rotation without downtime is described in [ARCHITECTURE.md](ARCHITECTURE.md#6-fernet-key-management-and-rotation).
 
 To try the production stack locally (self-signed certificate on `https://localhost`, everything removed afterwards): `make smoke-prod`.
+
+---
+
+## Local Installation (Windows, this laptop)
+
+Save-Pass can run permanently on the Windows laptop like Savings Tool: its own PostgreSQL service, the API as a scheduled task, IIS with HTTPS on `https://<laptop>.local:8443` for the home network (phone included), daily encrypted backups with a weekly restore test. Step-by-step guide: [`docs/local-install.md`](docs/local-install.md).
+
+```bash
+python scripts/release.py --to Y:\Apps\Save-Pass     # first run writes the settings template
+```
+
+For development there is a one-click start/stop: `ops\local\start-local.cmd` / `stop-local.cmd` (Docker, stops by itself after 30 minutes).
 
 ---
 
@@ -426,11 +438,12 @@ All tasks from the Kiro plan (1–29) and the follow-up phases (30–34) are don
 | Deployment | `.env.prod` not git-ignored; health check pointed to a missing endpoint; CI broke on Ubuntu 26 | Ignored, `/api/health` added, runners pinned (32.6, 32.2) |
 | Spec Phase 2 | Email verification, deactivation and CAPTCHA not implemented | Done, with reminders (33, 34.4) |
 | Operations | No backups; rate limits per process | Daily backups + restore script; Redis (34.2, 34.3) |
+| Local use | Dev database clashed with the native PostgreSQL on 5432; no way to run it permanently on the laptop | Dev ports only on 127.0.0.1 (DB 5436); local installation with IIS, backups and per-device limits (36) |
 
-**Pending** (task 35)
+**Pending** (tasks 35–36)
 
-- First deployment on a real server (needs a server and a domain).
-- Off-site encrypted backups, monitoring and alerts.
+- Local installation on this laptop: built and rehearsed (task 36); the administrator steps are run by the owner.
+- Monitoring and alerts. (A real server and cloud backups were dropped in favour of the local installation.)
 - GitHub Actions on Node 24.
 - Password reset, two-factor authentication, password generator, export and account deletion — outside the original spec.
 - Decide whether to move to client-side (zero-knowledge) encryption before real users.
@@ -442,4 +455,5 @@ All tasks from the Kiro plan (1–29) and the follow-up phases (30–34) are don
 - [`requirements.md`](.kiro/specs/password-manager-website/requirements.md) — Functional and non-functional requirements in EARS notation.
 - [`design.md`](.kiro/specs/password-manager-website/design.md) — Architecture, component design, data models, API shapes, security considerations, and correctness properties.
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — Technical deep-dive: components, encryption lifecycle, authentication and session refresh, permission model, schema and migrations, Fernet key rotation, audit log.
-- [`tasks.md`](.kiro/specs/password-manager-website/tasks.md) — Implementation plan and status (tasks 1–29 from Kiro, 30–34 done afterwards, 35 = backlog).
+- [`tasks.md`](.kiro/specs/password-manager-website/tasks.md) — Implementation plan and status (tasks 1–29 from Kiro, 30–34 done afterwards, 35 = backlog, 36 = local installation).
+- [`docs/local-install.md`](docs/local-install.md) — Local installation on Windows: pieces, ports, install, update, tools, restore.

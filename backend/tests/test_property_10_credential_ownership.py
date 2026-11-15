@@ -20,7 +20,7 @@ user) or 404 (not found), never 200/204.
 
 import os
 import string
-from datetime import date, datetime, timedelta, UTC
+from datetime import datetime, timedelta, UTC
 
 from cryptography.fernet import Fernet
 from hypothesis import given, settings, assume, HealthCheck
@@ -83,6 +83,12 @@ _SQLITE_ENGINE = create_engine(
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
+
+def utc_today():
+    """Today as the app records it: UTC (task 32.3), not the machine's local date."""
+    from app.utils.audit_columns import utc_date_time
+
+    return utc_date_time()[0]
 
 
 @event.listens_for(_SQLITE_ENGINE, "connect")
@@ -164,7 +170,7 @@ def _create_user(username: str, email: str) -> User:
     Using role="Admin" means the permissions middleware never queries the
     JSONB-backed profiles or user_profiles tables.
     """
-    now_date = date.today()
+    now_date = utc_today()
     now_time = datetime.now(UTC).time().replace(tzinfo=None)
     # A static bcrypt hash (rounds=4) avoids live hashing overhead.
     # This hash was pre-computed for "TestPass1@2024" at rounds=4.

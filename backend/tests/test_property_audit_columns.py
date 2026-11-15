@@ -21,6 +21,13 @@ from app.utils.audit_columns import set_creation_audit, set_modification_audit
 # The helpers only require attribute assignment, so a plain object works.
 # ---------------------------------------------------------------------------
 
+def utc_today():
+    """Today as the app records it: UTC (task 32.3), not the machine's local date."""
+    from app.utils.audit_columns import utc_date_time
+
+    return utc_date_time()[0]
+
+
 class _RecordStub:
     """
     Minimal stand-in for any ORM-mapped model instance that carries the six
@@ -60,7 +67,7 @@ class TestAuditColumnsUnit:
     def test_set_creation_audit_date_is_today(self):
         record = _RecordStub()
         set_creation_audit(record, user_id=1)
-        assert record.creation_date == date.today()
+        assert record.creation_date == utc_today()
 
     def test_set_creation_audit_time_is_a_time_instance(self):
         record = _RecordStub()
@@ -92,7 +99,7 @@ class TestAuditColumnsUnit:
         """Verify helpers work with a MagicMock standing in for a real ORM row."""
         model = MagicMock()
         set_creation_audit(model, user_id=42)
-        assert model.creation_date == date.today()
+        assert model.creation_date == utc_today()
         assert model.creation_user_id == 42
 
 
@@ -198,7 +205,7 @@ class TestAuditColumnsOnCreation:
 
         # MagicMock records assignments; reading back the attributes returns
         # the exact values that were assigned.
-        assert model.creation_date == date.today(), (
+        assert model.creation_date == utc_today(), (
             f"creation_date was not set to today's date on mock model "
             f"(user_id={user_id})"
         )

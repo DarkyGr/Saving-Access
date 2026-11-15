@@ -12,7 +12,7 @@ Properties tested:
 
 import os
 import string
-from datetime import date, time, datetime, timedelta, UTC
+from datetime import time, datetime, timedelta, UTC
 from unittest.mock import MagicMock
 
 from fastapi import Depends, FastAPI, HTTPException, status
@@ -48,6 +48,13 @@ os.environ.setdefault("BCRYPT_ROUNDS", "4")
 # SQLite tests in Property 8 by using a mock DB session — see below.
 # For Property 7 no DB query is needed (the test relies on JWT claims only).
 # ---------------------------------------------------------------------------
+
+def utc_today():
+    """Today as the app records it: UTC (task 32.3), not the machine's local date."""
+    from app.utils.audit_columns import utc_date_time
+
+    return utc_date_time()[0]
+
 
 def _make_sqlite_users_session() -> Session:
     """SQLite session with only the `users` table (for Property 7 helpers)."""
@@ -413,9 +420,9 @@ class TestProfileAssignmentUpdatesAuditColumns:
         )
 
         # modification_date must equal today
-        assert result.modification_date == date.today(), (
+        assert result.modification_date == utc_today(), (
             f"modification_date={result.modification_date!r} != today "
-            f"({date.today()!r}) for admin_id={admin_id}"
+            f"({utc_today()!r}) for admin_id={admin_id}"
         )
 
         # modification_user_id must equal the performing admin's id
@@ -491,8 +498,8 @@ class TestProfileAssignmentUpdatesAuditColumns:
         )
 
         # creation_date must equal today
-        assert result.creation_date == date.today(), (
-            f"creation_date={result.creation_date!r} != today ({date.today()!r}) "
+        assert result.creation_date == utc_today(), (
+            f"creation_date={result.creation_date!r} != today ({utc_today()!r}) "
             f"for admin_id={admin_id}"
         )
 
@@ -583,5 +590,5 @@ class TestProfileAssignmentUpdatesAuditColumns:
             f"modification_user_id={result.modification_user_id!r} != "
             f"admin_id={admin_id}"
         )
-        assert result.modification_date == date.today()
+        assert result.modification_date == utc_today()
         assert result.modification_time is not None

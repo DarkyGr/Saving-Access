@@ -3,3 +3,6 @@
 *.sh        text eol=lf
 Dockerfile  text eol=lf
 Caddyfile   text eol=lf
+# Windows scripts of the local installation (task 36)
+*.ps1       text eol=crlf
+*.cmd       text eol=crlf

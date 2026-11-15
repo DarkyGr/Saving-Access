@@ -19,7 +19,7 @@ over-restrictive.
 
 import os
 import string
-from datetime import date, datetime, timedelta, UTC
+from datetime import datetime, timedelta, UTC
 from collections.abc import Generator
 
 from cryptography.fernet import Fernet
@@ -84,6 +84,13 @@ _credential_list = st.lists(_credential_pair, min_size=1, max_size=8)
 # needing fully populated FK chains.
 # ---------------------------------------------------------------------------
 
+def utc_today():
+    """Today as the app records it: UTC (task 32.3), not the machine's local date."""
+    from app.utils.audit_columns import utc_date_time
+
+    return utc_date_time()[0]
+
+
 def _make_test_engine():
     """Create a fresh in-memory SQLite engine with only the required tables."""
     engine = create_engine(
@@ -144,7 +151,7 @@ def _create_test_user(db: Session, suffix: str = "") -> User:
     from app.security import hash_password
 
     password_hash = hash_password("TestPass1@xyz")
-    now_date = date.today()
+    now_date = utc_today()
     now_time = datetime.now(UTC).time().replace(tzinfo=None)
 
     username = f"search_user_{suffix}"
@@ -198,7 +205,7 @@ def _seed_credentials(
 ) -> list[Credential]:
     """Insert Credential rows for *user_id* directly, bypassing the HTTP layer."""
     encryptor = EncryptorService()
-    now_date = date.today()
+    now_date = utc_today()
     now_time = datetime.now(UTC).time().replace(tzinfo=None)
 
     rows: list[Credential] = []

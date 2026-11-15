@@ -13,7 +13,7 @@ Reglas:
 - Tareas nuevas que no estaban en Kiro van como secciones nuevas al final de `tasks.md` (numeración 30+), referenciando requisitos.
 - Si un cambio contradice `design.md`, actualiza `design.md` en el mismo commit y explica por qué en el mensaje.
 - `tasks.meta.json` y `.config.kiro` son metadatos de Kiro: no editarlos a mano.
-- Estado (2026-11-14): tareas 1–34 hechas; la tarea 35 es el backlog pendiente. Las funciones nuevas de 35.5–35.8 necesitan requisitos en `requirements.md` y diseño en `design.md` antes de implementarse.
+- Estado (2026-11-14): tareas 1–34 hechas; la 35 es el backlog (35.1 y 35.2 omitidas por el dueño); la 36 es la instalación local en Windows (falta que el dueño corra los pasos de administrador). Las funciones nuevas de 35.5–35.8 necesitan requisitos en `requirements.md` y diseño en `design.md` antes de implementarse.
 
 ## Stack
 
@@ -59,6 +59,11 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 ./scripts/smoke-prod.sh               # requiere Docker; CI lo ejecuta en cada push
 python -m app.cli rotate-fernet-key   # con FERNET_KEY="<nueva>,<vieja>"
 make backup                          # backup ahora; ./scripts/restore-backup.sh <dump> restaura
+
+# instalación local en Windows (tarea 36, docs/local-install.md)
+python scripts/release.py --to Y:\Apps\Save-Pass   # instala o actualiza (terminal de administrador al actualizar)
+powershell -ExecutionPolicy Bypass -File ops\windows\00-check.ps1   # revisa sin cambiar nada; 01-05 como administrador
+ops\local\start-local.cmd / stop-local.cmd      # desarrollo con Docker, se apaga solo a los 30 min
 python -m app.cli send-verification-reminders [--dry-run]   # el servicio scheduler lo corre cada hora
 
 # todo
@@ -77,4 +82,5 @@ make up / make down / make test-backend / make test-frontend / make lint
 - Dependencias: versiones exactas y publicadas hace ≥ 2 semanas; CI falla con vulnerabilidades (pip-audit, npm audit high).
 - Fechas y horas de auditoría en UTC desde un mismo instante (`utc_date_time()` en `app/utils/audit_columns.py`).
 - Fase 2 del spec (verificación de email, CAPTCHA) apagada por defecto: `EMAIL_VERIFICATION_ENABLED`, `HCAPTCHA_SITE_KEY`/`HCAPTCHA_SECRET`; la E2E la ejecuta encendida (emails en `backend/e2e-outbox/`).
+- Instalación local: mismo modelo que Savings-Tool (fase 8). Puertos: 8443 (IIS), 8010 (API), 5435 (BD instalada), 5436 (BD de desarrollo); 443/3000/5433/5434 son de Savings-Tool. Nada en `C:` (datos en `Y:\Apps\Save-Pass` y `Backup\`).
 - No commitear `.env`, `.hypothesis/`, `.pytest_cache/`, `node_modules/`.

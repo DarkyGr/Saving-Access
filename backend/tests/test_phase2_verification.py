@@ -49,6 +49,12 @@ from tests.conftest import make_test_engine  # noqa: E402
 _ENGINE = make_test_engine()
 _Session = sessionmaker(bind=_ENGINE, autocommit=False, autoflush=False)
 
+def utc_today():
+    """Today as the app records it: UTC (task 32.3), not the machine's local date."""
+    from app.utils.audit_columns import utc_date_time
+
+    return utc_date_time()[0]
+
 
 def _override_get_db():
     db: Session = _Session()
@@ -173,7 +179,7 @@ def test_disabled_keeps_mvp_behaviour(client, tmp_path, monkeypatch):
 
 def test_old_deadline_is_ignored_while_disabled(client):
     _register(client)
-    _set_deadline(date.today() - timedelta(days=5))
+    _set_deadline(utc_today() - timedelta(days=5))
     assert _login(client).status_code == 200
 
 
@@ -314,13 +320,13 @@ def test_resend_is_rate_limited_per_user(client, outbox):
 
 def test_deadline_day_itself_is_still_active(client, outbox):
     _register(client)
-    _set_deadline(date.today())
+    _set_deadline(utc_today())
     assert _login(client).status_code == 200
 
 
 def test_unverified_past_deadline_cannot_log_in(client, outbox):
     _register(client)
-    _set_deadline(date.today() - timedelta(days=1))
+    _set_deadline(utc_today() - timedelta(days=1))
 
     r = _login(client)
     assert r.status_code == 403
@@ -334,7 +340,7 @@ def test_unverified_past_deadline_cannot_log_in(client, outbox):
 def test_deactivated_account_cannot_use_old_link(client, outbox):
     _register(client)
     token = _token_from(_emails(outbox)[0])
-    _set_deadline(date.today() - timedelta(days=1))
+    _set_deadline(utc_today() - timedelta(days=1))
     r = client.post("/api/auth/verify-email", json={"token": token})
     assert r.status_code == 403
     assert _user().email_verified is False
@@ -345,7 +351,7 @@ def test_open_session_ends_when_deadline_passes(client, outbox):
     headers = _auth(client)
     assert client.post("/api/auth/refresh").status_code == 200
 
-    _set_deadline(date.today() - timedelta(days=1))
+    _set_deadline(utc_today() - timedelta(days=1))
     assert client.post("/api/auth/refresh").status_code == 401
     assert client.post("/api/profile/verification-email", headers=headers).status_code == 403
 
@@ -353,13 +359,13 @@ def test_open_session_ends_when_deadline_passes(client, outbox):
 def test_verified_account_is_never_deactivated(client, outbox):
     _register(client)
     client.post("/api/auth/verify-email", json={"token": _token_from(_emails(outbox)[0])})
-    _set_deadline(date.today() - timedelta(days=100))
+    _set_deadline(utc_today() - timedelta(days=100))
     assert _login(client).status_code == 200
 
 
 def test_cli_verify_email_reactivates(client, outbox, capsys):
     _register(client)
-    _set_deadline(date.today() - timedelta(days=1))
+    _set_deadline(utc_today() - timedelta(days=1))
     with patch.object(cli, "SessionLocal", _Session):
         cli.cmd_verify_email(argparse.Namespace(username="alice"))
     assert "verified" in capsys.readouterr().out
@@ -537,7 +543,7 @@ from app.services.email_verification_service import EmailVerificationService  # 
 
 def _remind(today: date | None = None, **kwargs) -> list[str]:
     with _Session() as db:
-        return EmailVerificationService(db).send_due_reminders(today or date.today(), **kwargs)
+        return EmailVerificationService(db).send_due_reminders(today or utc_today(), **kwargs)
 
 
 def test_signup_and_resend_store_the_ui_language(client, outbox):
@@ -581,15 +587,15 @@ def test_no_reminders_for_verified_deactivated_or_grandfathered(client, outbox):
     for name in ("verified", "expired", "legacy"):
         _register(client, name)
     client.post("/api/auth/verify-email", json={"token": _token_from(_emails(outbox)[0])})
-    _set_deadline(date.today() - timedelta(days=1), "expired")
+    _set_deadline(utc_today() - timedelta(days=1), "expired")
     _set_deadline(None, "legacy")
-    _set_deadline(date.today() + timedelta(days=1), "verified")
+    _set_deadline(utc_today() + timedelta(days=1), "verified")
     assert _remind() == []
 
 
 def test_dry_run_sends_and_changes_nothing(client, outbox):
     _register(client)
-    _set_deadline(date.today() + timedelta(days=3))
+    _set_deadline(utc_today() + timedelta(days=3))
     sent = len(_emails(outbox))
     assert _remind(dry_run=True) == ["alice"]
     assert len(_emails(outbox)) == sent
@@ -598,7 +604,7 @@ def test_dry_run_sends_and_changes_nothing(client, outbox):
 
 def test_failed_reminder_is_retried(client, outbox):
     _register(client)
-    _set_deadline(date.today() + timedelta(days=3))
+    _set_deadline(utc_today() + timedelta(days=3))
     with patch("app.services.email_verification_service.send_email", return_value=False):
         assert _remind() == []
     assert _user().last_verification_reminder_days is None
@@ -607,7 +613,7 @@ def test_failed_reminder_is_retried(client, outbox):
 
 def test_reminders_off(client, outbox, monkeypatch):
     _register(client)
-    _set_deadline(date.today() + timedelta(days=1))
+    _set_deadline(utc_today() + timedelta(days=1))
     monkeypatch.setenv("VERIFICATION_REMINDER_DAYS", "")
     assert _remind() == []
     monkeypatch.setenv("VERIFICATION_REMINDER_DAYS", "7,1")
@@ -623,7 +629,7 @@ def test_invalid_reminder_days_stop_startup(monkeypatch, outbox):
 
 def test_cli_send_verification_reminders(client, outbox, capsys):
     _register(client)
-    _set_deadline(date.today() + timedelta(days=1))
+    _set_deadline(utc_today() + timedelta(days=1))
     with patch.object(cli, "SessionLocal", _Session):
         cli.cmd_send_verification_reminders(argparse.Namespace(dry_run=True))
         assert "Would remind 1 user(s): alice" in capsys.readouterr().out

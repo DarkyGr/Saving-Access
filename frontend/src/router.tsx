@@ -5,6 +5,7 @@ import AppLayout from "./components/AppLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
+import HomePage from "./pages/HomePage";
 import ViewSearchPage from "./pages/ViewSearchPage";
 import SaveCredentialPage from "./pages/SaveCredentialPage";
 import EditCredentialPage from "./pages/EditCredentialPage";
@@ -23,6 +24,7 @@ const ForbiddenPage = React.lazy(() => import("./pages/ForbiddenPage"));
  *  /login                  → LoginPage (public)
  *  /signup                 → SignUpPage (public)
  *  /verify-email?token=…   → VerifyEmailPage (public, spec Phase 2)
+ *  /                       → ProtectedRoute(permission="credentials.view")    → HomePage (task 37.2)
  *  /credentials            → ProtectedRoute(permission="credentials.view")    → ViewSearchPage
  *  /credentials/new        → ProtectedRoute(permission="credentials.create")  → SaveCredentialPage
  *  /credentials/:id/edit   → ProtectedRoute(permission="credentials.edit")    → EditCredentialPage
@@ -48,6 +50,14 @@ const router = createBrowserRouter([
       {
         path: "/verify-email",
         element: <VerifyEmailPage />,
+      },
+      {
+        path: "/",
+        element: (
+          <ProtectedRoute permission="credentials.view">
+            <HomePage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/credentials",

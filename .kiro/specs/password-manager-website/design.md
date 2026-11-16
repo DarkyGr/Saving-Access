@@ -120,6 +120,7 @@ The `FERNET_KEY` is a 32-byte URL-safe base64 key read from a server-side enviro
 |-------|---------------|---------------|
 | `/login` | `LoginPage` | Public |
 | `/signup` | `SignUpPage` | Public |
+| `/` | `HomePage` | `credentials.view` (task 37.2) |
 | `/credentials` | `ViewSearchPage` | `credentials.view` |
 | `/credentials/new` | `SaveCredentialPage` | `credentials.create` |
 | `/credentials/:id/edit` | `EditCredentialPage` | `credentials.edit` |
@@ -136,6 +137,17 @@ The `FERNET_KEY` is a 32-byte URL-safe base64 key read from a server-side enviro
 | `ProtectedRoute` | HOC that checks the session + the route's permission; redirects to 403 page or login |
 | `ConfirmDeleteModal` | Generic confirmation modal for deletions |
 | `AlreadyVisibleModal` | Warning modal when another password is already revealed |
+| `SideNav`, `AccountMenu` | Grouped side menu and account menu of the shell (task 37.2) |
+| `SearchBox`, `FilterSelect`, `ViewToggle`, `Pagination` | List controls (task 37.2) |
+| `HelpTip` | ⓘ help tooltip next to a label (task 37.2) |
+
+### Application Shell and Interface Patterns *(task 37.2, Requirement 13)*
+
+- **Side menu** declared in `frontend/src/config/navigation.tsx` (group + permission per entry): Home, Vault (My credentials, Save credential), Administration (Manage users), Help (task 37.6). Entries the user lacks are hidden; an empty group is not shown. Groups close by their title (remembered per device in `localStorage`); the group of the current screen stays open. On ≥ 768 px it collapses to an icon rail (`savepass-sidebar-collapsed`); below that it opens as a drawer that closes after choosing a screen or with Escape.
+- **Account menu** (top right): initials avatar, username, role, Sign out. Settings join in task 37.3.
+- **Home** (`/`, `credentials.view`): counts (total, email vs username sign-in) and the five most recently changed credentials, from `GET /api/credentials` (`last_changed`). Signing in lands here.
+- **Lists** (`ViewSearchPage`, `AdminUsersPage`): the list is loaded once and filtered in the browser — accent- and case-insensitive search (`lib/text.ts`), filters with "All" first and options A–Z, pagination "X–Y of Z" with first / previous / next / last and 10/20/30/50/100 per page (`usePaged`; 10 in a list, 30 in cards; filters reset to page 1), distinct "nothing saved yet" and "no results" messages, and a list / cards switch saved in the account (`useListView` → `user_preferences.list_views`). The backend `q` parameter of `GET /api/credentials` stays for API clients; the page no longer uses it, so results follow every keystroke and accents are ignored on any database.
+- **Forms**: required fields with a red asterisk; help in an ⓘ tooltip next to the label (`HelpTip`: hover, focus or tap; Escape closes); a failed submit marks the fields `aria-invalid`, focuses and scrolls to the first one (`useFocusFirstError`, only on submit so typing never loses focus) and shows a specific message under each field; pages are fresh on each visit (they remount); destructive actions confirm first; a disabled control carries a `title` saying why.
 
 ---
 
@@ -185,6 +197,7 @@ erDiagram
         time operation_time
     }
 
+    users ||--o| user_preferences : "chooses"
     users ||--o{ credentials : "owns"
     users ||--o{ audit_log : "generates"
 ```
@@ -213,6 +226,18 @@ CREATE TABLE users (
 );
 
 -- profiles / user_profiles: dropped by migration 0006 (task 37.1)
+
+-- user_preferences (task 37.2, migration 0007): one row per user, created on the first change
+CREATE TABLE user_preferences (
+    user_id              INTEGER PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
+    list_views           JSON    NOT NULL,          -- {"credentials": "list" | "grid", "users": ...}
+    creation_date        DATE    NOT NULL,
+    creation_time        TIME    NOT NULL,
+    creation_user_id     INTEGER REFERENCES users(user_id),
+    modification_date    DATE,
+    modification_time    TIME,
+    modification_user_id INTEGER REFERENCES users(user_id)
+);
 
 -- credentials
 CREATE TABLE credentials (
@@ -285,8 +310,19 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
 // Response 200
 [
   { "credential_id": 7, "website_name": "GitHub", "email_or_username": "alice@example.com",
-    "is_username_login": false, "password": null }
+    "is_username_login": false, "password": null, "last_changed": "2026-11-16T15:04:05Z" }
 ]
+// Sorted by website name. last_changed (task 37.2) = last creation or edit, UTC.
+// The SPA loads the whole list without q and filters locally (accent-insensitive).
+```
+
+#### `GET /api/profile/preferences` / `PUT /api/profile/preferences/list-view` *(task 37.2)*
+```json
+// GET — any authenticated user; empty until the first change
+{ "list_views": { "credentials": "grid", "users": "list" } }
+// PUT body
+{ "key": "credentials", "view": "grid" }      // key: credentials | users, view: list | grid → 422 otherwise
+// Response 200: the whole updated object
 ```
 
 #### `POST /api/credentials`
@@ -465,7 +501,7 @@ Breakpoints (Tailwind CSS defaults, or equivalent CSS variables):
 | `xl` | ≥ 1280 px |
 
 Implementation:
-- Fluid grid layout: single-column on mobile, two-column on `md+`, sidebar on `lg+`.
+- Fluid grid layout: single-column on mobile; from `md` the side menu is fixed on the left (collapsible to icons), below `md` it is a drawer (task 37.2). Card grids use 1 / 2 / 3 columns at base / `sm` / `lg`.
 - All buttons, inputs, and icon controls have a minimum touch target of 44×44 px on screens < 768 px.
 - The credentials table on `ViewSearchPage` is wrapped in a horizontally scrollable container (`overflow-x: auto`) so no columns are clipped on narrow screens.
 - Form layouts stack vertically on mobile and align side-by-side on `md+`.

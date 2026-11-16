@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session, sessionmaker  # noqa: E402
 
 from tests.conftest import make_test_engine  # noqa: E402
 from app.main import app  # noqa: E402
-from app.models import AuditLog, Credential, RefreshToken, User  # noqa: E402
+from app.models import AuditLog, Credential, RefreshToken, User, UserPreference  # noqa: E402
 
 _ENGINE = make_test_engine()  # PostgreSQL when TEST_DATABASE_URL is set
 _Session = sessionmaker(bind=_ENGINE, autocommit=False, autoflush=False)
@@ -50,7 +50,7 @@ _PW = "Str0ngPassw0rd!"
 def _clean_db():
     with _Session() as db:
         # Children first: PostgreSQL enforces the foreign keys.
-        for model in (RefreshToken, AuditLog, Credential, User):
+        for model in (UserPreference, RefreshToken, AuditLog, Credential, User):
             db.query(model).delete()
         db.commit()
     yield
@@ -250,3 +250,59 @@ def test_health_endpoint(monkeypatch):
 
     monkeypatch.setattr(database, "SessionLocal", _Session)
     assert _client.get("/api/health").json() == {"status": "ok"}
+
+
+# ── Task 37.2: Home data and account preferences ────────────────────────────
+
+
+def test_list_carries_the_last_change():
+    _register("ivy")
+    headers = _login("ivy")
+    _create_credential(headers, site="Zeta")
+    first = _create_credential(headers, site="alpha")
+    rows = _client.get("/api/credentials", headers=headers).json()
+    assert {r["website_name"] for r in rows} == {"Zeta", "alpha"}
+    created = {r["credential_id"]: r["last_changed"] for r in rows}[first]
+    assert created.endswith("Z") and "T" in created
+
+    r = _client.put(
+        f"/api/credentials/{first}",
+        headers=headers,
+        json={
+            "website_name": "alpha",
+            "email_or_username": "ivy@example.com",
+            "is_username_login": False,
+            "password": "new-pw",
+            "account_password": _PW,
+        },
+    )
+    assert r.status_code == 200
+    single = _client.get(f"/api/credentials/{first}", headers=headers).json()
+    assert single["last_changed"] >= created
+
+
+def test_preferences_start_empty_and_save_list_views():
+    _register("jack")
+    headers = _login("jack")
+    assert _client.get("/api/profile/preferences").status_code == 401
+    assert _client.get("/api/profile/preferences", headers=headers).json() == {"list_views": {}}
+
+    r = _client.put("/api/profile/preferences/list-view", headers=headers, json={"key": "credentials", "view": "grid"})
+    assert r.status_code == 200 and r.json() == {"list_views": {"credentials": "grid"}}
+    r = _client.put("/api/profile/preferences/list-view", headers=headers, json={"key": "users", "view": "list"})
+    assert r.json() == {"list_views": {"credentials": "grid", "users": "list"}}
+    r = _client.put("/api/profile/preferences/list-view", headers=headers, json={"key": "credentials", "view": "list"})
+    assert r.json() == {"list_views": {"credentials": "list", "users": "list"}}
+    assert _client.get("/api/profile/preferences", headers=headers).json() == r.json()
+
+    for bad in ({"key": "other", "view": "grid"}, {"key": "credentials", "view": "table"}):
+        assert _client.put("/api/profile/preferences/list-view", headers=headers, json=bad).status_code == 422
+
+
+def test_preferences_are_per_account():
+    _register("kate")
+    _register("liam")
+    _client.put(
+        "/api/profile/preferences/list-view", headers=_login("kate"), json={"key": "credentials", "view": "grid"}
+    )
+    assert _client.get("/api/profile/preferences", headers=_login("liam")).json() == {"list_views": {}}

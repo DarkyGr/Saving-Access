@@ -52,6 +52,8 @@ graph TD
 | Database | PostgreSQL 15; SQLite in tests | Alembic migrations in `backend/migrations` |
 | Tests | pytest + Hypothesis, Vitest + RTL, Playwright | E2E runs against real uvicorn + Vite |
 
+**Frontend shell (task 37.2).** `AppLayout` renders the grouped side menu (`config/navigation.tsx`, one permission per entry; collapsible to icons on wide screens, a drawer on phones) and the account menu. Lists load once and filter, paginate and switch list / cards in the browser; the list / cards choice is saved in the account (`user_preferences`). Forms share `HelpTip` (ⓘ help) and `useFocusFirstError` (focus the first invalid field after a failed submit). Signing in opens Home (`/`).
+
 ---
 
 ## 2. Encryption lifecycle
@@ -218,6 +220,10 @@ erDiagram
         date operation_date
         time operation_time
     }
+    user_preferences {
+        int user_id PK "FK users"
+        json list_views
+    }
     refresh_tokens {
         int refresh_token_id PK
         int user_id FK
@@ -242,6 +248,7 @@ erDiagram
 | `0004_email_verification` | email_verification_tokens (spec Phase 2) |
 | `0005_verification_reminders` | `users.preferred_language`, `users.last_verification_reminder_days` |
 | `0006_retire_profiles` | drops profiles and user_profiles (permissions come from the role); its downgrade restores them and links every User to Full |
+| `0007_user_preferences` | user_preferences (list / cards per listing, saved in the account; task 37.2) |
 
 - Docker (`migrate` service in production) and the E2E tests run `alembic upgrade head` before the API starts. The app never creates tables.
 - `backend/db/schema.sql` is **generated** from the migrations (`python db/generate_schema_sql.py`) and includes the `app_user` role with SELECT/INSERT/UPDATE/DELETE only (Requirement 9.9).

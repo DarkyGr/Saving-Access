@@ -1,9 +1,11 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 
 import apiClient from "../api/apiClient";
+import { useFocusFirstError } from "../hooks/useFocusFirstError";
+import HelpTip from "../components/form/HelpTip";
 import PasswordInput from "../components/PasswordInput";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -93,6 +95,8 @@ export default function SignUpPage() {
   });
 
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
+  const formRef = useRef<HTMLFormElement>(null);
+  const focusFirstError = useFocusFirstError(formRef);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -158,6 +162,7 @@ export default function SignUpPage() {
 
     if (hasErrors) {
       setFieldErrors(errors);
+      focusFirstError();
       return;
     }
     setFieldErrors({});
@@ -211,7 +216,7 @@ export default function SignUpPage() {
             {t("signup.title")}
           </h1>
 
-          <form
+          <form ref={formRef}
             onSubmit={handleSubmit}
             noValidate
             aria-label={t("signup.title")}
@@ -231,10 +236,11 @@ export default function SignUpPage() {
             <div className="mb-5">
               <label
                 htmlFor="signup-username"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="inline-block text-sm font-medium text-gray-700 mb-1"
               >
                 {t("signup.usernameLabel")}
               </label>
+<HelpTip text={t("help.signupUsername")} topic={t("signup.usernameLabel")} />
               <input
                 id="signup-username"
                 type="text"
@@ -243,6 +249,7 @@ export default function SignUpPage() {
                 onChange={handleChange("username")}
                 placeholder={t("signup.usernamePlaceholder")}
                 aria-required="true"
+                aria-invalid={!!fieldErrors.username}
                 aria-describedby={
                   fieldErrors.username ? "signup-username-error" : undefined
                 }
@@ -273,10 +280,11 @@ export default function SignUpPage() {
             <div className="mb-5">
               <label
                 htmlFor="signup-email"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="inline-block text-sm font-medium text-gray-700 mb-1"
               >
                 {t("signup.emailLabel")}
               </label>
+<HelpTip text={t("help.signupEmail")} topic={t("signup.emailLabel")} />
               <input
                 id="signup-email"
                 type="email"
@@ -285,6 +293,7 @@ export default function SignUpPage() {
                 onChange={handleChange("email")}
                 placeholder={t("signup.emailPlaceholder")}
                 aria-required="true"
+                aria-invalid={!!fieldErrors.email}
                 aria-describedby={
                   fieldErrors.email ? "signup-email-error" : undefined
                 }
@@ -321,6 +330,10 @@ export default function SignUpPage() {
                 value={fields.password}
                 onChange={handleChange("password")}
                 aria-required="true"
+                aria-invalid={fieldErrors.password && fieldErrors.password.length > 0 ? true : undefined}
+                aria-describedby={
+                  fieldErrors.password && fieldErrors.password.length > 0 ? "signup-password-rules" : undefined
+                }
               />
               {/* Per-rule error list (Requirement 1.5 & 1.6) */}
               {fieldErrors.password && fieldErrors.password.length > 0 && (

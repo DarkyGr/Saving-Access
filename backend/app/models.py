@@ -20,6 +20,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    JSON,
     LargeBinary,
     SmallInteger,
     String,
@@ -103,6 +104,27 @@ class User(AuditColumnsMixin, Base):
         back_populates="user",
         foreign_keys="AuditLog.user_id",
     )
+
+
+# ---------------------------------------------------------------------------
+# user_preferences (task 37.2)
+# ---------------------------------------------------------------------------
+
+class UserPreference(AuditColumnsMixin, Base):
+    """
+    Per-account interface choices (Requirement 13.4; 14.x adds more).
+    One row per user, created on the first change.
+    """
+
+    __tablename__ = "user_preferences"
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    # {"credentials": "grid", "users": "list"} — list or grid per listing.
+    list_views = Column(JSON, nullable=False, default=dict)
 
 
 # ---------------------------------------------------------------------------

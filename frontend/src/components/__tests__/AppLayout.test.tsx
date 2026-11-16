@@ -90,6 +90,7 @@ describe("AppLayout", () => {
   it("logout clears the session and returns to /login", async () => {
     vi.spyOn(apiClient, "get").mockResolvedValue({ data: { permissions: [] } });
     const router = renderLayout(userToken);
+    await userEvent.click(await screen.findByRole("button", { name: "Account menu of alice" }));
     const button = await screen.findByRole("button", { name: /log out/i });
     await act(async () => {
       await userEvent.click(button);

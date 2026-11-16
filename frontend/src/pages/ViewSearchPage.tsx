@@ -1,24 +1,33 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 
 import apiClient from "../api/apiClient";
 import { useVisibilityTimer } from "../hooks/useVisibilityTimer";
+import { usePaged } from "../hooks/usePaged";
+import { useListView } from "../hooks/useListView";
+import { matchesQuery } from "../lib/text";
 import PasswordConfirmModal from "../components/PasswordConfirmModal";
 import AlreadyVisibleModal from "../components/AlreadyVisibleModal";
 import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
+import { FilterSelect, ListToolbar, Pagination, SearchBox, ViewToggle } from "../components/list/ListControls";
+import { PlusIcon } from "../components/icons";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-interface Credential {
+export interface Credential {
   credential_id: number;
   website_name: string;
   email_or_username: string;
   is_username_login: boolean;
   /** Always null from list endpoint; filled in by the reveal flow */
   password: string | null;
+  /** Last creation or edit, UTC ISO 8601 (task 37.2) */
+  last_changed?: string;
 }
+
+type LoginType = "" | "email" | "username";
 
 // ── Modal states ─────────────────────────────────────────────────────────────
 
@@ -29,16 +38,14 @@ type ModalState =
   | { type: "deleteConfirm"; targetId: number; websiteName: string }
   | { type: "deletePasswordConfirm"; targetId: number; websiteName: string };
 
-// ── Per-row reveal state ──────────────────────────────────────────────────────
-
 interface RevealedRow {
   credentialId: number;
   plaintext: string;
 }
 
-// ── Eye toggle icon ───────────────────────────────────────────────────────────
+// ── Icons ────────────────────────────────────────────────────────────────────
 
-function EyeOpenIcon() {
+function Svg({ children }: { children: ReactNode }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -51,120 +58,91 @@ function EyeOpenIcon() {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
+      {children}
     </svg>
   );
 }
 
-function EyeClosedIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      className="h-5 w-5"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-      <line x1="1" y1="1" x2="23" y2="23" />
-    </svg>
-  );
-}
+const EyeOpenIcon = () => (
+  <Svg>
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+    <circle cx="12" cy="12" r="3" />
+  </Svg>
+);
+const EyeClosedIcon = () => (
+  <Svg>
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+    <line x1="1" y1="1" x2="23" y2="23" />
+  </Svg>
+);
+const EditIcon = () => (
+  <Svg>
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+  </Svg>
+);
+const TrashIcon = () => (
+  <Svg>
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+    <path d="M10 11v6" />
+    <path d="M14 11v6" />
+    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+  </Svg>
+);
 
-function EditIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      className="h-5 w-5"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  );
-}
-
-function TrashIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      className="h-5 w-5"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-      <path d="M10 11v6" />
-      <path d="M14 11v6" />
-      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-    </svg>
-  );
-}
+const iconButton = [
+  "inline-flex items-center justify-center rounded",
+  "p-2 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 md:p-1.5",
+  "text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-1",
+  "transition-colors duration-100",
+].join(" ");
 
 // ── Component ────────────────────────────────────────────────────────────────
 
 /**
  * ViewSearchPage — /credentials
  *
- * Main page for viewing and searching saved credentials.
- *
- * Requirements 5.1–5.14, 7.1–7.7:
- *  5.1  Page accessible to authenticated users with the required Profile permission.
- *  5.2  Search input filters by website_name or email (case-insensitive partial match).
- *  5.3  Backend returns only current user's credentials.
- *  5.4  Password column always masked by default.
- *  5.5  Eye_Toggle opens PasswordConfirmModal.
- *  5.6  On correct password, decrypt and display in row.
- *  5.7  Start 60-second Visibility_Timer per row.
- *  5.8  Timer expiry auto-masks password.
- *  5.9  Manual click on revealed eye immediately masks and stops timer.
- *  5.10 If another password is visible, show AlreadyVisibleModal.
- *  5.11 AlreadyVisibleModal "Continue" hides current, proceeds to new reveal.
- *  5.12 AlreadyVisibleModal "Cancel" closes without revealing.
- *  5.13 PasswordConfirmModal always shown on Eye_Toggle click.
- *  5.14 Backend logs SELECT audit entry (server-side).
- *  7.1  Delete icon present on each row.
- *  7.2  Delete icon opens ConfirmDeleteModal.
- *  7.3  ConfirmDeleteModal "Cancel" closes without deleting.
- *  7.4  ConfirmDeleteModal "Delete" opens PasswordConfirmModal.
- *  7.5  Incorrect account password → backend rejects delete (401 shown).
- *  7.6  Valid delete → backend removes credential; list refreshed.
- *  7.7  Backend logs DELETE audit entry (server-side).
+ * Requirements 5.1–5.14, 7.1–7.7 and 13.4 (task 37.2):
+ *  5.2  The search box filters by website_name or email/username: partial,
+ *       case- and accent-insensitive. The page loads the user's own list
+ *       once (5.3: the backend returns only theirs) and filters it locally,
+ *       so results follow every keystroke.
+ *  13.4 Filter by login type, pagination "X–Y of Z" (10/20/30/50/100), list
+ *       or grid saved in the account, distinct "no data" / "no results".
+ *  5.4–5.13 Masked passwords, account-password prompt on every reveal,
+ *       one visible password at a time with a 60-second timer.
+ *  7.1–7.7 Delete with confirmation and the account password.
  */
 export default function ViewSearchPage() {
   const { t } = useTranslation();
 
-  // ── Credentials list state ──────────────────────────────────────────────
+  // ── List state ──────────────────────────────────────────────────────────
 
   const [credentials, setCredentials] = useState<Credential[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [loginType, setLoginType] = useState<LoginType>("");
+  const [view, setView] = useListView("credentials", "list");
 
-  // ── Reveal state ────────────────────────────────────────────────────────
-  // Only one row can have a revealed password at a time (Req 5.10).
+  const filtered = useMemo(
+    () =>
+      credentials.filter(
+        (c) =>
+          matchesQuery(searchQuery, [c.website_name, c.email_or_username]) &&
+          (loginType === "" || (loginType === "username") === c.is_username_login)
+      ),
+    [credentials, searchQuery, loginType]
+  );
+  const paged = usePaged(filtered, view === "grid" ? 30 : 10, `${searchQuery}|${loginType}|${view}`);
+
+  // ── Reveal state (one row at a time, Req 5.10) ──────────────────────────
 
   const [revealedRow, setRevealedRow] = useState<RevealedRow | null>(null);
   const timer = useVisibilityTimer(60_000);
 
-  // When the timer expires it sets isVisible = false, so we sync revealedRow
   useEffect(() => {
     if (!timer.isVisible && revealedRow !== null) {
       setRevealedRow(null);
@@ -180,23 +158,14 @@ export default function ViewSearchPage() {
   const [isModalLoading, setIsModalLoading] = useState(false);
   const [isDeletingId, setIsDeletingId] = useState<number | null>(null);
 
-  // ── Debounced search ────────────────────────────────────────────────────
-
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const fetchCredentials = useCallback(async (query: string) => {
-    setIsLoading(true);
+  const loadCredentials = useCallback(async () => {
     setFetchError(null);
     try {
-      const params = query.trim() ? { q: query.trim() } : {};
-      const response = await apiClient.get<Credential[]>("/api/credentials", {
-        params,
-      });
+      const response = await apiClient.get<Credential[]>("/api/credentials");
       setCredentials(response.data);
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
-        // The response interceptor in apiClient handles redirect to /login.
-        // Nothing further needed here.
+        // The response interceptor in apiClient handles the redirect.
         return;
       }
       setFetchError(t("errors.generic"));
@@ -205,28 +174,9 @@ export default function ViewSearchPage() {
     }
   }, [t]);
 
-  // Initial load
   useEffect(() => {
-    fetchCredentials("");
-  }, [fetchCredentials]);
-
-  // Debounce search input
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchQuery(value);
-
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      fetchCredentials(value);
-    }, 300);
-  };
-
-  // Cleanup debounce on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
+    loadCredentials();
+  }, [loadCredentials]);
 
   // ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -235,217 +185,196 @@ export default function ViewSearchPage() {
     setRevealedRow(null);
   }
 
-  // ── Eye toggle logic (Req 5.5 – 5.13) ──────────────────────────────────
+  function modalErrorFor(err: unknown): string {
+    if (axios.isAxiosError(err)) {
+      const status = err.response?.status;
+      if (status === 401) return t("passwordConfirmModal.errorWrongPassword");
+      if (status === 403) return t("errors.forbidden");
+    }
+    return t("passwordConfirmModal.errorGeneric");
+  }
+
+  // ── Eye toggle (Req 5.5 – 5.13) ─────────────────────────────────────────
 
   function handleEyeToggle(credentialId: number) {
-    // Req 5.9 — manual click on already-open eye immediately masks
     if (revealedRow?.credentialId === credentialId) {
-      maskCurrentRow();
+      maskCurrentRow(); // Req 5.9
       return;
     }
-
-    // Req 5.10 — another row is currently visible → show AlreadyVisibleModal
     if (revealedRow !== null) {
-      setModal({ type: "alreadyVisible", pendingId: credentialId });
+      setModal({ type: "alreadyVisible", pendingId: credentialId }); // Req 5.10
       setModalError(undefined);
       return;
     }
-
-    // Req 5.13 — always show PasswordConfirmModal
-    setModal({ type: "revealConfirm", targetId: credentialId });
+    setModal({ type: "revealConfirm", targetId: credentialId }); // Req 5.13
     setModalError(undefined);
   }
 
-  // AlreadyVisibleModal "Continue" (Req 5.11)
   function handleAlreadyVisibleContinue() {
-    const modal_ = modal as { type: "alreadyVisible"; pendingId: number };
-    const pendingId = modal_.pendingId;
+    const pendingId = (modal as { type: "alreadyVisible"; pendingId: number }).pendingId;
     maskCurrentRow();
     setModal({ type: "revealConfirm", targetId: pendingId });
     setModalError(undefined);
   }
 
-  // AlreadyVisibleModal "Cancel" (Req 5.12)
-  function handleAlreadyVisibleCancel() {
+  function closeModal() {
     setModal({ type: "none" });
     setModalError(undefined);
   }
 
-  // PasswordConfirmModal confirm for reveal (Req 5.5–5.7)
   async function handleRevealConfirm(accountPassword: string) {
-    const modal_ = modal as { type: "revealConfirm"; targetId: number };
-    const targetId = modal_.targetId;
-
+    const targetId = (modal as { type: "revealConfirm"; targetId: number }).targetId;
     setIsModalLoading(true);
     setModalError(undefined);
-
     try {
       const response = await apiClient.post<{ password: string }>(
         `/api/credentials/${targetId}/reveal`,
         { account_password: accountPassword }
       );
-
-      const plaintext = response.data.password;
-      setRevealedRow({ credentialId: targetId, plaintext });
+      setRevealedRow({ credentialId: targetId, plaintext: response.data.password });
       timer.startTimer();
-      setModal({ type: "none" });
-      setModalError(undefined);
+      closeModal();
     } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        const status = err.response?.status;
-        if (status === 401) {
-          setModalError(t("passwordConfirmModal.errorWrongPassword"));
-        } else if (status === 403) {
-          setModalError(t("errors.forbidden"));
-        } else {
-          setModalError(t("passwordConfirmModal.errorGeneric"));
-        }
-      } else {
-        setModalError(t("passwordConfirmModal.errorGeneric"));
-      }
+      setModalError(modalErrorFor(err));
     } finally {
       setIsModalLoading(false);
     }
   }
 
-  function handleRevealCancel() {
-    setModal({ type: "none" });
-    setModalError(undefined);
-  }
-
-  // ── Delete flow (Req 7.1–7.7) ───────────────────────────────────────────
+  // ── Delete (Req 7.1–7.7) ────────────────────────────────────────────────
 
   function handleDeleteClick(credential: Credential) {
-    setModal({
-      type: "deleteConfirm",
-      targetId: credential.credential_id,
-      websiteName: credential.website_name,
-    });
+    setModal({ type: "deleteConfirm", targetId: credential.credential_id, websiteName: credential.website_name });
     setModalError(undefined);
   }
 
-  // ConfirmDeleteModal "Delete" → show PasswordConfirmModal (Req 7.4)
   function handleDeleteConfirm() {
-    const modal_ = modal as {
-      type: "deleteConfirm";
-      targetId: number;
-      websiteName: string;
-    };
-    setModal({
-      type: "deletePasswordConfirm",
-      targetId: modal_.targetId,
-      websiteName: modal_.websiteName,
-    });
+    const m = modal as { type: "deleteConfirm"; targetId: number; websiteName: string };
+    setModal({ type: "deletePasswordConfirm", targetId: m.targetId, websiteName: m.websiteName });
     setModalError(undefined);
   }
 
-  // ConfirmDeleteModal "Cancel" (Req 7.3)
-  function handleDeleteModalCancel() {
-    setModal({ type: "none" });
-    setModalError(undefined);
-  }
-
-  // PasswordConfirmModal confirm for delete (Req 7.4–7.6)
   async function handleDeletePasswordConfirm(accountPassword: string) {
-    const modal_ = modal as {
-      type: "deletePasswordConfirm";
-      targetId: number;
-      websiteName: string;
-    };
-    const targetId = modal_.targetId;
-
+    const targetId = (modal as { type: "deletePasswordConfirm"; targetId: number }).targetId;
     setIsModalLoading(true);
     setIsDeletingId(targetId);
     setModalError(undefined);
-
     try {
-      await apiClient.delete(`/api/credentials/${targetId}`, {
-        data: { account_password: accountPassword },
-      });
-
-      // Req 7.6 — success (204) → close modal and refresh list
-      setModal({ type: "none" });
-      setModalError(undefined);
-
-      // If the deleted row was the currently revealed one, clear it
-      if (revealedRow?.credentialId === targetId) {
-        maskCurrentRow();
-      }
-
-      await fetchCredentials(searchQuery);
+      await apiClient.delete(`/api/credentials/${targetId}`, { data: { account_password: accountPassword } });
+      closeModal();
+      if (revealedRow?.credentialId === targetId) maskCurrentRow();
+      await loadCredentials();
     } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        const status = err.response?.status;
-        if (status === 401) {
-          setModalError(t("passwordConfirmModal.errorWrongPassword"));
-        } else if (status === 403) {
-          setModalError(t("errors.forbidden"));
-        } else {
-          setModalError(t("passwordConfirmModal.errorGeneric"));
-        }
-      } else {
-        setModalError(t("passwordConfirmModal.errorGeneric"));
-      }
+      setModalError(modalErrorFor(err));
     } finally {
       setIsModalLoading(false);
       setIsDeletingId(null);
     }
   }
 
-  function handleDeletePasswordCancel() {
-    setModal({ type: "none" });
-    setModalError(undefined);
+  // ── Pieces shared by the table and the cards ────────────────────────────
+
+  function passwordCell(cred: Credential) {
+    const isRevealed = revealedRow?.credentialId === cred.credential_id;
+    return isRevealed ? (
+      <span className="inline-flex items-center gap-2">
+        <span className="font-mono text-gray-900 break-all">{revealedRow!.plaintext}</span>
+        {timer.secondsRemaining > 0 && (
+          <span
+            className="text-xs text-gray-400 tabular-nums"
+            aria-live="polite"
+            aria-label={`${t("visibilityTimer.label")} ${timer.secondsRemaining}s`}
+          >
+            ({timer.secondsRemaining}s)
+          </span>
+        )}
+      </span>
+    ) : (
+      <span className="text-gray-400" aria-label={t("credentials.maskedPassword")}>
+        {t("credentials.maskedPassword")}
+      </span>
+    );
   }
+
+  function actions(cred: Credential) {
+    const isRevealed = revealedRow?.credentialId === cred.credential_id;
+    return (
+      <div className="inline-flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => handleEyeToggle(cred.credential_id)}
+          className={`${iconButton} hover:text-indigo-600 hover:bg-indigo-50 focus:ring-indigo-500`}
+          aria-label={isRevealed ? t("credentials.hideButton") : t("credentials.revealButton")}
+          aria-pressed={isRevealed}
+        >
+          {isRevealed ? <EyeClosedIcon /> : <EyeOpenIcon />}
+        </button>
+        <Link
+          to={`/credentials/${cred.credential_id}/edit`}
+          className={`${iconButton} hover:text-indigo-600 hover:bg-indigo-50 focus:ring-indigo-500`}
+          aria-label={`${t("credentials.editButton")} ${cred.website_name}`}
+        >
+          <EditIcon />
+        </Link>
+        <button
+          type="button"
+          onClick={() => handleDeleteClick(cred)}
+          disabled={isDeletingId === cred.credential_id}
+          title={isDeletingId === cred.credential_id ? t("credentials.deleting") : undefined}
+          className={`${iconButton} hover:text-red-600 hover:bg-red-50 focus:ring-red-500 disabled:opacity-40 disabled:cursor-not-allowed`}
+          aria-label={`${t("credentials.deleteButton")} ${cred.website_name}`}
+        >
+          <TrashIcon />
+        </button>
+      </div>
+    );
+  }
+
+  const th = "px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap";
+  const showList = !isLoading && !fetchError && paged.total > 0;
 
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
     <>
-      <main className="min-h-screen bg-gray-50 px-4 py-8 sm:py-12">
+      <main className="flex-1 px-4 py-8 sm:py-10">
         <div className="mx-auto w-full max-w-5xl">
-
-          {/* ── Header row ── */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">
-              {t("credentials.pageTitle")}
-            </h1>
-
+            <h1 className="text-2xl font-bold text-gray-900">{t("credentials.pageTitle")}</h1>
             <Link
               to="/credentials/new"
               className={[
-                "inline-flex items-center justify-center rounded-md",
+                "inline-flex items-center justify-center gap-2 rounded-md",
                 "bg-indigo-600 text-white text-sm font-semibold",
                 "px-4 py-2 min-h-[44px]",
                 "hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2",
                 "transition-colors duration-150 whitespace-nowrap",
               ].join(" ")}
             >
+              <PlusIcon className="h-4 w-4" />
               {t("credentials.addNew")}
             </Link>
           </div>
 
-          {/* ── Search input (Req 5.2, debounced 300 ms) ── */}
-          <div className="mb-6">
-            <label htmlFor="credential-search" className="sr-only">
-              {t("credentials.searchPlaceholder")}
-            </label>
-            <input
+          <ListToolbar view={<ViewToggle view={view} onChange={setView} />}>
+            <SearchBox
               id="credential-search"
-              type="search"
               value={searchQuery}
-              onChange={handleSearchChange}
+              onChange={setSearchQuery}
               placeholder={t("credentials.searchPlaceholder")}
-              autoComplete="off"
-              className={[
-                "block w-full rounded-md border border-gray-300 px-3 py-2",
-                "text-gray-900 placeholder-gray-400 text-sm",
-                "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
-                "min-h-[44px] md:min-h-[40px]",
-              ].join(" ")}
             />
-          </div>
+            <FilterSelect
+              id="credential-login-type"
+              label={t("credentials.filterLoginType")}
+              value={loginType}
+              onChange={(v) => setLoginType(v as LoginType)}
+              options={[
+                { value: "email", label: t("credentials.loginTypeEmail") },
+                { value: "username", label: t("credentials.loginTypeUsername") },
+              ]}
+            />
+          </ListToolbar>
 
-          {/* ── Error banner ── */}
           {fetchError && (
             <div
               role="alert"
@@ -456,202 +385,89 @@ export default function ViewSearchPage() {
             </div>
           )}
 
-          {/* ── Loading indicator ── */}
           {isLoading && (
             <p className="text-sm text-gray-500 mb-4" aria-live="polite">
               {t("common.loading")}
             </p>
           )}
 
-          {/* ── No results ── */}
           {!isLoading && !fetchError && credentials.length === 0 && (
+            <p className="text-sm text-gray-500" aria-live="polite">
+              {t("credentials.noData")}
+            </p>
+          )}
+          {!isLoading && !fetchError && credentials.length > 0 && filtered.length === 0 && (
             <p className="text-sm text-gray-500" aria-live="polite">
               {t("credentials.noResults")}
             </p>
           )}
 
-          {/* ── Credentials table (Req 5.4, 11.3 — horizontally scrollable) ── */}
-          {!isLoading && credentials.length > 0 && (
+          {/* Table (Req 5.4, 11.3 — horizontally scrollable) */}
+          {showList && view === "list" && (
             <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
               <table className="min-w-full divide-y divide-gray-200 bg-white">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th
-                      scope="col"
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"
-                    >
-                      {t("credentials.tableHeaderWebsite")}
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"
-                    >
-                      {t("credentials.tableHeaderEmailUsername")}
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"
-                    >
-                      {t("credentials.tableHeaderPassword")}
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"
-                    >
-                      {t("credentials.tableHeaderActions")}
-                    </th>
+                    <th scope="col" className={th}>{t("credentials.tableHeaderWebsite")}</th>
+                    <th scope="col" className={th}>{t("credentials.tableHeaderEmailUsername")}</th>
+                    <th scope="col" className={th}>{t("credentials.tableHeaderPassword")}</th>
+                    <th scope="col" className={`${th} text-right`}>{t("credentials.tableHeaderActions")}</th>
                   </tr>
                 </thead>
-
                 <tbody className="divide-y divide-gray-100">
-                  {credentials.map((cred) => {
-                    const isRevealed =
-                      revealedRow?.credentialId === cred.credential_id;
-
-                    return (
-                      <tr
-                        key={cred.credential_id}
-                        className="hover:bg-gray-50 transition-colors duration-100"
-                      >
-                        {/* Website */}
-                        <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
-                          {cred.website_name}
-                        </td>
-
-                        {/* Email / Username */}
-                        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                          {cred.email_or_username}
-                        </td>
-
-                        {/* Password (masked or revealed) + timer */}
-                        <td className="px-4 py-3 text-sm whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            {isRevealed ? (
-                              <>
-                                <span className="font-mono text-gray-900">
-                                  {revealedRow!.plaintext}
-                                </span>
-                                {timer.secondsRemaining > 0 && (
-                                  <span
-                                    className="text-xs text-gray-400 tabular-nums"
-                                    aria-live="polite"
-                                    aria-label={`${t("visibilityTimer.label")} ${timer.secondsRemaining}s`}
-                                  >
-                                    ({timer.secondsRemaining}s)
-                                  </span>
-                                )}
-                              </>
-                            ) : (
-                              <span
-                                className="text-gray-400"
-                                aria-label={t("credentials.maskedPassword")}
-                              >
-                                {t("credentials.maskedPassword")}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* Actions */}
-                        <td className="px-4 py-3 text-right whitespace-nowrap">
-                          <div className="inline-flex items-center gap-1">
-                            {/* Eye toggle (Req 5.5) */}
-                            <button
-                              type="button"
-                              onClick={() => handleEyeToggle(cred.credential_id)}
-                              className={[
-                                "inline-flex items-center justify-center rounded",
-                                "p-2 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 md:p-1.5",
-                                "text-gray-500 hover:text-indigo-600 hover:bg-indigo-50",
-                                "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1",
-                                "transition-colors duration-100",
-                              ].join(" ")}
-                              aria-label={
-                                isRevealed
-                                  ? t("credentials.hideButton")
-                                  : t("credentials.revealButton")
-                              }
-                              aria-pressed={isRevealed}
-                            >
-                              {isRevealed ? <EyeClosedIcon /> : <EyeOpenIcon />}
-                            </button>
-
-                            {/* Edit icon → /credentials/:id/edit (Req 6.1–6.2, 21.4) */}
-                            <Link
-                              to={`/credentials/${cred.credential_id}/edit`}
-                              className={[
-                                "inline-flex items-center justify-center rounded",
-                                "p-2 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 md:p-1.5",
-                                "text-gray-500 hover:text-indigo-600 hover:bg-indigo-50",
-                                "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1",
-                                "transition-colors duration-100",
-                              ].join(" ")}
-                              aria-label={`${t("credentials.editButton")} ${cred.website_name}`}
-                            >
-                              <EditIcon />
-                            </Link>
-
-                            {/* Delete icon (Req 7.1–7.2) */}
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteClick(cred)}
-                              disabled={isDeletingId === cred.credential_id}
-                              className={[
-                                "inline-flex items-center justify-center rounded",
-                                "p-2 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 md:p-1.5",
-                                "text-gray-500 hover:text-red-600 hover:bg-red-50",
-                                "focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1",
-                                "transition-colors duration-100",
-                                "disabled:opacity-40 disabled:cursor-not-allowed",
-                              ].join(" ")}
-                              aria-label={`${t("credentials.deleteButton")} ${cred.website_name}`}
-                            >
-                              <TrashIcon />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {paged.pageItems.map((cred) => (
+                    <tr key={cred.credential_id} className="hover:bg-gray-50 transition-colors duration-100">
+                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{cred.website_name}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{cred.email_or_username}</td>
+                      <td className="px-4 py-3 text-sm whitespace-nowrap">{passwordCell(cred)}</td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">{actions(cred)}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           )}
+
+          {/* Cards */}
+          {showList && view === "grid" && (
+            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {paged.pageItems.map((cred) => (
+                <li
+                  key={cred.credential_id}
+                  className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                  aria-label={cred.website_name}
+                >
+                  <p className="truncate text-base font-semibold text-gray-900">{cred.website_name}</p>
+                  <p className="truncate text-sm text-gray-600">{cred.email_or_username}</p>
+                  <p className="text-sm">{passwordCell(cred)}</p>
+                  <div className="mt-auto flex justify-end border-t border-gray-100 pt-2">{actions(cred)}</div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {showList && <Pagination paged={paged} id="credentials-pages" />}
         </div>
       </main>
 
-      {/* ── AlreadyVisibleModal (Req 5.10–5.12) ── */}
       {modal.type === "alreadyVisible" && (
-        <AlreadyVisibleModal
-          onContinue={handleAlreadyVisibleContinue}
-          onCancel={handleAlreadyVisibleCancel}
-        />
+        <AlreadyVisibleModal onContinue={handleAlreadyVisibleContinue} onCancel={closeModal} />
       )}
-
-      {/* ── PasswordConfirmModal for reveal (Req 5.5, 5.13) ── */}
       {modal.type === "revealConfirm" && (
         <PasswordConfirmModal
           onConfirm={handleRevealConfirm}
-          onCancel={handleRevealCancel}
+          onCancel={closeModal}
           error={modalError}
           isLoading={isModalLoading}
         />
       )}
-
-      {/* ── ConfirmDeleteModal (Req 7.2–7.3) ── */}
       {modal.type === "deleteConfirm" && (
-        <ConfirmDeleteModal
-          websiteName={modal.websiteName}
-          onConfirm={handleDeleteConfirm}
-          onCancel={handleDeleteModalCancel}
-        />
+        <ConfirmDeleteModal websiteName={modal.websiteName} onConfirm={handleDeleteConfirm} onCancel={closeModal} />
       )}
-
-      {/* ── PasswordConfirmModal for delete (Req 7.4–7.5) ── */}
       {modal.type === "deletePasswordConfirm" && (
         <PasswordConfirmModal
           onConfirm={handleDeletePasswordConfirm}
-          onCancel={handleDeletePasswordCancel}
+          onCancel={closeModal}
           error={modalError}
           isLoading={isModalLoading}
         />

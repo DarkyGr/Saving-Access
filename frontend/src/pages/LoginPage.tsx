@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import axios from "axios";
 
 import apiClient from "../api/apiClient";
+import { useFocusFirstError } from "../hooks/useFocusFirstError";
 import { useAuth } from "../context/AuthContext";
 import PasswordInput from "../components/PasswordInput";
 import HCaptcha, { type HCaptchaHandle } from "../components/HCaptcha";
@@ -70,6 +71,8 @@ export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
+  const formRef = useRef<HTMLFormElement>(null);
+  const focusFirstError = useFocusFirstError(formRef);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -95,6 +98,7 @@ export default function LoginPage() {
     const errors = validate();
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
+      focusFirstError();
       return;
     }
     setFieldErrors({});
@@ -118,7 +122,7 @@ export default function LoginPage() {
           ? { deadline: data.deactivation_deadline ?? null }
           : null
       );
-      navigate("/credentials", { replace: true });
+      navigate("/", { replace: true });
     } catch (err: unknown) {
       // hCaptcha tokens are single-use: always ask for a new challenge.
       captchaRef.current?.reset();
@@ -155,7 +159,7 @@ export default function LoginPage() {
             {t("login.title")}
           </h1>
 
-          <form onSubmit={handleSubmit} noValidate aria-label={t("login.title")}>
+          <form ref={formRef} onSubmit={handleSubmit} noValidate aria-label={t("login.title")}>
             {justRegistered && !apiError && (
               <div
                 role="status"
@@ -194,6 +198,7 @@ export default function LoginPage() {
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder={t("login.usernamePlaceholder")}
                 aria-required="true"
+                aria-invalid={!!fieldErrors.username}
                 aria-describedby={
                   fieldErrors.username ? "login-username-error" : undefined
                 }

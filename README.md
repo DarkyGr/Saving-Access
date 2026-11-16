@@ -321,7 +321,7 @@ save-pass/
 
 ### Login (`/login`)
 
-The entry point. Enter username and password to authenticate. On success, a JWT is stored in React memory (not `localStorage`) and the user is redirected to the credentials screen. Expired tokens redirect back here automatically.
+The entry point. Enter username and password to authenticate. On success, a JWT is stored in React memory (not `localStorage`) and the user is taken to Home. Expired tokens redirect back here automatically.
 
 When enabled: an hCaptcha challenge must be solved before logging in, and an account whose email is not verified gets a reminder (with **Resend email**) after logging in. Unverified accounts are deactivated 30 days after sign-up; an administrator reactivates them with `python -m app.cli verify-email --username <name>`.
 
@@ -333,9 +333,17 @@ Create a new account. Password must be at least 12 characters and include at lea
 
 Opened from the verification email. Each link works once and expires after 48 hours; log in to request a new one.
 
+### Moving around
+
+A side menu groups the screens: **Home**, **Vault** (My Credentials, Save Credential) and **Administration** (Admin only). Click a group title to close or open it; the menu remembers it on that device. The arrow at the top folds the menu to icons (the names appear on hover). On a phone the ☰ button opens the menu, which closes after choosing a screen. Your name at the top right opens the account menu with your role and **Log Out**.
+
+### Home (`/`)
+
+The first screen after logging in: how many credentials you have (and how many sign in with an email or a username) and the five you changed most recently.
+
 ### View / Search Credentials (`/credentials`)
 
-The main screen. A search box filters credentials in real time by website name or email/username (case-insensitive). Results appear in a table with these columns:
+The main screen. The search box filters as you type by website name or email/username, ignoring upper/lower case and accents (`jose` finds `José`). Filter by sign-in type (email or username), page through the results (`1–10 of 42`, 10 to 100 per page) and switch between a table and cards; the table/cards choice is saved in your account. Results appear in a table with these columns:
 
 | Column | Notes |
 |--------|-------|
@@ -355,7 +363,7 @@ The main screen. A search box filters credentials in real time by website name o
 
 ### Save Credential (`/credentials/new`)
 
-Form to store a new credential. Fields: website name, email (or username if "Username Login" is checked), and password. The password field has an eye toggle for review before saving. Submitting shows the account-password confirmation prompt.
+Form to store a new credential. Fields: website name, email (or username if "Username Login" is checked), and password. Required fields carry a red asterisk and the ⓘ next to a label explains the field; if something is missing or wrong, the field turns red, gets the focus and the reason appears under it. The password field has an eye toggle for review before saving. Submitting shows the account-password confirmation prompt.
 
 ### Edit Credential (`/credentials/:id/edit`)
 
@@ -363,7 +371,7 @@ Pre-populated form with the existing credential data. The password field is mask
 
 ### Admin — Users (`/admin/users`) *(Admin only)*
 
-Lists all registered users with their role (User or Admin). A dropdown per row changes another user's role; your own row is locked so there is always an Admin. The Admin never sees other users' passwords.
+Lists all registered users with their role (User or Admin) and whether their email is verified, with search by name or email, filters by role and verification, pages and table/cards view. A dropdown per row changes another user's role; your own row is locked so there is always an Admin. The Admin never sees other users' passwords.
 
 ### 403 Forbidden (`/403`)
 
@@ -438,7 +446,7 @@ All tasks from the Kiro plan (1–29) and the follow-up phases (30–34) are don
 **Pending** (tasks 35–37)
 
 - Local installation on this laptop: installed on 2026-11-15 (task 36); the phone test is left.
-- Task 37 (decided 2026-11-15): bring Savings Tool's screens and settings — side menu and interface patterns, appearance and personal settings, user administration and audit view, mandatory 2FA and session limits, in-app help. 37.1 (roles and permissions) is done.
+- Task 37 (decided 2026-11-15): bring Savings Tool's screens and settings — side menu and interface patterns, appearance and personal settings, user administration and audit view, mandatory 2FA and session limits, in-app help. 37.1 (roles and permissions) and 37.2 (menu, Home, lists and form patterns) are done.
 - Monitoring and alerts. (A real server and cloud backups were dropped in favour of the local installation.)
 - GitHub Actions on Node 24.
 - Password reset, two-factor authentication, password generator, export and account deletion — outside the original spec.

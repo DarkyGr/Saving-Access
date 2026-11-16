@@ -37,7 +37,8 @@ async function logIn(
   await page.getByPlaceholder("Enter your username").fill(username);
   await page.getByPlaceholder("Enter your password").fill(ACCOUNT_PW);
   await page.getByRole("button", { name: "Log In", exact: true }).click();
-  await expect(page).toHaveURL(/\/credentials$/);
+  // Task 37.2: signing in opens Home.
+  await expect(page).toHaveURL(/\/$/);
   const modal = page.getByRole("dialog", { name: "Verify your email" });
   if (!unverified) {
     await expect(modal).toHaveCount(0);
@@ -45,6 +46,12 @@ async function logIn(
     await modal.getByRole("button", { name: "Close" }).click();
     await expect(modal).toHaveCount(0);
   }
+}
+
+/** Sign out from the account menu (task 37.2). */
+async function logOut(page: Page) {
+  await page.getByRole("button", { name: /^Account menu of/ }).click();
+  await page.getByRole("button", { name: "Log Out" }).click();
 }
 
 /** Verification links sent to *email*, oldest first (file email backend). */
@@ -70,7 +77,11 @@ test("user lifecycle: sign up, log in, save, search, reveal, edit, delete, logou
   // B1: login lands on /credentials instead of bouncing back to /login.
   // B2 + B5: a new sign-up is a User, whose role grants the vault (task 37.1).
   await logIn(page, user, { unverified: true });
+  // Task 37.2: Home with an empty vault, then the grouped side menu.
+  await expect(page.getByText("Your vault is empty.", { exact: false })).toBeVisible();
+  await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "My Credentials" }).click();
   await expect(page.getByRole("heading", { name: "My Credentials" })).toBeVisible();
+  await expect(page.getByText("You have not saved any credentials yet.")).toBeVisible();
 
   // B7: header with user, language toggle and logout.
   await expect(page.getByTestId("current-user")).toHaveText(user);
@@ -110,10 +121,25 @@ test("user lifecycle: sign up, log in, save, search, reveal, edit, delete, logou
   await confirmAccountPassword(page);
   await expect(page).toHaveURL(/\/credentials$/);
 
-  // Search filters the list.
-  await page.getByPlaceholder(/Search by website/).fill("enterprise");
+  // Search filters the list, ignoring case and accents (task 37.2).
+  await page.getByPlaceholder(/Search by website/).fill("ÉNTERPRISE");
   const edited = page.getByRole("row", { name: /GitHub Enterprise/ });
   await expect(edited).toBeVisible();
+  await expect(page.getByText("1–1 of 1")).toBeVisible();
+
+  // Cards instead of the table, saved in the account: still cards after a reload.
+  await page.getByRole("button", { name: "Show as cards" }).click();
+  await expect(page.getByRole("listitem", { name: "GitHub Enterprise" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("listitem", { name: "GitHub Enterprise" })).toBeVisible();
+  await page.getByRole("button", { name: "Show as a list" }).click();
+  await page.getByPlaceholder(/Search by website/).fill("enterprise");
+
+  // Home lists it as recently changed.
+  await page.getByRole("link", { name: "Home" }).click();
+  await expect(page.getByRole("region", { name: "Recently changed" })).toContainText("GitHub Enterprise");
+  await page.getByRole("link", { name: "See all" }).click();
+  await page.getByPlaceholder(/Search by website/).fill("enterprise");
 
   // Delete.
   await edited.getByRole("button", { name: "Delete GitHub Enterprise" }).click();
@@ -133,7 +159,7 @@ test("user lifecycle: sign up, log in, save, search, reveal, edit, delete, logou
   await expect(page.getByTestId("current-user")).toHaveText(user);
 
   // Logout revokes the refresh cookie: a later reload cannot restore the session.
-  await page.getByRole("button", { name: "Log Out" }).click();
+  await logOut(page);
   await expect(page).toHaveURL(/\/login$/);
   await page.goto("/credentials");
   await expect(page).toHaveURL(/\/login$/);
@@ -168,20 +194,20 @@ test("admin: create via CLI, change a user's role, permissions follow", async ({
   await expect(role).toHaveValue("User");
   await role.selectOption("Admin");
   await expect(page.getByRole("status")).toHaveText("Role updated.");
-  await page.getByRole("button", { name: "Log Out" }).click();
+  await logOut(page);
 
   // As Admin the user sees the administration.
   await logIn(page, user, { unverified: true });
   await page.getByRole("link", { name: "Manage Users" }).click();
   await expect(page.getByRole("heading", { name: "Manage Users" })).toBeVisible();
-  await page.getByRole("button", { name: "Log Out" }).click();
+  await logOut(page);
 
   // Demote again.
   await logIn(page, admin);
   await page.getByRole("link", { name: "Manage Users" }).click();
   await page.getByLabel(`Change the role of ${user}`).selectOption("User");
   await expect(page.getByRole("status")).toHaveText("Role updated.");
-  await page.getByRole("button", { name: "Log Out" }).click();
+  await logOut(page);
 
   // Back to User: vault yes, administration no.
   await logIn(page, user, { unverified: true });
@@ -225,7 +251,7 @@ test("spec Phase 2: verify email, resend, deactivation and reactivation", async 
   await expect(modal.getByRole("status")).toContainText("new verification email");
   await expect.poll(() => verificationLinks(email).length).toBe(2);
   await modal.getByRole("button", { name: "Close" }).click();
-  await page.getByRole("button", { name: "Log Out" }).click();
+  await logOut(page);
 
   // 2.9: past the deadline and unverified → login refused with an explanation.
   backend([
@@ -253,7 +279,7 @@ test("spec Phase 2: verify email, resend, deactivation and reactivation", async 
   // …the admin CLI can.
   expect(backend(["-m", "app.cli", "verify-email", "--username", name])).toContain("verified");
   await logIn(page, name);
-  await page.getByRole("button", { name: "Log Out" }).click();
+  await logOut(page);
 
   // 1.10: a fresh account verifies through the emailed link, once.
   const fresh = `fresh_${run}`;

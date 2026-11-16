@@ -1,9 +1,11 @@
-import { useState, useEffect, type FormEvent } from "react";
+import { useRef, useState, useEffect, type FormEvent } from "react";
 import { useNavigate, useParams, Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 
 import apiClient from "../api/apiClient";
+import { useFocusFirstError } from "../hooks/useFocusFirstError";
+import HelpTip from "../components/form/HelpTip";
 import PasswordInput from "../components/PasswordInput";
 import PasswordConfirmModal from "../components/PasswordConfirmModal";
 
@@ -63,6 +65,8 @@ export default function EditCredentialPage() {
   });
 
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
+  const formRef = useRef<HTMLFormElement>(null);
+  const focusFirstError = useFocusFirstError(formRef);
   const [apiError, setApiError] = useState<string | null>(null);
 
   // ── Modal state ─────────────────────────────────────────────────────────
@@ -157,15 +161,15 @@ export default function EditCredentialPage() {
     // website_name — required, must start with alphanumeric (Requirement 6.3 / 4.2)
     const website = fields.website_name.trim();
     if (!website) {
-      errors.website_name = t("errors.validationError");
+      errors.website_name = t("form.required");
     } else if (!/^[a-zA-Z0-9]/.test(website)) {
-      errors.website_name = t("errors.validationError");
+      errors.website_name = t("form.websiteFormat");
     }
 
     // email_or_username — required regardless of mode
     const emailUsername = fields.email_or_username.trim();
     if (!emailUsername) {
-      errors.email_or_username = t("errors.validationError");
+      errors.email_or_username = t("form.required");
     } else if (!fields.is_username_login) {
       // Basic RFC 5321 format check on the client (server enforces strictly)
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailUsername)) {
@@ -175,7 +179,7 @@ export default function EditCredentialPage() {
 
     // password — required (user must re-enter to update; Req 6.3)
     if (!fields.password) {
-      errors.password = t("errors.validationError");
+      errors.password = t("form.required");
     }
 
     return errors;
@@ -191,6 +195,7 @@ export default function EditCredentialPage() {
     const hasErrors = Object.values(errors).some(Boolean);
     if (hasErrors) {
       setFieldErrors(errors);
+      focusFirstError();
       return;
     }
 
@@ -256,7 +261,7 @@ export default function EditCredentialPage() {
   // Loading state
   if (isFetching) {
     return (
-      <main className="min-h-screen bg-gray-50 px-4 py-10 sm:py-14">
+      <main className="flex-1 px-4 py-10 sm:py-14">
         <div className="mx-auto w-full max-w-lg">
           <p className="text-sm text-gray-500" aria-live="polite">
             {t("common.loading")}
@@ -269,7 +274,7 @@ export default function EditCredentialPage() {
   // Fetch error state
   if (fetchError) {
     return (
-      <main className="min-h-screen bg-gray-50 px-4 py-10 sm:py-14">
+      <main className="flex-1 px-4 py-10 sm:py-14">
         <div className="mx-auto w-full max-w-lg">
           <div
             role="alert"
@@ -291,7 +296,7 @@ export default function EditCredentialPage() {
 
   return (
     <>
-      <main className="min-h-screen bg-gray-50 px-4 py-10 sm:py-14">
+      <main className="flex-1 px-4 py-10 sm:py-14">
         <div className="mx-auto w-full max-w-lg">
           {/* Card */}
           <div className="bg-white rounded-2xl shadow-md px-6 py-8 sm:px-10 sm:py-10">
@@ -311,7 +316,7 @@ export default function EditCredentialPage() {
               </div>
             )}
 
-            <form
+            <form ref={formRef}
               onSubmit={handleSubmit}
               noValidate
               aria-label={t("editCredential.pageTitle")}
@@ -320,13 +325,14 @@ export default function EditCredentialPage() {
               <div className="mb-5">
                 <label
                   htmlFor="edit-website"
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="inline-block text-sm font-medium text-gray-700 mb-1"
                 >
                   {t("editCredential.websiteLabel")}
                   <span aria-hidden="true" className="ml-1 text-red-500">
                     *
                   </span>
                 </label>
+<HelpTip text={t("help.website")} topic={t("editCredential.websiteLabel")} />
                 <input
                   id="edit-website"
                   type="text"
@@ -335,6 +341,7 @@ export default function EditCredentialPage() {
                   onChange={handleChange("website_name")}
                   placeholder={t("editCredential.websitePlaceholder")}
                   aria-required="true"
+                  aria-invalid={!!fieldErrors.website_name}
                   aria-describedby={
                     fieldErrors.website_name ? "edit-website-error" : undefined
                   }
@@ -388,13 +395,14 @@ export default function EditCredentialPage() {
                   <>
                     <label
                       htmlFor="edit-username"
-                      className="block text-sm font-medium text-gray-700 mb-1"
+                      className="inline-block text-sm font-medium text-gray-700 mb-1"
                     >
                       {t("editCredential.usernameLabel")}
                       <span aria-hidden="true" className="ml-1 text-red-500">
                         *
                       </span>
                     </label>
+<HelpTip text={t("help.username")} topic={t("editCredential.usernameLabel")} />
                     <input
                       id="edit-username"
                       type="text"
@@ -403,6 +411,7 @@ export default function EditCredentialPage() {
                       onChange={handleChange("email_or_username")}
                       placeholder={t("editCredential.usernamePlaceholder")}
                       aria-required="true"
+                      aria-invalid={!!fieldErrors.email_or_username}
                       aria-describedby={
                         fieldErrors.email_or_username
                           ? "edit-emailusername-error"
@@ -426,13 +435,14 @@ export default function EditCredentialPage() {
                   <>
                     <label
                       htmlFor="edit-email"
-                      className="block text-sm font-medium text-gray-700 mb-1"
+                      className="inline-block text-sm font-medium text-gray-700 mb-1"
                     >
                       {t("editCredential.emailLabel")}
                       <span aria-hidden="true" className="ml-1 text-red-500">
                         *
                       </span>
                     </label>
+<HelpTip text={t("help.email")} topic={t("editCredential.emailLabel")} />
                     <input
                       id="edit-email"
                       type="email"
@@ -441,6 +451,7 @@ export default function EditCredentialPage() {
                       onChange={handleChange("email_or_username")}
                       placeholder={t("editCredential.emailPlaceholder")}
                       aria-required="true"
+                      aria-invalid={!!fieldErrors.email_or_username}
                       aria-describedby={
                         fieldErrors.email_or_username
                           ? "edit-emailusername-error"
@@ -477,6 +488,7 @@ export default function EditCredentialPage() {
                   <PasswordInput
                     id="edit-password"
                     label={`${t("editCredential.passwordLabel")} *`}
+                    help={t("help.credentialPasswordEdit")}
                     placeholder={t("editCredential.passwordPlaceholder")}
                     autoComplete="new-password"
                     value={fields.password}

@@ -6,7 +6,20 @@
     "adminUsers": "Administrar Usuarios",
     "logout": "Cerrar Sesión",
     "login": "Iniciar Sesión",
-    "signup": "Registrarse"
+    "signup": "Registrarse",
+    "home": "Inicio",
+    "groups": {
+      "home": "Inicio",
+      "vault": "Bóveda",
+      "admin": "Administración",
+      "help": "Ayuda"
+    },
+    "groupCurrent": "Este grupo tiene la pantalla en la que estás, por eso queda abierto.",
+    "expand": "Abrir el menú",
+    "collapse": "Plegar el menú a íconos",
+    "menu": "Menú",
+    "openMenu": "Abrir el menú",
+    "closeMenu": "Cerrar el menú"
   },
   "language": {
     "toggle": "Idioma",
@@ -67,7 +80,7 @@
   "credentials": {
     "pageTitle": "Mis Credenciales",
     "searchPlaceholder": "Buscar por sitio web o correo / usuario…",
-    "noResults": "No se encontraron credenciales.",
+    "noResults": "Ninguna credencial coincide con la búsqueda o los filtros.",
     "tableHeaderWebsite": "Sitio Web",
     "tableHeaderEmailUsername": "Correo / Usuario",
     "tableHeaderPassword": "Contraseña",
@@ -77,7 +90,12 @@
     "deleteButton": "Eliminar",
     "revealButton": "Mostrar contraseña",
     "hideButton": "Ocultar contraseña",
-    "addNew": "Guardar Nueva Credencial"
+    "addNew": "Guardar Nueva Credencial",
+    "filterLoginType": "Inicio de sesión",
+    "loginTypeEmail": "Correo",
+    "loginTypeUsername": "Usuario",
+    "noData": "Todavía no has guardado credenciales.",
+    "deleting": "Eliminando…"
   },
   "visibilityTimer": {
     "label": "Se oculta en",
@@ -154,7 +172,12 @@
     "roles": {
       "User": "Usuario",
       "Admin": "Administrador"
-    }
+    },
+    "searchPlaceholder": "Buscar por nombre o correo",
+    "filterEmail": "Correo",
+    "verified": "Verificado",
+    "unverified": "Sin verificar",
+    "noResults": "Ningún usuario coincide con la búsqueda o los filtros."
   },
   "forbidden": {
     "title": "403 — Acceso Prohibido",
@@ -198,5 +221,43 @@
     "deactivated": "Esta cuenta está desactivada. Contacta con el administrador.",
     "serverError": "Ocurrió un error inesperado. Inténtalo de nuevo.",
     "goToLogin": "Ir a iniciar sesión"
+  },
+  "account": {
+    "menuLabel": "Menú de la cuenta de {{username}}"
+  },
+  "list": {
+    "all": "Todos",
+    "viewLabel": "Vista",
+    "viewList": "Ver como lista",
+    "viewGrid": "Ver como tarjetas",
+    "perPage": "Por página",
+    "range": "{{from}}–{{to}} de {{total}}",
+    "first": "Primera página",
+    "previous": "Página anterior",
+    "next": "Página siguiente",
+    "last": "Última página"
+  },
+  "home": {
+    "title": "Hola, {{username}}",
+    "total": "Credenciales guardadas",
+    "withEmail": "Entran con correo",
+    "withUsername": "Entran con usuario",
+    "recent": "Cambiadas recientemente",
+    "seeAll": "Ver todas",
+    "empty": "Tu bóveda está vacía. Guarda tu primera credencial para verla aquí."
+  },
+  "form": {
+    "helpFor": "Ayuda: {{topic}}",
+    "required": "Este campo es obligatorio.",
+    "websiteFormat": "Empieza con una letra o un número."
+  },
+  "help": {
+    "website": "El nombre con el que reconoces el sitio, por ejemplo github.com. Debe empezar con una letra o un número.",
+    "email": "El correo con el que entras a ese sitio. Marca la casilla de arriba si el sitio usa un nombre de usuario.",
+    "username": "El nombre de usuario con el que entras a ese sitio.",
+    "credentialPassword": "La contraseña de ese sitio. Se guarda cifrada; para verla después se pide la contraseña de tu cuenta.",
+    "credentialPasswordEdit": "Escribe una contraseña nueva para reemplazarla o deja la actual. Se guarda cifrada.",
+    "signupUsername": "Tu nombre en Save-Pass. Con él inicias sesión.",
+    "signupEmail": "Sirve para verificar tu cuenta y para enviarte avisos de seguridad."
   }
 }

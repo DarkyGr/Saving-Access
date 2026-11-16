@@ -38,7 +38,7 @@ function renderLogin(state?: unknown) {
         element: <AppLayout />,
         children: [
           { path: "/login", element: <LoginPage /> },
-          { path: "/credentials", element: <p>credentials page</p> },
+          { path: "/", element: <p>home page</p> },
         ],
       },
     ],
@@ -82,7 +82,7 @@ describe("LoginPage — spec Phase 2", () => {
     const router = renderLogin();
     await fillAndSubmit();
 
-    await waitFor(() => expect(router.state.location.pathname).toBe("/credentials"));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/"));
     expect(apiClient.post).toHaveBeenCalledWith("/api/auth/login", {
       username: "alice",
       password: "Str0ngPassw0rd!",
@@ -106,7 +106,7 @@ describe("LoginPage — spec Phase 2", () => {
     expect(dialog).toHaveTextContent("December 14, 2026");
     await userEvent.setup().click(screen.getByRole("button", { name: "Close" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByText("credentials page")).toBeInTheDocument();
+    expect(screen.getByText("home page")).toBeInTheDocument();
   });
 
   it("explains a deactivated account (2.9)", async () => {

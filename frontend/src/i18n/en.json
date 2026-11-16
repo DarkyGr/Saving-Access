@@ -6,7 +6,20 @@
     "adminUsers": "Manage Users",
     "logout": "Log Out",
     "login": "Log In",
-    "signup": "Sign Up"
+    "signup": "Sign Up",
+    "home": "Home",
+    "groups": {
+      "home": "Home",
+      "vault": "Vault",
+      "admin": "Administration",
+      "help": "Help"
+    },
+    "groupCurrent": "This group holds the screen you are on, so it stays open.",
+    "expand": "Expand the menu",
+    "collapse": "Collapse the menu to icons",
+    "menu": "Menu",
+    "openMenu": "Open the menu",
+    "closeMenu": "Close the menu"
   },
   "language": {
     "toggle": "Language",
@@ -67,7 +80,7 @@
   "credentials": {
     "pageTitle": "My Credentials",
     "searchPlaceholder": "Search by website or email / username…",
-    "noResults": "No credentials found.",
+    "noResults": "No credentials match the search or filters.",
     "tableHeaderWebsite": "Website",
     "tableHeaderEmailUsername": "Email / Username",
     "tableHeaderPassword": "Password",
@@ -77,7 +90,12 @@
     "deleteButton": "Delete",
     "revealButton": "Show password",
     "hideButton": "Hide password",
-    "addNew": "Save New Credential"
+    "addNew": "Save New Credential",
+    "filterLoginType": "Sign-in",
+    "loginTypeEmail": "Email",
+    "loginTypeUsername": "Username",
+    "noData": "You have not saved any credentials yet.",
+    "deleting": "Deleting…"
   },
   "visibilityTimer": {
     "label": "Auto-hides in",
@@ -154,7 +172,12 @@
     "roles": {
       "User": "User",
       "Admin": "Admin"
-    }
+    },
+    "searchPlaceholder": "Search by name or email",
+    "filterEmail": "Email",
+    "verified": "Verified",
+    "unverified": "Not verified",
+    "noResults": "No users match the search or filters."
   },
   "forbidden": {
     "title": "403 — Access Forbidden",
@@ -198,5 +221,43 @@
     "deactivated": "This account is deactivated. Contact the administrator.",
     "serverError": "An unexpected error occurred. Please try again.",
     "goToLogin": "Go to log in"
+  },
+  "account": {
+    "menuLabel": "Account menu of {{username}}"
+  },
+  "list": {
+    "all": "All",
+    "viewLabel": "View",
+    "viewList": "Show as a list",
+    "viewGrid": "Show as cards",
+    "perPage": "Per page",
+    "range": "{{from}}–{{to}} of {{total}}",
+    "first": "First page",
+    "previous": "Previous page",
+    "next": "Next page",
+    "last": "Last page"
+  },
+  "home": {
+    "title": "Hello, {{username}}",
+    "total": "Saved credentials",
+    "withEmail": "Sign in with an email",
+    "withUsername": "Sign in with a username",
+    "recent": "Recently changed",
+    "seeAll": "See all",
+    "empty": "Your vault is empty. Save your first credential to see it here."
+  },
+  "form": {
+    "helpFor": "Help: {{topic}}",
+    "required": "This field is required.",
+    "websiteFormat": "Start with a letter or a number."
+  },
+  "help": {
+    "website": "The name you know the site by, for example github.com. It must start with a letter or a number.",
+    "email": "The email you sign in with on that site. Tick the box above if the site uses a username instead.",
+    "username": "The username you sign in with on that site.",
+    "credentialPassword": "The password of that site. It is stored encrypted; showing it later asks for your account password.",
+    "credentialPasswordEdit": "Type a new password to replace it, or leave the current one. It is stored encrypted.",
+    "signupUsername": "Your name in Save-Pass. You sign in with it.",
+    "signupEmail": "Used to verify your account and to send you security notices."
   }
 }

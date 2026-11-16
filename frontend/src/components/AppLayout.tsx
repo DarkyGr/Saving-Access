@@ -1,118 +1,147 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router";
+import { Outlet, useLocation, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
-import apiClient from "../api/apiClient";
+
 import { useAuth } from "../context/AuthContext";
+import { visibleItems } from "../config/navigation";
+import { usePermissions } from "../hooks/usePermissions";
+import { readLocal, writeLocal } from "../lib/storage";
 import LanguageToggle from "./LanguageToggle";
 import VerifyEmailModal from "./VerifyEmailModal";
+import SideNav from "./layout/SideNav";
+import AccountMenu from "./layout/AccountMenu";
+import { ChevronsLeftIcon, ChevronsRightIcon, CloseIcon, MenuIcon } from "./icons";
+
+const COLLAPSED_KEY = "savepass-sidebar-collapsed";
 
 /**
  * AppLayout — application shell rendered around every route.
  *
- * - Language toggle always visible in the header (Requirement 10.2).
- * - When authenticated: navigation filtered by the user's permissions
- *   (Requirement 3.5, task 37.1 — the same list for every role) and a logout button.
+ * - Language toggle always visible (Requirement 10.2).
+ * - Signed in (Requirement 13.1–13.2, task 37.2): side menu grouped by
+ *   section and filtered by the user's permissions (task 37.1). On wide
+ *   screens it collapses to icons (remembered on this device); below 768 px
+ *   it opens as a drawer that closes after choosing a screen. The account
+ *   menu at the top right shows who is signed in and signs out.
  */
-
-interface NavItem {
-  to: string;
-  permission: string;
-  labelKey: string;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { to: "/credentials", permission: "credentials.view", labelKey: "nav.credentials" },
-  { to: "/credentials/new", permission: "credentials.create", labelKey: "nav.saveCredential" },
-  { to: "/admin/users", permission: "users.manage", labelKey: "nav.adminUsers" },
-];
-
-function usePermissions(token: string | null, role: string | undefined): string[] {
-  // `role` is a dependency only so a role change in the token refetches.
-  const [permissions, setPermissions] = useState<string[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!token) {
-      setPermissions([]);
-      return;
-    }
-    apiClient
-      .get<{ permissions: string[] }>("/api/profile/permissions")
-      .then((res) => {
-        if (!cancelled) setPermissions(res.data.permissions ?? []);
-      })
-      .catch(() => {
-        if (!cancelled) setPermissions([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token, role]);
-
-  return permissions;
-}
-
 export default function AppLayout() {
   const { t } = useTranslation();
   const { token, user, logout, verificationNotice, dismissVerificationNotice } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const permissions = usePermissions(token, user?.role);
+  const items = visibleItems(permissions);
 
-  const canSee = (permission: string) => permissions.includes(permission);
+  const [collapsed, setCollapsed] = useState<boolean>(() => readLocal(COLLAPSED_KEY, false));
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // A new screen closes the phone drawer.
+  useEffect(() => setDrawerOpen(false), [pathname]);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setDrawerOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [drawerOpen]);
+
+  function toggleCollapsed() {
+    setCollapsed((v) => {
+      writeLocal(COLLAPSED_KEY, !v);
+      return !v;
+    });
+  }
 
   function handleLogout() {
     logout();
     navigate("/login", { replace: true });
   }
 
-  const linkClass = ({ isActive }: { isActive: boolean }) =>
-    [
-      "inline-flex items-center min-h-[44px] px-3 rounded-md text-sm font-medium",
-      isActive ? "bg-indigo-50 text-indigo-700" : "text-gray-700 hover:bg-gray-100",
-    ].join(" ");
+  if (!token || !user) {
+    return (
+      <>
+        <header className="border-b border-gray-200 bg-white">
+          <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-2">
+            <span className="text-base font-bold text-gray-900">Save-Pass</span>
+            <div className="ml-auto">
+              <LanguageToggle />
+            </div>
+          </div>
+        </header>
+        <Outlet />
+      </>
+    );
+  }
 
   return (
-    <>
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2">
-          <span className="text-base font-bold text-gray-900">Save-Pass</span>
+    <div className="min-h-screen bg-gray-50 md:flex">
+      {/* Desktop side menu */}
+      <aside
+        className={[
+          "hidden md:flex md:flex-col md:shrink-0 border-r border-gray-200 bg-white",
+          "md:sticky md:top-0 md:h-screen md:overflow-y-auto transition-[width] duration-150",
+          collapsed ? "md:w-16" : "md:w-60",
+        ].join(" ")}
+      >
+        <div className={`flex h-14 items-center border-b border-gray-200 ${collapsed ? "justify-center" : "justify-between px-4"}`}>
+          {!collapsed && <span className="text-base font-bold text-gray-900">Save-Pass</span>}
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? t("nav.expand") : t("nav.collapse")}
+            title={collapsed ? t("nav.expand") : t("nav.collapse")}
+            className="flex h-10 w-10 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+          >
+            {collapsed ? <ChevronsRightIcon /> : <ChevronsLeftIcon />}
+          </button>
+        </div>
+        <SideNav items={items} collapsed={collapsed} />
+      </aside>
 
-          {token && (
-            <nav aria-label={t("nav.main")} className="flex flex-wrap gap-1">
-              {NAV_ITEMS.filter((item) => canSee(item.permission)).map((item) => (
-                <NavLink key={item.to} to={item.to} end className={linkClass}>
-                  {t(item.labelKey)}
-                </NavLink>
-              ))}
-            </nav>
-          )}
-
-          <div className="ml-auto flex items-center gap-3">
-            {user && (
-              <span className="hidden text-sm text-gray-600 sm:inline" data-testid="current-user">
-                {user.username}
-              </span>
-            )}
-            <LanguageToggle />
-            {token && (
+      {/* Phone drawer */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label={t("nav.menu")}>
+          <div className="absolute inset-0 bg-black/40" onClick={() => setDrawerOpen(false)} aria-hidden="true" />
+          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col overflow-y-auto bg-white shadow-xl">
+            <div className="flex h-14 items-center justify-between border-b border-gray-200 px-4">
+              <span className="text-base font-bold text-gray-900">Save-Pass</span>
               <button
                 type="button"
-                onClick={handleLogout}
-                className="min-h-[44px] rounded-md border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                onClick={() => setDrawerOpen(false)}
+                aria-label={t("nav.closeMenu")}
+                className="flex h-11 w-11 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100"
               >
-                {t("nav.logout")}
+                <CloseIcon />
               </button>
-            )}
+            </div>
+            <SideNav items={items} onNavigate={() => setDrawerOpen(false)} />
           </div>
         </div>
-      </header>
-      <Outlet />
-      {token && verificationNotice && (
-        <VerifyEmailModal
-          deadline={verificationNotice.deadline}
-          onClose={dismissVerificationNotice}
-        />
       )}
-    </>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-gray-200 bg-white px-2 sm:px-4">
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            aria-label={t("nav.openMenu")}
+            aria-expanded={drawerOpen}
+            className="flex h-11 w-11 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 md:hidden"
+          >
+            <MenuIcon />
+          </button>
+          <span className="text-base font-bold text-gray-900 md:hidden">Save-Pass</span>
+          <div className="ml-auto flex items-center gap-2">
+            <LanguageToggle />
+            <AccountMenu username={user.username} role={user.role} onLogout={handleLogout} />
+          </div>
+        </header>
+        <Outlet />
+      </div>
+
+      {verificationNotice && (
+        <VerifyEmailModal deadline={verificationNotice.deadline} onClose={dismissVerificationNotice} />
+      )}
+    </div>
   );
 }

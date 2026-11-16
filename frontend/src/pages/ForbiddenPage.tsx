@@ -17,7 +17,7 @@ export default function ForbiddenPage() {
   const { t } = useTranslation();
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
+    <main className="flex-1 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md text-center">
         <div className="bg-white rounded-2xl shadow-md px-8 py-10">
           {/* Lock / shield icon */}

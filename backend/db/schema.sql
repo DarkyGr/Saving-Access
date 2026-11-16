@@ -186,6 +186,25 @@ DROP TABLE profiles;
 
 UPDATE alembic_version SET version_num='0006_retire_profiles' WHERE alembic_version.version_num = '0005_verification_reminders';
 
+-- Running upgrade 0006_retire_profiles -> 0007_user_preferences
+
+CREATE TABLE user_preferences (
+    user_id INTEGER NOT NULL, 
+    list_views JSON NOT NULL, 
+    creation_date DATE NOT NULL, 
+    creation_time TIME WITHOUT TIME ZONE NOT NULL, 
+    creation_user_id INTEGER, 
+    modification_date DATE, 
+    modification_time TIME WITHOUT TIME ZONE, 
+    modification_user_id INTEGER, 
+    PRIMARY KEY (user_id), 
+    FOREIGN KEY(user_id) REFERENCES users (user_id) ON DELETE CASCADE, 
+    FOREIGN KEY(creation_user_id) REFERENCES users (user_id), 
+    FOREIGN KEY(modification_user_id) REFERENCES users (user_id)
+);
+
+UPDATE alembic_version SET version_num='0007_user_preferences' WHERE alembic_version.version_num = '0006_retire_profiles';
+
 COMMIT;
 
 

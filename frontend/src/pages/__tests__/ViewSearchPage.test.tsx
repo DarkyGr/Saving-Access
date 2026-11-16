@@ -85,35 +85,117 @@ describe("ViewSearchPage", () => {
 
   // ── 3. Search debounce calls correct API endpoint (Requirement 5.2) ──────
 
-  it("typing 'git' in the search box triggers GET /api/credentials?q=git after debounce", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-
+  it("search filters the loaded list, ignoring case and accents (Req 5.2, 13.4)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(apiClient.get).mockImplementation(async (url: string) =>
+      url === "/api/credentials"
+        ? {
+            data: [
+              ...fixtureCredentials,
+              { credential_id: 3, website_name: "Banco Galicia", email_or_username: "josé", is_username_login: true, password: null },
+            ],
+          }
+        : { data: { list_views: {} } }
+    );
     renderPage();
+    await screen.findByText("GitHub");
+    // The list is loaded once; searching does not call the API again.
+    const listCalls = () => vi.mocked(apiClient.get).mock.calls.filter(([url]) => url === "/api/credentials").length;
+    expect(listCalls()).toBe(1);
 
-    // Initial load call (empty query) must complete first
-    await vi.runAllTimersAsync();
-    await waitFor(() => expect(vi.mocked(apiClient.get)).toHaveBeenCalledTimes(1));
-    vi.clearAllMocks();
+    const search = screen.getByPlaceholderText(/search by website or email/i);
+    await user.type(search, "GITL");
+    expect(screen.getByText("GitLab")).toBeInTheDocument();
+    expect(screen.queryByText("GitHub")).not.toBeInTheDocument();
 
-    // Mock the search response
-    vi.mocked(apiClient.get).mockResolvedValue({ data: fixtureCredentials });
+    await user.clear(search);
+    await user.type(search, "jose");
+    expect(screen.getByText("Banco Galicia")).toBeInTheDocument();
+    expect(screen.queryByText("GitLab")).not.toBeInTheDocument();
 
-    const searchInput = screen.getByPlaceholderText(
-      /search by website or email/i
+    await user.clear(search);
+    await user.type(search, "nothing-like-this");
+    expect(screen.getByText("No credentials match the search or filters.")).toBeInTheDocument();
+    expect(listCalls()).toBe(1);
+  });
+
+  it("filters by sign-in type", async () => {
+    const user = userEvent.setup();
+    vi.mocked(apiClient.get).mockImplementation(async (url: string) =>
+      url === "/api/credentials"
+        ? {
+            data: [
+              ...fixtureCredentials,
+              { credential_id: 3, website_name: "Steam", email_or_username: "gamer", is_username_login: true, password: null },
+            ],
+          }
+        : { data: { list_views: {} } }
     );
-    await user.type(searchInput, "git");
+    renderPage();
+    await screen.findByText("Steam");
+    await user.selectOptions(screen.getByLabelText("Sign-in"), "username");
+    expect(screen.getByText("Steam")).toBeInTheDocument();
+    expect(screen.queryByText("GitHub")).not.toBeInTheDocument();
+  });
 
-    // Advance past the 300 ms debounce
-    vi.advanceTimersByTime(300);
-    await vi.runAllTimersAsync();
-
-    await waitFor(() =>
-      expect(vi.mocked(apiClient.get)).toHaveBeenCalledWith(
-        "/api/credentials",
-        expect.objectContaining({ params: { q: "git" } })
-      )
+  it("says when there is nothing saved yet (not 'no results')", async () => {
+    vi.mocked(apiClient.get).mockImplementation(async (url: string) =>
+      url === "/api/credentials" ? { data: [] } : { data: { list_views: {} } }
     );
+    renderPage();
+    expect(await screen.findByText("You have not saved any credentials yet.")).toBeInTheDocument();
+  });
+
+  it("paginates 10 per page with the range and page size", async () => {
+    const user = userEvent.setup();
+    const many = Array.from({ length: 23 }, (_, i) => ({
+      credential_id: i + 1,
+      website_name: `Site ${String(i + 1).padStart(2, "0")}`,
+      email_or_username: `u${i}@example.com`,
+      is_username_login: false,
+      password: null,
+    }));
+    vi.mocked(apiClient.get).mockImplementation(async (url: string) =>
+      url === "/api/credentials" ? { data: many } : { data: { list_views: {} } }
+    );
+    renderPage();
+    expect(await screen.findByText("1–10 of 23")).toBeInTheDocument();
+    expect(screen.getByText("Site 01")).toBeInTheDocument();
+    expect(screen.queryByText("Site 11")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous page" })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Last page" }));
+    expect(screen.getByText("21–23 of 23")).toBeInTheDocument();
+    expect(screen.getByText("Site 23")).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Per page"), "50");
+    expect(screen.getByText("1–23 of 23")).toBeInTheDocument();
+  });
+
+  it("switches to cards and saves the choice in the account", async () => {
+    const user = userEvent.setup();
+    vi.mocked(apiClient.get).mockImplementation(async (url: string) =>
+      url === "/api/credentials" ? { data: fixtureCredentials } : { data: { list_views: {} } }
+    );
+    vi.mocked(apiClient.put).mockResolvedValue({ data: { list_views: { credentials: "grid" } } });
+    renderPage();
+    await screen.findByRole("table");
+    await user.click(screen.getByRole("button", { name: "Show as cards" }));
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.getByRole("listitem", { name: "GitHub" })).toBeInTheDocument();
+    expect(apiClient.put).toHaveBeenCalledWith("/api/profile/preferences/list-view", {
+      key: "credentials",
+      view: "grid",
+    });
+  });
+
+  it("opens in the view saved in the account", async () => {
+    vi.mocked(apiClient.get).mockImplementation(async (url: string) =>
+      url === "/api/credentials" ? { data: fixtureCredentials } : { data: { list_views: { credentials: "grid" } } }
+    );
+    renderPage();
+    expect(await screen.findByRole("listitem", { name: "GitHub" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("table")).not.toBeInTheDocument());
   });
 
   // ── 4. Eye_Toggle opens PasswordConfirmModal (Requirements 5.5, 5.13) ────

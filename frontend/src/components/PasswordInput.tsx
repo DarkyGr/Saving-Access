@@ -1,12 +1,16 @@
 import { useState, forwardRef } from "react";
 import { useTranslation } from "react-i18next";
 
+import HelpTip from "./form/HelpTip";
+
 export interface PasswordInputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> {
   /** Optional label rendered above the input */
   label?: string;
   /** Error message rendered below the input */
   error?: string;
+  /** Help shown in an info tooltip next to the label (Requirement 13.5) */
+  help?: string;
 }
 
 /**
@@ -15,7 +19,7 @@ export interface PasswordInputProps
  * Touch target for the toggle is ≥ 44×44 px on mobile (< 768 px).
  */
 const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
-  ({ label, error, id, className = "", ...rest }, ref) => {
+  ({ label, error, help, id, className = "", ...rest }, ref) => {
     const { t } = useTranslation();
     const [visible, setVisible] = useState(false);
 
@@ -26,11 +30,12 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="block text-sm font-medium text-gray-700 mb-1"
+            className={`${help ? "inline-block" : "block"} text-sm font-medium text-gray-700 mb-1`}
           >
             {label}
           </label>
         )}
+        {label && help && <HelpTip text={help} topic={label.replace(/\s*\*$/, "")} />}
 
         <div className="relative flex items-center">
           <input
@@ -48,7 +53,8 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
             ]
               .filter(Boolean)
               .join(" ")}
-            aria-describedby={error ? `${inputId}-error` : undefined}
+            aria-invalid={error ? true : rest["aria-invalid"]}
+            aria-describedby={error ? `${inputId}-error` : rest["aria-describedby"]}
           />
 
           {/* Eye_Toggle button — min 44×44 px touch target on mobile */}

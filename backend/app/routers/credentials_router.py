@@ -26,6 +26,8 @@ Requirements: 4.1–4.12, 5.1–5.14, 6.1–6.9, 7.1–7.7, 8.1–8.7
 """
 
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
@@ -60,8 +62,30 @@ class CredentialListItem(BaseModel):
     email_or_username: str
     is_username_login: bool
     password: None = None
+    # Last change (creation or edit) in UTC, ISO 8601 (task 37.2: Home screen).
+    last_changed: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+def _last_changed(row: Credential) -> str:
+    """When the credential was last created or edited, in UTC."""
+    if row.modification_date is not None and row.modification_time is not None:
+        when = datetime.combine(row.modification_date, row.modification_time)
+    else:
+        when = datetime.combine(row.creation_date, row.creation_time)
+    return when.isoformat(timespec="seconds") + "Z"
+
+
+def _list_item(row: Credential) -> CredentialListItem:
+    return CredentialListItem(
+        credential_id=row.credential_id,
+        website_name=row.website_name,
+        email_or_username=row.email_or_username,
+        is_username_login=row.is_username_login,
+        password=None,
+        last_changed=_last_changed(row),
+    )
 
 
 class CreateCredentialRequest(BaseModel):
@@ -221,18 +245,9 @@ def list_credentials(
             | (Credential.email_or_username.ilike(pattern, escape="\\"))
         )
 
-    rows = query.all()
+    rows = query.order_by(Credential.website_name, Credential.credential_id).all()
 
-    return [
-        CredentialListItem(
-            credential_id=row.credential_id,
-            website_name=row.website_name,
-            email_or_username=row.email_or_username,
-            is_username_login=row.is_username_login,
-            password=None,
-        )
-        for row in rows
-    ]
+    return [_list_item(row) for row in rows]
 
 
 # ---------------------------------------------------------------------------
@@ -257,13 +272,7 @@ def get_credential(
     dedicated ``/reveal`` endpoint and account-password confirmation.
     """
     row = _get_owned_credential(credential_id, claims["user_id"], db)
-    return CredentialListItem(
-        credential_id=row.credential_id,
-        website_name=row.website_name,
-        email_or_username=row.email_or_username,
-        is_username_login=row.is_username_login,
-        password=None,
-    )
+    return _list_item(row)
 
 
 # ---------------------------------------------------------------------------

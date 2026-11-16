@@ -378,7 +378,7 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
 - [ ] 37. Bring Savings Tool's administration, screens and personal settings to Save-Pass (owner's decisions of 2026-11-15: open sign-up, mandatory 2FA, password still asked on every credential reveal/edit/delete with idle and maximum session limits, one role per account, order 37.1 → 37.6)
   - [x] 37.1 Per-action permissions with two fixed roles: `app/permissions.py`, every endpoint asks for one (no Admin bypass, role read from the database), profiles retired (migration 0006), Admin page changes roles (not their own), menu and routes by permission
     - _Requirements: 3.1–3.7_
-  - [ ] 37.2 Application shell and interface patterns: grouped side menu (collapsible, drawer on the phone), account menu, Home, lists with search / filters / pagination / list-grid, form patterns
+  - [x] 37.2 Application shell and interface patterns: grouped side menu (collapsible, drawer on the phone), account menu, Home, lists with search / filters / pagination / list-grid, form patterns
     - _Requirements: 13.1–13.5_
   - [ ] 37.3 Appearance and personal settings: Settings screen (profile, preferences, password, active sessions), light/dark/system theme, accent colors, avatar, private mode, user ID `SP-XXXXXX`
     - _Requirements: 14.1–14.5_

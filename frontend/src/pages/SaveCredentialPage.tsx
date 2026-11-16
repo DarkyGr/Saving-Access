@@ -1,9 +1,11 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 
 import apiClient from "../api/apiClient";
+import { useFocusFirstError } from "../hooks/useFocusFirstError";
+import HelpTip from "../components/form/HelpTip";
 import PasswordInput from "../components/PasswordInput";
 import PasswordConfirmModal from "../components/PasswordConfirmModal";
 
@@ -60,6 +62,8 @@ export default function SaveCredentialPage() {
   });
 
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
+  const formRef = useRef<HTMLFormElement>(null);
+  const focusFirstError = useFocusFirstError(formRef);
   const [apiError, setApiError] = useState<string | null>(null);
 
   // ── Modal state ─────────────────────────────────────────────────────────
@@ -98,16 +102,16 @@ export default function SaveCredentialPage() {
     // dots all reasonably expected for a site name; pure non-alphanumeric is rejected)
     const website = fields.website_name.trim();
     if (!website) {
-      errors.website_name = t("errors.validationError");
+      errors.website_name = t("form.required");
     } else if (!/^[a-zA-Z0-9]/.test(website)) {
       // Must start with an alphanumeric character (Requirement 4.2)
-      errors.website_name = t("errors.validationError");
+      errors.website_name = t("form.websiteFormat");
     }
 
     // email_or_username — required regardless of mode
     const emailUsername = fields.email_or_username.trim();
     if (!emailUsername) {
-      errors.email_or_username = t("errors.validationError");
+      errors.email_or_username = t("form.required");
     } else if (!fields.is_username_login) {
       // Basic RFC 5321 format check on the client (server enforces strictly)
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailUsername)) {
@@ -117,7 +121,7 @@ export default function SaveCredentialPage() {
 
     // password — required
     if (!fields.password) {
-      errors.password = t("errors.validationError");
+      errors.password = t("form.required");
     }
 
     return errors;
@@ -133,6 +137,7 @@ export default function SaveCredentialPage() {
     const hasErrors = Object.values(errors).some(Boolean);
     if (hasErrors) {
       setFieldErrors(errors);
+      focusFirstError();
       return;
     }
 
@@ -195,7 +200,7 @@ export default function SaveCredentialPage() {
 
   return (
     <>
-      <main className="min-h-screen bg-gray-50 px-4 py-10 sm:py-14">
+      <main className="flex-1 px-4 py-10 sm:py-14">
         <div className="mx-auto w-full max-w-lg">
           {/* Card */}
           <div className="bg-white rounded-2xl shadow-md px-6 py-8 sm:px-10 sm:py-10">
@@ -215,7 +220,7 @@ export default function SaveCredentialPage() {
               </div>
             )}
 
-            <form
+            <form ref={formRef}
               onSubmit={handleSubmit}
               noValidate
               aria-label={t("saveCredential.pageTitle")}
@@ -224,13 +229,14 @@ export default function SaveCredentialPage() {
               <div className="mb-5">
                 <label
                   htmlFor="save-website"
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="inline-block text-sm font-medium text-gray-700 mb-1"
                 >
                   {t("saveCredential.websiteLabel")}
                   <span aria-hidden="true" className="ml-1 text-red-500">
                     *
                   </span>
                 </label>
+<HelpTip text={t("help.website")} topic={t("saveCredential.websiteLabel")} />
                 <input
                   id="save-website"
                   type="text"
@@ -239,6 +245,7 @@ export default function SaveCredentialPage() {
                   onChange={handleChange("website_name")}
                   placeholder={t("saveCredential.websitePlaceholder")}
                   aria-required="true"
+                  aria-invalid={!!fieldErrors.website_name}
                   aria-describedby={
                     fieldErrors.website_name ? "save-website-error" : undefined
                   }
@@ -293,13 +300,14 @@ export default function SaveCredentialPage() {
                   <>
                     <label
                       htmlFor="save-username"
-                      className="block text-sm font-medium text-gray-700 mb-1"
+                      className="inline-block text-sm font-medium text-gray-700 mb-1"
                     >
                       {t("saveCredential.usernameLabel")}
                       <span aria-hidden="true" className="ml-1 text-red-500">
                         *
                       </span>
                     </label>
+<HelpTip text={t("help.username")} topic={t("saveCredential.usernameLabel")} />
                     <input
                       id="save-username"
                       type="text"
@@ -308,6 +316,7 @@ export default function SaveCredentialPage() {
                       onChange={handleChange("email_or_username")}
                       placeholder={t("saveCredential.usernamePlaceholder")}
                       aria-required="true"
+                      aria-invalid={!!fieldErrors.email_or_username}
                       aria-describedby={
                         fieldErrors.email_or_username
                           ? "save-emailusername-error"
@@ -331,13 +340,14 @@ export default function SaveCredentialPage() {
                   <>
                     <label
                       htmlFor="save-email"
-                      className="block text-sm font-medium text-gray-700 mb-1"
+                      className="inline-block text-sm font-medium text-gray-700 mb-1"
                     >
                       {t("saveCredential.emailLabel")}
                       <span aria-hidden="true" className="ml-1 text-red-500">
                         *
                       </span>
                     </label>
+<HelpTip text={t("help.email")} topic={t("saveCredential.emailLabel")} />
                     <input
                       id="save-email"
                       type="email"
@@ -346,6 +356,7 @@ export default function SaveCredentialPage() {
                       onChange={handleChange("email_or_username")}
                       placeholder={t("saveCredential.emailPlaceholder")}
                       aria-required="true"
+                      aria-invalid={!!fieldErrors.email_or_username}
                       aria-describedby={
                         fieldErrors.email_or_username
                           ? "save-emailusername-error"
@@ -383,6 +394,7 @@ export default function SaveCredentialPage() {
                   <PasswordInput
                     id="save-password"
                     label={`${t("saveCredential.passwordLabel")} *`}
+                    help={t("help.credentialPassword")}
                     placeholder={t("saveCredential.passwordPlaceholder")}
                     autoComplete="new-password"
                     value={fields.password}

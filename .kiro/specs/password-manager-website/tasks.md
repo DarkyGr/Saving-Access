@@ -375,7 +375,7 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - [x] 36.7 Rehearsed without administrator rights (two releases, API from the installed folder, privileges, backup + restore test, CLI); `tests/test_local_install.py`, client-IP tests
   - [ ] 36.8 Owner runs the administrator steps on the laptop (01, 02–05) and tests on the laptop and the phone
 
-- [ ] 37. Bring Savings Tool's administration, screens and personal settings to Save-Pass (owner's decisions of 2026-11-15: open sign-up, mandatory 2FA, password still asked on every credential reveal/edit/delete with idle and maximum session limits, one role per account, order 37.1 → 37.6)
+- [x] 37. Bring Savings Tool's administration, screens and personal settings to Save-Pass (owner's decisions of 2026-11-15: open sign-up, mandatory 2FA, password still asked on every credential reveal/edit/delete with idle and maximum session limits, one role per account, order 37.1 → 37.6)
   - [x] 37.1 Per-action permissions with two fixed roles: `app/permissions.py`, every endpoint asks for one (no Admin bypass, role read from the database), profiles retired (migration 0006), Admin page changes roles (not their own), menu and routes by permission
     - _Requirements: 3.1–3.7_
   - [x] 37.2 Application shell and interface patterns: grouped side menu (collapsible, drawer on the phone), account menu, Home, lists with search / filters / pagination / list-grid, form patterns

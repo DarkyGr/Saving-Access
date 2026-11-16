@@ -4,7 +4,6 @@ Administrative command-line tasks.
 Usage (from backend/ or inside the backend container), after
 ``alembic upgrade head``::
 
-    python -m app.cli seed
     python -m app.cli create-admin --username admin --email admin@example.com
     python -m app.cli promote --username alice
     python -m app.cli verify-email --username alice
@@ -24,7 +23,6 @@ import sys
 from app.database import SessionLocal
 from app.models import User
 from app.security import hash_password
-from app.seed import seed_default_profiles
 from app.services.auth_service import validate_password_strength
 from app.utils.audit_columns import utc_date_time
 from app.utils.email_validator import validate_email
@@ -41,12 +39,6 @@ def _read_password() -> str:
     return first
 
 
-def cmd_seed(_args: argparse.Namespace) -> None:
-    with SessionLocal() as db:
-        seed_default_profiles(db)
-    print("Default profiles are in place.")
-
-
 def cmd_create_admin(args: argparse.Namespace) -> None:
     if not validate_email(args.email):
         sys.exit("Invalid email address.")
@@ -56,7 +48,6 @@ def cmd_create_admin(args: argparse.Namespace) -> None:
         sys.exit("Password rejected:\n  - " + "\n  - ".join(errors))
 
     with SessionLocal() as db:
-        seed_default_profiles(db)
         clash = (
             db.query(User)
             .filter((User.username == args.username) | (User.email == args.email))
@@ -161,8 +152,6 @@ def cmd_rotate_fernet_key(args: argparse.Namespace) -> None:
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m app.cli")
     sub = parser.add_subparsers(dest="command", required=True)
-
-    sub.add_parser("seed", help="Create the default profiles (run alembic upgrade head first)").set_defaults(func=cmd_seed)
 
     p_admin = sub.add_parser("create-admin", help="Create an Admin account")
     p_admin.add_argument("--username", required=True)

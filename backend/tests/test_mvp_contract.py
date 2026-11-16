@@ -2,8 +2,7 @@
 Frontend ↔ backend contract tests (Phase 1 / MVP unblock, tasks 30.x).
 
 These exercise the endpoints and claims the React app relies on, against a
-full schema with the default profiles seeded — the setup earlier tests
-skipped by promoting every test user to Admin.
+full schema (task 37.1: permissions come from the role, no seed data).
 """
 
 import os
@@ -28,8 +27,7 @@ from sqlalchemy.orm import Session, sessionmaker  # noqa: E402
 
 from tests.conftest import make_test_engine  # noqa: E402
 from app.main import app  # noqa: E402
-from app.models import AuditLog, Credential, Profile, RefreshToken, User, UserProfile  # noqa: E402
-from app.seed import seed_default_profiles  # noqa: E402
+from app.models import AuditLog, Credential, RefreshToken, User  # noqa: E402
 
 _ENGINE = make_test_engine()  # PostgreSQL when TEST_DATABASE_URL is set
 _Session = sessionmaker(bind=_ENGINE, autocommit=False, autoflush=False)
@@ -52,10 +50,9 @@ _PW = "Str0ngPassw0rd!"
 def _clean_db():
     with _Session() as db:
         # Children first: PostgreSQL enforces the foreign keys.
-        for model in (RefreshToken, AuditLog, Credential, UserProfile, Profile, User):
+        for model in (RefreshToken, AuditLog, Credential, User):
             db.query(model).delete()
         db.commit()
-        seed_default_profiles(db)
     yield
 
 
@@ -98,27 +95,23 @@ def test_jwt_contains_claims_required_by_frontend():
     assert "exp" in claims
 
 
-# ── B5: seed + default profile on sign-up ────────────────────────────────────
+# ── B5 / task 37.1: a new sign-up is a User with the whole vault ─────────────
+
+_VAULT = [
+    "credentials.create",
+    "credentials.delete",
+    "credentials.edit",
+    "credentials.reveal",
+    "credentials.view",
+]
 
 
-def test_default_profiles_are_seeded_idempotently():
-    with _Session() as db:
-        seed_default_profiles(db)  # second run must not duplicate
-        names = sorted(p.profile_name for p in db.query(Profile).all())
-    assert names == ["Basic", "Full"]
-
-
-def test_new_user_gets_full_profile_and_can_use_credentials():
+def test_new_user_gets_the_vault_permissions_and_can_use_credentials():
     _register("bob")
     headers = _login("bob")
     r = _client.get("/api/profile/permissions", headers=headers)
     assert r.status_code == 200
-    assert set(r.json()["permissions"]) == {
-        "credentials",
-        "credentials.new",
-        "credentials.edit",
-        "credentials.delete",
-    }
+    assert r.json() == {"role": "User", "permissions": _VAULT}
     assert _client.get("/api/credentials", headers=headers).status_code == 200
 
 
@@ -129,12 +122,12 @@ def test_profile_permissions_requires_auth():
     assert _client.get("/api/profile/permissions").status_code == 401
 
 
-def test_profile_permissions_admin_is_wildcard():
+def test_profile_permissions_admin_is_an_explicit_list():
     _register("root")
     _make_admin("root")
     r = _client.get("/api/profile/permissions", headers=_login("root"))
     assert r.status_code == 200
-    assert r.json() == {"role": "Admin", "permissions": ["*"]}
+    assert r.json() == {"role": "Admin", "permissions": sorted(_VAULT + ["users.manage"])}
 
 
 # ── B3: GET /api/credentials/{id} ────────────────────────────────────────────
@@ -180,49 +173,37 @@ def test_get_single_credential_enforces_ownership():
 # ── B4 + Property 7: admin endpoints are Admin-role only ─────────────────────
 
 
-def test_admin_lists_profiles_with_screens():
+def test_admin_lists_users_with_their_role():
+    _register("eve")
     _register("root")
     _make_admin("root")
-    r = _client.get("/api/admin/profiles", headers=_login("root"))
+    r = _client.get("/api/admin/users", headers=_login("root"))
     assert r.status_code == 200
-    by_name = {p["profile_name"]: p for p in r.json()}
-    assert by_name["Basic"]["permitted_screens"] == ["credentials"]
-    assert "credentials.delete" in by_name["Full"]["permitted_screens"]
+    roles = {u["username"]: u["role"] for u in r.json()}
+    assert roles == {"eve": "User", "root": "Admin"}
+    assert {"user_id", "username", "email", "role", "email_verified"} == set(r.json()[0])
 
 
-def test_user_cannot_reach_admin_even_with_admin_screen_in_profile():
-    _register("eve")
-    with _Session() as db:
-        full = db.query(Profile).filter(Profile.profile_name == "Full").one()
-        full.permitted_screens = list(full.permitted_screens) + ["admin.users"]
-        db.commit()
+def test_user_cannot_reach_admin_endpoints():
+    uid = _register("eve")
     headers = _login("eve")
     assert _client.get("/api/admin/users", headers=headers).status_code == 403
-    assert _client.get("/api/admin/profiles", headers=headers).status_code == 403
+    r = _client.put(f"/api/admin/users/{uid}/role", headers=headers, json={"role": "Admin"})
+    assert r.status_code == 403
+    assert r.json() == {"detail": "Access denied."}
 
 
-def test_admin_reassigns_profile_and_permissions_follow():
+def test_role_change_applies_to_the_next_request_with_the_same_token():
     uid = _register("frank")
     _register("root")
     _make_admin("root")
     admin = _login("root")
-    profiles = {p["profile_name"]: p["profile_id"] for p in _client.get("/api/admin/profiles", headers=admin).json()}
-    r = _client.put(f"/api/admin/users/{uid}/profile", headers=admin, json={"profile_id": profiles["Basic"]})
-    assert r.status_code == 200
     frank = _login("frank")
-    assert _client.get("/api/profile/permissions", headers=frank).json()["permissions"] == ["credentials"]
+    assert _client.put(f"/api/admin/users/{uid}/role", headers=admin, json={"role": "Admin"}).status_code == 200
+    assert _client.get("/api/admin/users", headers=frank).status_code == 200
+    assert _client.put(f"/api/admin/users/{uid}/role", headers=admin, json={"role": "User"}).status_code == 200
+    assert _client.get("/api/admin/users", headers=frank).status_code == 403
     assert _client.get("/api/credentials", headers=frank).status_code == 200
-    r = _client.post(
-        "/api/credentials",
-        headers=frank,
-        json={
-            "website_name": "X",
-            "email_or_username": "frank@example.com",
-            "password": "pw",
-            "account_password": _PW,
-        },
-    )
-    assert r.status_code == 403
 
 
 # ── B6 contract: wrong account password keeps the documented detail ─────────

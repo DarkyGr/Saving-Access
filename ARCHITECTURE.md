@@ -19,19 +19,16 @@ graph TD
         CredR["credentials_router<br/>/api/credentials"]
         AdminR["admin_router<br/>/api/admin"]
         ProfR["profile_router<br/>/api/profile"]
-        Perm["require_permission / require_admin"]
+        Perm["require_permission<br/>permissions.py: role → permissions"]
         AuthS["AuthService<br/>bcrypt + PyJWT"]
         RefS["RefreshTokenService"]
         Enc["EncryptorService<br/>Fernet"]
-        ProfS["ProfileService"]
         Audit["AuditService"]
         ORM["SQLAlchemy ORM"]
     end
 
     subgraph DB["PostgreSQL (schema via Alembic)"]
         users[(users)]
-        profiles[(profiles)]
-        user_profiles[(user_profiles)]
         credentials[(credentials)]
         audit_log[(audit_log)]
         refresh_tokens[(refresh_tokens)]
@@ -43,15 +40,14 @@ graph TD
     CredR & AdminR & ProfR --> Perm --> AuthS
     AuthR --> AuthS & RefS
     CredR --> Enc & Audit
-    AdminR & ProfR --> ProfS
-    AuthS & RefS & ProfS & Audit & CredR --> ORM
-    ORM --> users & profiles & user_profiles & credentials & audit_log & refresh_tokens
+    AuthS & RefS & Audit & CredR & AdminR & ProfR --> ORM
+    ORM --> users & credentials & audit_log & refresh_tokens
 ```
 
 | Layer | Technology | Notes |
 |---|---|---|
 | Frontend | React 18, TypeScript, Vite, Tailwind, react-i18next, axios, React Router 7 | `AppLayout` header, `SessionBootstrap`, `ProtectedRoute` |
-| Backend | FastAPI, SQLAlchemy 2, Pydantic 2 | Startup (`lifespan`) validates secrets and seeds profiles |
+| Backend | FastAPI, SQLAlchemy 2, Pydantic 2 | Startup (`lifespan`) validates secrets; no seed data |
 | Security libs | `cryptography` (Fernet), `bcrypt`, PyJWT, slowapi | `app/security.py`, `app/rate_limit.py` |
 | Database | PostgreSQL 15; SQLite in tests | Alembic migrations in `backend/migrations` |
 | Tests | pytest + Hypothesis, Vitest + RTL, Playwright | E2E runs against real uvicorn + Vite |
@@ -171,23 +167,21 @@ Both features are **off by default** and switched on by configuration; the backe
 
 ## 4. Roles and permissions
 
-```
-Admin → every screen, every admin endpoint (role check only)
-User  → screens listed in the assigned profile's permitted_screens
-```
+One role per account, and only two roles (task 37.1, the owner's decision). Kiro's per-user screen profiles were retired by migration `0006`: with two fixed roles they were a second, redundant source of truth.
 
-| Screen key | Grants |
-|---|---|
-| `credentials` | list/search, reveal |
-| `credentials.new` | save |
-| `credentials.edit` | open the edit page (`GET /api/credentials/{id}`), update |
-| `credentials.delete` | delete |
-| `admin.users`, `admin.profiles` | frontend routes; the API behind them is Admin-role only |
+| Permission | Grants | User | Admin |
+|---|---|:-:|:-:|
+| `credentials.view` | list/search, open the edit page (`GET /api/credentials/{id}`) | ✓ | ✓ |
+| `credentials.create` | save | ✓ | ✓ |
+| `credentials.edit` | update | ✓ | ✓ |
+| `credentials.delete` | delete | ✓ | ✓ |
+| `credentials.reveal` | show a saved password | ✓ | ✓ |
+| `users.manage` | list users, change another user's role | | ✓ |
 
-- **Backend**: `require_permission(screen)` decodes the JWT; Admin passes; a User passes only if `screen` is in their profile. `/api/admin/*` uses `require_admin`, which ignores profiles entirely (Property 7).
-- **Frontend**: `ProtectedRoute` lets Admin through and asks `GET /api/profile/permissions` for Users; `AppLayout` hides links the user cannot open. The frontend check is for navigation only; the backend is the authority.
-- **Seed**: on startup the backend creates the profiles **Basic** (`credentials`) and **Full** (all four credential screens) if missing. New sign-ups get `DEFAULT_PROFILE` (default `Full`). Admins are created with `python -m app.cli create-admin`; there is no sign-up path to Admin.
-- **Ownership**: every single-credential query filters by `credential_id` **and** `user_id`. Admins manage profiles, not other users' vaults.
+- **Backend**: `app/permissions.py` holds the names and `ROLE_PERMISSIONS`. `require_permission(name)` validates the JWT, loads the user and allows only if their **current** role grants the name: no role bypass, deny by default, and a role change applies to the next request. Naming an unknown permission fails when the module loads. `tests/test_permissions.py` checks that every non-public endpoint authenticates and which permission each credential/admin endpoint asks for.
+- **Frontend**: `ProtectedRoute` and `AppLayout` both use `GET /api/profile/permissions` (an explicit list for every role). The frontend check is for navigation only; the backend is the authority.
+- **Roles**: new sign-ups are `User`; the first Admin comes from `python -m app.cli create-admin` (or `promote`). On `/admin/users` an Admin changes another account's role (`PUT /api/admin/users/{id}/role`, modification Audit_Columns set); nobody can change their own role, so one Admin always remains.
+- **Ownership**: every credential query filters by the caller's `user_id`. Admin manages accounts, never other users' vaults.
 
 ---
 
@@ -195,8 +189,6 @@ User  → screens listed in the assigned profile's permitted_screens
 
 ```mermaid
 erDiagram
-    users ||--o{ user_profiles : has
-    profiles ||--o{ user_profiles : "assigned via"
     users ||--o{ credentials : owns
     users ||--o{ audit_log : generates
     users ||--o{ refresh_tokens : "signs in with"
@@ -209,16 +201,6 @@ erDiagram
         varchar role "User | Admin"
         boolean email_verified
         date deactivation_deadline
-    }
-    profiles {
-        int profile_id PK
-        varchar profile_name UK
-        jsonb permitted_screens
-    }
-    user_profiles {
-        int user_profile_id PK
-        int user_id FK
-        int profile_id FK
     }
     credentials {
         int credential_id PK
@@ -257,6 +239,9 @@ erDiagram
 | `0001_baseline` | users, profiles, user_profiles, credentials, audit_log |
 | `0002_refresh_tokens` | refresh_tokens |
 | `0003_search_trgm` | `pg_trgm` extension and GIN trigram indexes on `website_name` / `email_or_username` |
+| `0004_email_verification` | email_verification_tokens (spec Phase 2) |
+| `0005_verification_reminders` | `users.preferred_language`, `users.last_verification_reminder_days` |
+| `0006_retire_profiles` | drops profiles and user_profiles (permissions come from the role); its downgrade restores them and links every User to Full |
 
 - Docker (`migrate` service in production) and the E2E tests run `alembic upgrade head` before the API starts. The app never creates tables.
 - `backend/db/schema.sql` is **generated** from the migrations (`python db/generate_schema_sql.py`) and includes the `app_user` role with SELECT/INSERT/UPDATE/DELETE only (Requirement 9.9).

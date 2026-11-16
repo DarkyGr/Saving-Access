@@ -93,15 +93,9 @@ def _disable_fk(dbapi_conn, _record):  # pragma: no cover
 
 
 # Create only the tables this integration test actually touches.
-# Profile and UserProfile are JSONB-backed (PostgreSQL-only) and are
-# deliberately excluded.  The test uses an Admin-role JWT so the
-# permissions middleware bypasses the profile lookup entirely.
 User.__table__.create(bind=_ENGINE, checkfirst=True)
 Credential.__table__.create(bind=_ENGINE, checkfirst=True)
 AuditLog.__table__.create(bind=_ENGINE, checkfirst=True)
-from app.models import Profile as _Pf, UserProfile as _UPf  # noqa: E402
-_Pf.__table__.create(bind=_ENGINE, checkfirst=True)
-_UPf.__table__.create(bind=_ENGINE, checkfirst=True)
 from app.models import RefreshToken as _RT  # noqa: E402
 _RT.__table__.create(bind=_ENGINE, checkfirst=True)
 
@@ -232,13 +226,9 @@ class TestFullCredentialLifecycle:
             assert register_body["role"] == "User"
             registered_user_id: int = register_body["user_id"]
 
-            # Promote the user to Admin so the permissions middleware skips the
-            # JSONB-backed Profile/UserProfile tables (which are not created in
-            # the SQLite in-memory schema).
+            # The User role alone grants the vault permissions (task 37.1).
             user_row = db.query(User).filter(User.user_id == registered_user_id).first()
-            assert user_row is not None
-            user_row.role = "Admin"
-            db.commit()
+            assert user_row is not None and user_row.role == "User"
 
             # ------------------------------------------------------------------
             # Step 2: Log in and obtain a JWT
@@ -606,473 +596,104 @@ class TestFullCredentialLifecycle:
 
 
 # ---------------------------------------------------------------------------
-# Task 27.2 — Admin profile assignment end-to-end integration test
+# Task 27.2, revised by task 37.1 — Admin role change end-to-end
 #
-# This test class uses its own isolated in-memory SQLite engine so that the
-# JSONB-backed ``profiles`` and ``user_profiles`` tables can be created with
-# a TEXT column (SQLite's dialect cannot render PostgreSQL's JSONB).  The raw
-# SQL tables are schema-compatible with the ORM models: ProfileService and the
-# permissions middleware both issue standard SELECT queries that SQLite handles
-# transparently, and ``permitted_screens`` is serialised / deserialised as
-# JSON text.
-#
-# Requirements: 3.1–3.7
+# Kiro's version assigned screen profiles; profiles were retired and the role
+# alone now decides the permissions (Requirements 3.1–3.7, Property 8).
 # ---------------------------------------------------------------------------
 
-import json as _json
 
-from sqlalchemy import create_engine as _create_engine, text as _text
-from sqlalchemy.orm import sessionmaker as _sessionmaker
-from sqlalchemy.pool import StaticPool as _StaticPool
-
-from app.models import (  # noqa: E402  (models already imported above)
-    AuditLog as _AuditLog2,
-    Credential as _Credential2,
-    User as _User2,
-)
-
-# ---------------------------------------------------------------------------
-# Dedicated engine for the admin-profile test class.
-# A separate engine avoids table-creation conflicts with the engine used in
-# TestFullCredentialLifecycle (which intentionally omits Profile/UserProfile).
-# ---------------------------------------------------------------------------
-
-_ADMIN_ENGINE = _create_engine(
-    "sqlite:///:memory:",
-    connect_args={"check_same_thread": False},
-    poolclass=_StaticPool,
-)
-
-
-@event.listens_for(_ADMIN_ENGINE, "connect")
-def _disable_fk_admin(dbapi_conn, _record):  # pragma: no cover
-    dbapi_conn.execute("PRAGMA foreign_keys = OFF")
-
-
-# Create the standard ORM-mapped tables (no JSONB).
-_User2.__table__.create(bind=_ADMIN_ENGINE, checkfirst=True)
-_Credential2.__table__.create(bind=_ADMIN_ENGINE, checkfirst=True)
-_AuditLog2.__table__.create(bind=_ADMIN_ENGINE, checkfirst=True)
-from app.models import Profile as _Pf, UserProfile as _UPf  # noqa: E402
-_Pf.__table__.create(bind=_ADMIN_ENGINE, checkfirst=True)
-_UPf.__table__.create(bind=_ADMIN_ENGINE, checkfirst=True)
-from app.models import RefreshToken as _RT  # noqa: E402
-from datetime import UTC
-_RT.__table__.create(bind=_ADMIN_ENGINE, checkfirst=True)
-
-# Create ``profiles`` and ``user_profiles`` with TEXT instead of JSONB so
-# that SQLAlchemy's SQLite dialect can render them without errors.
-with _ADMIN_ENGINE.connect() as _conn:
-    _conn.execute(_text(
-        "CREATE TABLE IF NOT EXISTS profiles ("
-        "profile_id INTEGER PRIMARY KEY AUTOINCREMENT, "
-        "profile_name VARCHAR(64) NOT NULL UNIQUE, "
-        "permitted_screens TEXT NOT NULL DEFAULT '[]', "
-        "creation_date DATE NOT NULL, "
-        "creation_time TIME NOT NULL, "
-        "creation_user_id INTEGER, "
-        "modification_date DATE, "
-        "modification_time TIME, "
-        "modification_user_id INTEGER)"
-    ))
-    _conn.execute(_text(
-        "CREATE TABLE IF NOT EXISTS user_profiles ("
-        "user_profile_id INTEGER PRIMARY KEY AUTOINCREMENT, "
-        "user_id INTEGER NOT NULL, "
-        "profile_id INTEGER NOT NULL, "
-        "creation_date DATE NOT NULL, "
-        "creation_time TIME NOT NULL, "
-        "creation_user_id INTEGER, "
-        "modification_date DATE, "
-        "modification_time TIME, "
-        "modification_user_id INTEGER)"
-    ))
-    _conn.commit()
-
-_AdminTestingSessionLocal = _sessionmaker(
-    bind=_ADMIN_ENGINE,
-    autocommit=False,
-    autoflush=False,
-)
-
-
-def _override_get_db_admin():
-    """FastAPI dependency override pointing to the admin-test engine."""
-    db: Session = _AdminTestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-# ---------------------------------------------------------------------------
-# Dedicated TestClient for the admin-profile tests.
-# We swap get_db to the admin engine before instantiating the client and
-# restore it afterwards in the class tear-down so the two test classes do not
-# interfere with each other.
-# ---------------------------------------------------------------------------
-
-app.dependency_overrides[get_db] = _override_get_db_admin
-_admin_client = TestClient(app, raise_server_exceptions=True)
-# Restore the original override so other test classes keep using the first engine.
-app.dependency_overrides[get_db] = _override_get_db
-
-
-class TestAdminProfileAssignment:
+class TestAdminRoleChange:
     """
-    End-to-end integration test for the admin profile assignment flow.
-
-    Scenario
-    --------
-    1. Register an Admin user and a regular User.
-    2. Admin logs in; seeds a Profile with a limited ``permitted_screens`` list
-       (``["credentials", "credentials.new"]``) directly into the SQLite DB.
-    3. Admin calls ``PUT /api/admin/users/{user_id}/profile`` → 200.
-    4. User logs in and exercises every credential endpoint:
-         - ``GET  /api/credentials``              → 200  (in profile)
-         - ``POST /api/credentials``              → 201  (in profile)
-         - ``PUT  /api/credentials/{id}``         → 403  (NOT in profile)
-         - ``DELETE /api/credentials/{id}``       → 403  (NOT in profile)
-         - ``POST /api/credentials/{id}/reveal``  → 200  (in profile — "credentials")
-
-    Requirements: 3.1–3.7
+    1. Register two accounts; make the first an Admin directly in the DB
+       (as ``python -m app.cli create-admin`` / ``promote`` would).
+    2. The User reaches the vault but not the admin endpoints.
+    3. The Admin promotes the User; the *same* token now reaches the admin
+       endpoints (the role is read from the database on each request).
+    4. The Admin cannot change their own role; the role change sets the
+       target's modification Audit_Columns.
+    5. Demoted again, the User is denied the admin endpoints but keeps the vault.
     """
 
-    def setup_method(self) -> None:
-        """Point get_db at the admin engine before each test method."""
-        app.dependency_overrides[get_db] = _override_get_db_admin
-
-    def teardown_method(self) -> None:
-        """Restore the original get_db override after each test method."""
-        app.dependency_overrides[get_db] = _override_get_db
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _seed_profile(db: Session, name: str, screens: list[str]) -> int:
-        """Insert a profile row via raw SQL and return its profile_id."""
-        from datetime import datetime
-
-        now_date = str(utc_today())
-        now_time = str(datetime.now(UTC).time().replace(tzinfo=None))
-        db.execute(
-            _text(
-                "INSERT INTO profiles "
-                "(profile_name, permitted_screens, creation_date, creation_time) "
-                "VALUES (:n, :s, :d, :t)"
-            ),
-            {
-                "n": name,
-                "s": _json.dumps(screens),
-                "d": now_date,
-                "t": now_time,
+    def _register_and_login(self, name: str) -> tuple[int, dict]:
+        r = _client.post(
+            "/api/auth/register",
+            json={
+                "username": name,
+                "email": f"{name}@example.com",
+                "password": _STRONG_PASSWORD,
+                "password_confirmation": _STRONG_PASSWORD,
             },
         )
-        db.commit()
-        row = db.execute(
-            _text("SELECT profile_id FROM profiles WHERE profile_name = :n"),
-            {"n": name},
-        ).fetchone()
-        return row[0]
+        assert r.status_code == 201, r.text
+        user_id = r.json()["user_id"]
+        return user_id, self._login(name)
 
-    # ------------------------------------------------------------------
-    # Test
-    # ------------------------------------------------------------------
+    @staticmethod
+    def _login(name: str) -> dict:
+        r = _client.post("/api/auth/login", json={"username": name, "password": _STRONG_PASSWORD})
+        assert r.status_code == 200, r.text
+        return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
-    def test_admin_assigns_profile_and_user_respects_permissions(self) -> None:
-        """
-        Full admin-profile-assignment end-to-end scenario.
-
-        Validates: Requirements 3.1–3.7
-        """
-        db: Session = _AdminTestingSessionLocal()
-
+    def test_admin_changes_roles_and_permissions_follow(self) -> None:
+        db: Session = _TestingSessionLocal()
         try:
-            # Clean slate for this test
-            db.execute(_text("DELETE FROM user_profiles"))
-            db.execute(_text("DELETE FROM profiles"))
-            db.query(_AuditLog2).delete()
-            db.query(_Credential2).delete()
-            db.query(_User2).delete()
+            admin_id, _ = self._register_and_login("role_admin")
+            user_id, user_headers = self._register_and_login("role_user")
+            db.query(User).filter(User.user_id == admin_id).update({"role": "Admin"})
             db.commit()
+            admin_headers = self._login("role_admin")
 
-            # ----------------------------------------------------------
-            # Step 1: Register Admin user
-            # ----------------------------------------------------------
-            admin_reg = _admin_client.post(
-                "/api/auth/register",
-                json={
-                    "username": "profile_admin",
-                    "email": "profile_admin@example.com",
-                    "password": _STRONG_PASSWORD,
-                    "password_confirmation": _STRONG_PASSWORD,
-                },
-            )
-            assert admin_reg.status_code == 201, (
-                f"Admin register failed: {admin_reg.status_code} {admin_reg.text}"
-            )
-            admin_id: int = admin_reg.json()["user_id"]
+            # 2. A User has the vault, not the administration.
+            assert _client.get("/api/credentials", headers=user_headers).status_code == 200
+            assert _client.get("/api/admin/users", headers=user_headers).status_code == 403
+            assert _client.put(
+                f"/api/admin/users/{admin_id}/role", json={"role": "User"}, headers=user_headers
+            ).status_code == 403
 
-            # Promote to Admin role
-            admin_row = db.query(_User2).filter(_User2.user_id == admin_id).first()
-            assert admin_row is not None
-            admin_row.role = "Admin"
-            db.commit()
+            listed = _client.get("/api/admin/users", headers=admin_headers)
+            assert listed.status_code == 200
+            roles = {u["username"]: u["role"] for u in listed.json()}
+            assert roles["role_admin"] == "Admin" and roles["role_user"] == "User"
+            assert all("password_hash" not in u for u in listed.json())
 
-            # ----------------------------------------------------------
-            # Step 2: Register regular User
-            # ----------------------------------------------------------
-            user_reg = _admin_client.post(
-                "/api/auth/register",
-                json={
-                    "username": "profile_user",
-                    "email": "profile_user@example.com",
-                    "password": _STRONG_PASSWORD,
-                    "password_confirmation": _STRONG_PASSWORD,
-                },
+            # 4. Never on yourself, so one Admin always remains.
+            own = _client.put(
+                f"/api/admin/users/{admin_id}/role", json={"role": "User"}, headers=admin_headers
             )
-            assert user_reg.status_code == 201, (
-                f"User register failed: {user_reg.status_code} {user_reg.text}"
-            )
-            regular_user_id: int = user_reg.json()["user_id"]
-            assert user_reg.json()["role"] == "User", (
-                "Newly registered user should have role='User' (Requirement 3.1)"
-            )
+            assert own.status_code == 400
+            assert own.json() == {"detail": "You cannot change your own role."}
+            assert _client.put(
+                "/api/admin/users/999999/role", json={"role": "Admin"}, headers=admin_headers
+            ).status_code == 404
+            assert _client.put(
+                f"/api/admin/users/{user_id}/role", json={"role": "Root"}, headers=admin_headers
+            ).status_code == 422
 
-            # ----------------------------------------------------------
-            # Step 3: Admin logs in
-            # ----------------------------------------------------------
-            admin_login = _admin_client.post(
-                "/api/auth/login",
-                json={"username": "profile_admin", "password": _STRONG_PASSWORD},
+            # 3. Promote: the same token reaches the admin endpoints at once.
+            promoted = _client.put(
+                f"/api/admin/users/{user_id}/role", json={"role": "Admin"}, headers=admin_headers
             )
-            assert admin_login.status_code == 200, (
-                f"Admin login failed: {admin_login.status_code} {admin_login.text}"
-            )
-            admin_token: str = admin_login.json()["access_token"]
-            admin_headers = {"Authorization": f"Bearer {admin_token}"}
+            assert promoted.status_code == 200
+            assert promoted.json() == {"user_id": user_id, "role": "Admin"}
+            assert _client.get("/api/admin/users", headers=user_headers).status_code == 200
+            perms = _client.get("/api/profile/permissions", headers=user_headers).json()
+            assert perms["role"] == "Admin" and "users.manage" in perms["permissions"]
 
-            # ----------------------------------------------------------
-            # Step 4: Seed a Profile with limited permitted screens.
-            # Only "credentials" and "credentials.new" are permitted;
-            # "credentials.edit" and "credentials.delete" are excluded.
-            # ----------------------------------------------------------
-            permitted: list[str] = ["credentials", "credentials.new"]
-            profile_id: int = self._seed_profile(db, "LimitedAccess", permitted)
-            assert profile_id > 0
-
-            # ----------------------------------------------------------
-            # Step 5: Admin assigns the profile to the regular user.
-            # Requirement 3.2 — Admin can call PUT /api/admin/users/{id}/profile.
-            # Requirement 3.3 — Assignment is persisted with audit columns.
-            # Requirement 3.7 — Response contains {user_id, profile_id}.
-            # ----------------------------------------------------------
-            assign_resp = _admin_client.put(
-                f"/api/admin/users/{regular_user_id}/profile",
-                json={"profile_id": profile_id},
-                headers=admin_headers,
-            )
-            assert assign_resp.status_code == 200, (
-                f"Profile assignment failed: {assign_resp.status_code} {assign_resp.text}"
-            )
-            assign_body = assign_resp.json()
-            assert assign_body["user_id"] == regular_user_id, (
-                "Response user_id must match the target user (Requirement 3.7)"
-            )
-            assert assign_body["profile_id"] == profile_id, (
-                "Response profile_id must match the assigned profile (Requirement 3.7)"
-            )
-
-            # Verify the user_profiles row was actually persisted (Requirement 3.3)
+            # Property 8: the role change is recorded in the Audit_Columns.
             db.expire_all()
-            up_row = db.execute(
-                _text(
-                    "SELECT user_id, profile_id FROM user_profiles "
-                    "WHERE user_id = :uid"
-                ),
-                {"uid": regular_user_id},
-            ).fetchone()
-            assert up_row is not None, (
-                "user_profiles row must exist after assignment (Requirement 3.3)"
-            )
-            assert up_row[1] == profile_id
+            row = db.query(User).filter(User.user_id == user_id).one()
+            assert row.modification_user_id == admin_id
+            assert row.modification_date == utc_today()
+            assert row.modification_time is not None
 
-            # ----------------------------------------------------------
-            # Step 6: Regular user logs in
-            # ----------------------------------------------------------
-            user_login = _admin_client.post(
-                "/api/auth/login",
-                json={"username": "profile_user", "password": _STRONG_PASSWORD},
-            )
-            assert user_login.status_code == 200, (
-                f"User login failed: {user_login.status_code} {user_login.text}"
-            )
-            user_token: str = user_login.json()["access_token"]
-            user_headers = {"Authorization": f"Bearer {user_token}"}
-
-            # ----------------------------------------------------------
-            # Step 7: Permitted routes — must return success (200 / 201)
-            # Requirement 3.4 — User may access only screens in their profile.
-            # ----------------------------------------------------------
-
-            # GET /api/credentials is permitted ("credentials" in profile)
-            list_resp = _admin_client.get("/api/credentials", headers=user_headers)
-            assert list_resp.status_code == 200, (
-                f"GET /api/credentials should be 200 for a user with 'credentials' "
-                f"permission, got {list_resp.status_code}: {list_resp.text}"
-            )
-
-            # POST /api/credentials is permitted ("credentials.new" in profile)
-            create_resp = _admin_client.post(
-                "/api/credentials",
-                json={
-                    "website_name": "permitted-site.com",
-                    "email_or_username": "user@permitted-site.com",
-                    "is_username_login": False,
-                    "password": "SitePass1@Test",
-                    "account_password": _STRONG_PASSWORD,
-                },
-                headers=user_headers,
-            )
-            assert create_resp.status_code == 201, (
-                f"POST /api/credentials should be 201 for a user with 'credentials.new' "
-                f"permission, got {create_resp.status_code}: {create_resp.text}"
-            )
-            created_cred_id: int = create_resp.json()["credential_id"]
-
-            # POST /api/credentials/{id}/reveal is permitted ("credentials" in profile)
-            reveal_resp = _admin_client.post(
-                f"/api/credentials/{created_cred_id}/reveal",
-                json={"account_password": _STRONG_PASSWORD},
-                headers=user_headers,
-            )
-            assert reveal_resp.status_code == 200, (
-                f"POST /api/credentials/reveal should be 200 for 'credentials' "
-                f"permission, got {reveal_resp.status_code}: {reveal_resp.text}"
-            )
-            assert reveal_resp.json()["password"] == "SitePass1@Test"
-
-            # ----------------------------------------------------------
-            # Step 8: Forbidden routes — must return 403
-            # Requirement 3.4 — screens not in profile are blocked.
-            # Requirement 3.6 — forbidden access returns 403 {"detail": "Access denied."}.
-            # ----------------------------------------------------------
-
-            # PUT /api/credentials/{id} requires "credentials.edit" — NOT in profile
-            update_resp = _admin_client.put(
-                f"/api/credentials/{created_cred_id}",
-                json={
-                    "website_name": "permitted-site.com",
-                    "email_or_username": "user@permitted-site.com",
-                    "is_username_login": False,
-                    "password": "NewSitePass1@Test",
-                    "account_password": _STRONG_PASSWORD,
-                },
-                headers=user_headers,
-            )
-            assert update_resp.status_code == 403, (
-                f"PUT /api/credentials should be 403 when 'credentials.edit' is "
-                f"not in the profile, got {update_resp.status_code}: {update_resp.text}"
-            )
-            assert update_resp.json()["detail"] == "Access denied.", (
-                "403 response detail must be 'Access denied.' (Requirement 3.6)"
-            )
-
-            # DELETE /api/credentials/{id} requires "credentials.delete" — NOT in profile
-            delete_resp = _admin_client.request(
-                "DELETE",
-                f"/api/credentials/{created_cred_id}",
-                json={"account_password": _STRONG_PASSWORD},
-                headers=user_headers,
-            )
-            assert delete_resp.status_code == 403, (
-                f"DELETE /api/credentials should be 403 when 'credentials.delete' "
-                f"is not in the profile, got {delete_resp.status_code}: {delete_resp.text}"
-            )
-            assert delete_resp.json()["detail"] == "Access denied.", (
-                "403 response detail must be 'Access denied.' (Requirement 3.6)"
-            )
-
-            # GET /api/admin/users requires "admin.users" — NOT in profile
-            # (Requirement 3.5 — admin.users is Admin-only in practice, but the
-            # middleware 403s a User JWT regardless of route handler intent)
-            admin_users_resp = _admin_client.get(
-                "/api/admin/users",
-                headers=user_headers,
-            )
-            assert admin_users_resp.status_code == 403, (
-                f"GET /api/admin/users should be 403 for a non-admin user, "
-                f"got {admin_users_resp.status_code}: {admin_users_resp.text}"
-            )
-            assert admin_users_resp.json()["detail"] == "Access denied.", (
-                "403 response detail must be 'Access denied.' (Requirement 3.6)"
-            )
-
-            # ----------------------------------------------------------
-            # Step 9: Re-assignment — Admin updates the profile to include
-            # "credentials.edit".  Verify that PUT is now allowed.
-            # Requirement 3.3 — re-assignment updates existing user_profiles row.
-            # ----------------------------------------------------------
-            expanded_screens = [
-                "credentials",
-                "credentials.new",
-                "credentials.edit",
-            ]
-            expanded_profile_id: int = self._seed_profile(
-                db, "ExpandedAccess", expanded_screens
-            )
-
-            reassign_resp = _admin_client.put(
-                f"/api/admin/users/{regular_user_id}/profile",
-                json={"profile_id": expanded_profile_id},
-                headers=admin_headers,
-            )
-            assert reassign_resp.status_code == 200, (
-                f"Re-assignment failed: {reassign_resp.status_code} {reassign_resp.text}"
-            )
-
-            # Verify there is still only ONE user_profiles row for this user
-            # (upsert behaviour — Requirement 3.3).
-            db.expire_all()
-            row_count = db.execute(
-                _text(
-                    "SELECT COUNT(*) FROM user_profiles WHERE user_id = :uid"
-                ),
-                {"uid": regular_user_id},
-            ).scalar()
-            assert row_count == 1, (
-                f"Expected exactly 1 user_profiles row after re-assignment, "
-                f"got {row_count} (Requirement 3.3)"
-            )
-
-            # User must now be able to call PUT /api/credentials/{id}
-            # (need a fresh login to get a JWT that picks up the new profile)
-            user_login2 = _admin_client.post(
-                "/api/auth/login",
-                json={"username": "profile_user", "password": _STRONG_PASSWORD},
-            )
-            assert user_login2.status_code == 200
-            user_token2: str = user_login2.json()["access_token"]
-            user_headers2 = {"Authorization": f"Bearer {user_token2}"}
-
-            update_after_reassign = _admin_client.put(
-                f"/api/credentials/{created_cred_id}",
-                json={
-                    "website_name": "permitted-site.com",
-                    "email_or_username": "user@permitted-site.com",
-                    "is_username_login": False,
-                    "password": "UpdatedPass1@",
-                    "account_password": _STRONG_PASSWORD,
-                },
-                headers=user_headers2,
-            )
-            assert update_after_reassign.status_code == 200, (
-                f"PUT /api/credentials should be 200 after expanding the profile to "
-                f"include 'credentials.edit', got "
-                f"{update_after_reassign.status_code}: {update_after_reassign.text}"
-            )
-
+            # 5. Demote: administration denied again, vault kept.
+            assert _client.put(
+                f"/api/admin/users/{user_id}/role", json={"role": "User"}, headers=admin_headers
+            ).status_code == 200
+            assert _client.get("/api/admin/users", headers=user_headers).status_code == 403
+            assert _client.get("/api/credentials", headers=user_headers).status_code == 200
         finally:
+            db.query(User).filter(User.username.in_(["role_admin", "role_user"])).delete()
+            db.commit()
             db.close()

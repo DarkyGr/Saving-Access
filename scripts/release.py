@@ -89,7 +89,6 @@ def example_settings() -> str:
         "CLIENT_IP_HEADER=X-Client-IP",
         "RATE_LIMIT_ENABLED=true",
         "RATE_LIMIT_STORAGE=memory://",
-        "DEFAULT_PROFILE=Full",
         "# Spec Phase 2 (see .env.prod.example): off until SMTP is configured.",
         "EMAIL_VERIFICATION_ENABLED=false",
         "EMAIL_BACKEND=console",

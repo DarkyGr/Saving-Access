@@ -45,7 +45,7 @@ const ADMIN_JWT = makeTestJwt({
  * Wraps ProtectedRoute in a MemoryRouter and adds sentinel routes for /login
  * and /403 so we can assert redirects by the rendered text.
  */
-function renderProtectedRoute(screen_key: string) {
+function renderProtectedRoute(permission: string) {
   return render(
     <MemoryRouter initialEntries={["/protected"]}>
       <Routes>
@@ -54,7 +54,7 @@ function renderProtectedRoute(screen_key: string) {
         <Route
           path="/protected"
           element={
-            <ProtectedRoute screen={screen_key}>
+            <ProtectedRoute permission={permission}>
               <div>Protected Content</div>
             </ProtectedRoute>
           }
@@ -82,7 +82,7 @@ describe("ProtectedRoute", () => {
 
   it("redirects to /login when token is null (Requirement 3.4)", async () => {
     // Auth state is already null from beforeEach
-    renderProtectedRoute("credentials");
+    renderProtectedRoute("credentials.view");
 
     await waitFor(() => {
       expect(screen.getByText("Login Page")).toBeInTheDocument();
@@ -107,11 +107,11 @@ describe("ProtectedRoute", () => {
         "fetch",
         vi.fn().mockResolvedValue({
           ok: true,
-          json: async () => ({ permissions: ["other-screen", "dashboard"] }),
+          json: async () => ({ permissions: ["credentials.create"] }),
         })
       );
 
-      renderProtectedRoute("credentials");
+      renderProtectedRoute("credentials.view");
 
       await waitFor(() => {
         expect(screen.getByText("Forbidden Page")).toBeInTheDocument();
@@ -122,31 +122,28 @@ describe("ProtectedRoute", () => {
     }
   );
 
-  // ── 3. Admin JWT → renders children without a permissions check ────────────
+  // ── 3. Admin JWT → still asks the API (no client-side bypass, task 37.1) ──
 
-  it(
-    "renders children for Admin role without checking permissions (Requirement 3.4, 3.6)",
-    async () => {
-      setAuthStateForProtectedRoute({
-        token: ADMIN_JWT,
-        user: { role: "Admin", user_id: 2 },
-      });
+  it("checks the permissions API for Admin too and obeys it", async () => {
+    setAuthStateForProtectedRoute({
+      token: ADMIN_JWT,
+      user: { role: "Admin", user_id: 2 },
+    });
 
-      // fetch should NOT be called for Admin
-      const fetchSpy = vi.fn();
-      vi.stubGlobal("fetch", fetchSpy);
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ permissions: ["credentials.view"] }),
+    });
+    vi.stubGlobal("fetch", fetchSpy);
 
-      renderProtectedRoute("credentials");
+    renderProtectedRoute("users.manage");
 
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      expect(fetchSpy).not.toHaveBeenCalled();
-      expect(screen.queryByText("Login Page")).not.toBeInTheDocument();
-      expect(screen.queryByText("Forbidden Page")).not.toBeInTheDocument();
-    }
-  );
+    await waitFor(() => {
+      expect(screen.getByText("Forbidden Page")).toBeInTheDocument();
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Protected Content")).not.toBeInTheDocument();
+  });
 
   // ── 4. User JWT + matching permission → renders children ──────────────────
 
@@ -161,11 +158,11 @@ describe("ProtectedRoute", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ permissions: ["credentials", "dashboard"] }),
+        json: async () => ({ permissions: ["credentials.view", "credentials.create"] }),
       })
     );
 
-    renderProtectedRoute("credentials");
+    renderProtectedRoute("credentials.view");
 
     await waitFor(() => {
       expect(screen.getByText("Protected Content")).toBeInTheDocument();
@@ -192,7 +189,7 @@ describe("ProtectedRoute", () => {
       })
     );
 
-    renderProtectedRoute("credentials");
+    renderProtectedRoute("credentials.view");
 
     await waitFor(() => {
       expect(screen.getByText("Forbidden Page")).toBeInTheDocument();

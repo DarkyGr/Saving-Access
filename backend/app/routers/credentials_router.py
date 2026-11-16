@@ -194,7 +194,7 @@ def _get_owned_credential(
 )
 def list_credentials(
     q: str | None = None,
-    claims: dict = Depends(require_permission("credentials")),
+    claims: dict = Depends(require_permission("credentials.view")),
     db: Session = Depends(get_db),
 ) -> list[CredentialListItem]:
     """Return the authenticated user's credentials, optionally filtered by *q*.
@@ -248,7 +248,7 @@ def list_credentials(
 )
 def get_credential(
     credential_id: int,
-    claims: dict = Depends(require_permission("credentials.edit")),
+    claims: dict = Depends(require_permission("credentials.view")),
     db: Session = Depends(get_db),
 ) -> CredentialListItem:
     """Return a single owned credential for the Edit page (Requirement 6.2).
@@ -281,7 +281,7 @@ def get_credential(
 def create_credential(
     request: Request,
     body: CreateCredentialRequest,
-    claims: dict = Depends(require_permission("credentials.new")),
+    claims: dict = Depends(require_permission("credentials.create")),
     db: Session = Depends(get_db),
 ) -> CreateCredentialResponse:
     """Encrypt and persist a new credential record.
@@ -475,7 +475,7 @@ def reveal_credential(
     request: Request,
     credential_id: int,
     body: RevealCredentialRequest,
-    claims: dict = Depends(require_permission("credentials")),
+    claims: dict = Depends(require_permission("credentials.reveal")),
     db: Session = Depends(get_db),
 ) -> RevealCredentialResponse:
     """Decrypt and return the plaintext password for a single credential.

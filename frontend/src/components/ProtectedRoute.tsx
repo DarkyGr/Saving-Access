@@ -45,8 +45,8 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 // ──────────────────────────────────────────────────────────────────────────────
 
 export interface ProtectedRouteProps {
-  /** The screen key to check against the user's profile permissions */
-  screen: string;
+  /** The permission the route needs, e.g. "credentials.view" (task 37.1) */
+  permission: string;
   /** The component to render when access is granted */
   children: JSX.Element;
 }
@@ -58,17 +58,16 @@ type Status = "loading" | "allowed" | "forbidden" | "unauthenticated";
  *
  * Logic:
  *  1. Read JWT from AuthContext in-memory state (never localStorage).
- *  2. Decode claims to get `role`.
- *  3. Admin → render children immediately.
- *  4. User → fetch `GET /api/profile/permissions`, check `screen` in list.
- *  5. No token → redirect to `/login`.
- *  6. Permission denied → redirect to `/403`.
+ *  2. Fetch `GET /api/profile/permissions` and check `permission` in the
+ *     list — for every role, Admin included (no bypass, task 37.1).
+ *  3. No token → redirect to `/login`.
+ *  4. Permission denied → redirect to `/403`.
  *
  * NOTE: Once task 17.2 (AuthContext) is implemented, replace the `_authState`
  * module-level variable usage here with a `useAuth()` hook call.
  */
 export default function ProtectedRoute({
-  screen,
+  permission,
   children,
 }: ProtectedRouteProps) {
   const [status, setStatus] = useState<Status>("loading");
@@ -85,21 +84,12 @@ export default function ProtectedRoute({
         return;
       }
 
-      const payload = decodeJwtPayload(token);
-      if (!payload) {
+      if (!decodeJwtPayload(token)) {
         setStatus("unauthenticated");
         return;
       }
 
-      const role = payload["role"] as string | undefined;
-
-      // Admins always have full access
-      if (role === "Admin") {
-        if (!cancelled) setStatus("allowed");
-        return;
-      }
-
-      // For Users, check profile permissions via the API
+      // The backend decides from the role stored now (no client-side bypass).
       try {
         const apiBase = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
         const res = await fetch(`${apiBase}/api/profile/permissions`, {
@@ -113,7 +103,7 @@ export default function ProtectedRoute({
           }
           const data = (await res.json()) as { permissions: string[] };
           const permissions: string[] = data.permissions ?? [];
-          setStatus(permissions.includes(screen) ? "allowed" : "forbidden");
+          setStatus(permissions.includes(permission) ? "allowed" : "forbidden");
         }
       } catch {
         if (!cancelled) setStatus("forbidden");
@@ -124,7 +114,7 @@ export default function ProtectedRoute({
     return () => {
       cancelled = true;
     };
-  }, [token, screen]);
+  }, [token, permission]);
 
   if (status === "loading") {
     // Render nothing while the async permission check is in-flight

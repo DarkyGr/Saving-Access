@@ -64,6 +64,17 @@ def test_existing_create_all_database_can_be_adopted(db_url):
         # Nor the reminder columns (added in 0005).
         conn.exec_driver_sql("ALTER TABLE users DROP COLUMN preferred_language")
         conn.exec_driver_sql("ALTER TABLE users DROP COLUMN last_verification_reminder_days")
+        # It still had the profile tables (dropped by 0006, task 37.1).
+        conn.exec_driver_sql(
+            "CREATE TABLE profiles (profile_id INTEGER PRIMARY KEY, profile_name VARCHAR(64), "
+            "permitted_screens TEXT, creation_date DATE, creation_time TIME, creation_user_id INTEGER, "
+            "modification_date DATE, modification_time TIME, modification_user_id INTEGER)"
+        )
+        conn.exec_driver_sql(
+            "CREATE TABLE user_profiles (user_profile_id INTEGER PRIMARY KEY, user_id INTEGER, "
+            "profile_id INTEGER, creation_date DATE, creation_time TIME, creation_user_id INTEGER, "
+            "modification_date DATE, modification_time TIME, modification_user_id INTEGER)"
+        )
     engine.dispose()
 
     assert _alembic(db_url, "stamp", "0001_baseline").returncode == 0
@@ -73,4 +84,36 @@ def test_existing_create_all_database_can_be_adopted(db_url):
     engine = create_engine(db_url)
     tables = inspect(engine).get_table_names()
     assert "refresh_tokens" in tables and "email_verification_tokens" in tables
+    assert "profiles" not in tables and "user_profiles" not in tables
     engine.dispose()
+
+
+def test_downgrade_from_0006_restores_profiles_for_existing_users(db_url):
+    """Going back below 0006 gives every User the Full profile they had."""
+    from sqlalchemy import create_engine, text
+
+    assert _alembic(db_url, "upgrade", "head").returncode == 0
+    engine = create_engine(db_url)
+    with engine.begin() as conn:
+        for name, role in (("u1", "User"), ("a1", "Admin")):
+            conn.execute(
+                text(
+                    "INSERT INTO users (username, email, password_hash, role, email_verified, "
+                    "creation_date, creation_time) VALUES (:n, :e, 'x', :r, 1, '2026-11-16', '00:00:00')"
+                ),
+                {"n": name, "e": f"{name}@example.com", "r": role},
+            )
+    engine.dispose()
+
+    down = _alembic(db_url, "downgrade", "0005_verification_reminders")
+    assert down.returncode == 0, down.stderr
+    engine = create_engine(db_url)
+    with engine.connect() as conn:
+        names = [r[0] for r in conn.execute(text("SELECT profile_name FROM profiles ORDER BY profile_id"))]
+        links = conn.execute(
+            text("SELECT u.username, p.profile_name FROM user_profiles up "
+                 "JOIN users u ON u.user_id = up.user_id JOIN profiles p ON p.profile_id = up.profile_id")
+        ).all()
+    engine.dispose()
+    assert names == ["Basic", "Full"]
+    assert [tuple(r) for r in links] == [("u1", "Full")]

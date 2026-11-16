@@ -63,7 +63,7 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [
     {
-      // Fresh DB every run: migrations create the schema, startup seeds profiles.
+      // Fresh DB every run: migrations create the schema (no seed data).
       command:
         (postgresUrl
           ? `python -m alembic downgrade base && `

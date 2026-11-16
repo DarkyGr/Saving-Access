@@ -97,7 +97,6 @@ services:
       COOKIE_SAMESITE: strict
       # Frontend and API share Caddy's origin; CORS is only a safety net.
       CORS_ORIGINS: https://${SITE_ADDRESS:-localhost}
-      DEFAULT_PROFILE: ${DEFAULT_PROFILE:-Full}
       RATE_LIMIT_ENABLED: "true"
       # Counters shared by all workers through Redis (task 34.2).
       RATE_LIMIT_STORAGE: ${RATE_LIMIT_STORAGE:-redis://redis:6379/0}

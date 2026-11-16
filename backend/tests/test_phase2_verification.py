@@ -35,13 +35,10 @@ from app.models import (  # noqa: E402
     AuditLog,
     Credential,
     EmailVerificationToken,
-    Profile,
     RefreshToken,
     User,
-    UserProfile,
 )
 from app.rate_limit import limiter  # noqa: E402
-from app.seed import seed_default_profiles  # noqa: E402
 from app.services import captcha_service, email_sender  # noqa: E402
 from app.services.email_sender import OutgoingEmail  # noqa: E402
 from tests.conftest import make_test_engine  # noqa: E402
@@ -81,13 +78,10 @@ def _clean_db():
             RefreshToken,
             AuditLog,
             Credential,
-            UserProfile,
-            Profile,
             User,
         ):
             db.query(model).delete()
         db.commit()
-        seed_default_profiles(db)
     yield
 
 

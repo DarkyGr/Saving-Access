@@ -68,7 +68,7 @@ test("user lifecycle: sign up, log in, save, search, reveal, edit, delete, logou
   await signUp(page, user);
 
   // B1: login lands on /credentials instead of bouncing back to /login.
-  // B2 + B5: the new user has a default profile, so ProtectedRoute lets them in.
+  // B2 + B5: a new sign-up is a User, whose role grants the vault (task 37.1).
   await logIn(page, user, { unverified: true });
   await expect(page.getByRole("heading", { name: "My Credentials" })).toBeVisible();
 
@@ -139,7 +139,7 @@ test("user lifecycle: sign up, log in, save, search, reveal, edit, delete, logou
   await expect(page).toHaveURL(/\/login$/);
 });
 
-test("admin: create via CLI, see admin pages, reassign a user's profile", async ({ page }) => {
+test("admin: create via CLI, change a user's role, permissions follow", async ({ page }) => {
   // B5: the first Admin is created with the backend CLI.
   execFileSync(
     "python",
@@ -157,29 +157,40 @@ test("admin: create via CLI, see admin pages, reassign a user's profile", async 
     }
   );
 
+  // Task 37.1: no profiles any more, only the two roles.
   await logIn(page, admin);
-
-  // B4: profiles come from GET /api/admin/profiles, not hard-coded data.
-  await page.getByRole("link", { name: "Profiles" }).click();
-  await expect(page.getByText("Basic", { exact: true })).toBeVisible();
-  await expect(page.getByText("Full", { exact: true })).toBeVisible();
-
-  // Reassign the user from the first test to the read-only "Basic" profile.
+  await expect(page.getByRole("link", { name: "Profiles" })).toHaveCount(0);
   await page.getByRole("link", { name: "Manage Users" }).click();
-  const userRow = page.getByRole("row", { name: new RegExp(user) });
-  await expect(userRow).toBeVisible();
-  await userRow.getByRole("combobox").selectOption({ label: "Basic" });
-  await expect(page.getByText("Profile assigned successfully.")).toBeVisible();
+  await expect(page.getByLabel(`Change the role of ${admin}`)).toBeDisabled();
 
+  // Promote the user from the first test.
+  const role = page.getByLabel(`Change the role of ${user}`);
+  await expect(role).toHaveValue("User");
+  await role.selectOption("Admin");
+  await expect(page.getByRole("status")).toHaveText("Role updated.");
   await page.getByRole("button", { name: "Log Out" }).click();
 
-  // The user now only sees the list screen; /credentials/new is forbidden.
+  // As Admin the user sees the administration.
   await logIn(page, user, { unverified: true });
-  await expect(page.getByRole("link", { name: "Save Credential" })).toHaveCount(0);
+  await page.getByRole("link", { name: "Manage Users" }).click();
+  await expect(page.getByRole("heading", { name: "Manage Users" })).toBeVisible();
+  await page.getByRole("button", { name: "Log Out" }).click();
+
+  // Demote again.
+  await logIn(page, admin);
+  await page.getByRole("link", { name: "Manage Users" }).click();
+  await page.getByLabel(`Change the role of ${user}`).selectOption("User");
+  await expect(page.getByRole("status")).toHaveText("Role updated.");
+  await page.getByRole("button", { name: "Log Out" }).click();
+
+  // Back to User: vault yes, administration no.
+  await logIn(page, user, { unverified: true });
+  await expect(page.getByRole("link", { name: "Save Credential" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Manage Users" })).toHaveCount(0);
   // Client-side navigation: a full page.goto would reload and drop the
   // in-memory token, which would prove nothing about permissions.
   await page.evaluate(() => {
-    window.history.pushState({}, "", "/credentials/new");
+    window.history.pushState({}, "", "/admin/users");
     window.dispatchEvent(new PopStateEvent("popstate"));
   });
   await expect(page).toHaveURL(/\/403$/);

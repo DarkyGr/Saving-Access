@@ -11,7 +11,7 @@ The system is built with:
 - **Database**: PostgreSQL 15.
 - **Auth**: JWT (short-lived access token, HTTPS-only), issued by the backend on successful login.
 
-Two roles exist: **User** and **Admin**. A profile/permission system controls which pages a User may access. The Admin has unrestricted access to every screen and every record.
+Two roles exist: **User** and **Admin**, one per account. Each role grants a fixed set of per-action permissions defined in code (`app/permissions.py`); every endpoint asks for one and anything not granted is denied. Credentials are private to their owner for every role (task 37.1 retired Kiro's per-user screen profiles).
 
 ---
 
@@ -31,15 +31,13 @@ graph TD
         AdminRouter[Admin Router\n/api/admin]
         AuthService[AuthService\nbcrypt + JWT]
         EncryptorService[EncryptorService\nFernet / AES]
-        ProfileService[ProfileService\nRBAC]
+        Permissions[permissions.py\nrole → permissions]
         AuditService[AuditService\nwrite audit_log]
         ORM[SQLAlchemy ORM\nparameterized queries]
     end
 
     subgraph Database[PostgreSQL]
         users[(users)]
-        profiles[(profiles)]
-        user_profiles[(user_profiles)]
         credentials[(credentials)]
         audit_log[(audit_log)]
     end
@@ -50,15 +48,13 @@ graph TD
     AuthRouter --> AuthService
     CredRouter --> EncryptorService
     CredRouter --> AuditService
-    AdminRouter --> ProfileService
+    CredRouter --> Permissions
+    AdminRouter --> Permissions
     AdminRouter --> AuditService
     AuthService --> ORM
     EncryptorService --> ORM
-    ProfileService --> ORM
     AuditService --> ORM
     ORM --> users
-    ORM --> profiles
-    ORM --> user_profiles
     ORM --> credentials
     ORM --> audit_log
 ```
@@ -106,7 +102,8 @@ The `FERNET_KEY` is a 32-byte URL-safe base64 key read from a server-side enviro
 |--------|-----------|-----------------|
 | `auth_router` | `/api/auth` | Register, login, logout, token refresh, `GET /config` (CAPTCHA site key, verification on/off), `POST /verify-email` (Phase 2) |
 | `credentials_router` | `/api/credentials` | CRUD for credentials; reveal endpoint |
-| `admin_router` | `/api/admin` | User listing, profile assignment, audit log view |
+| `admin_router` | `/api/admin` | User listing and role change (`users.manage`) |
+| `profile_router` | `/api/profile` | The caller's role and permissions; resend the verification email |
 
 ### Backend Services
 
@@ -114,7 +111,7 @@ The `FERNET_KEY` is a 32-byte URL-safe base64 key read from a server-side enviro
 |---------|-------------|
 | `AuthService` | `register(payload)`, `login(payload) → JWT`, `verify_token(token) → user_id`, `check_account_password(user_id, raw_password) → bool` |
 | `EncryptorService` | `encrypt(plaintext: str) → bytes`, `decrypt(ciphertext: bytes) → str` |
-| `ProfileService` | `get_user_permissions(user_id) → List[Screen]`, `assign_profile(admin_id, user_id, profile_id)` |
+| `permissions` (module) | `PERMISSIONS`, `ROLE_PERMISSIONS`, `permissions_for(role) → frozenset[str]` |
 | `AuditService` | `log(user_id, operation, affected_record_id)` |
 
 ### Frontend Pages and Routes
@@ -123,11 +120,10 @@ The `FERNET_KEY` is a 32-byte URL-safe base64 key read from a server-side enviro
 |-------|---------------|---------------|
 | `/login` | `LoginPage` | Public |
 | `/signup` | `SignUpPage` | Public |
-| `/credentials` | `ViewSearchPage` | User (with permission) or Admin |
-| `/credentials/new` | `SaveCredentialPage` | User (with permission) or Admin |
-| `/credentials/:id/edit` | `EditCredentialPage` | User (with permission) or Admin |
-| `/admin/users` | `AdminUsersPage` | Admin only |
-| `/admin/profiles` | `AdminProfilesPage` | Admin only |
+| `/credentials` | `ViewSearchPage` | `credentials.view` |
+| `/credentials/new` | `SaveCredentialPage` | `credentials.create` |
+| `/credentials/:id/edit` | `EditCredentialPage` | `credentials.edit` |
+| `/admin/users` | `AdminUsersPage` | `users.manage` (Admin) |
 
 ### Frontend Shared Components
 
@@ -137,7 +133,7 @@ The `FERNET_KEY` is a 32-byte URL-safe base64 key read from a server-side enviro
 | `PasswordConfirmModal` | Reusable account-password prompt modal |
 | `VisibilityTimer` | Hook + UI countdown for 60 s auto-mask |
 | `LanguageToggle` | Header EN/ES switcher |
-| `ProtectedRoute` | HOC that checks JWT + Profile permission; redirects to 403 page or login |
+| `ProtectedRoute` | HOC that checks the session + the route's permission; redirects to 403 page or login |
 | `ConfirmDeleteModal` | Generic confirmation modal for deletions |
 | `AlreadyVisibleModal` | Warning modal when another password is already revealed |
 
@@ -157,30 +153,6 @@ erDiagram
         varchar role
         boolean email_verified
         date deactivation_deadline
-        date creation_date
-        time creation_time
-        int creation_user_id FK
-        date modification_date
-        time modification_time
-        int modification_user_id FK
-    }
-
-    profiles {
-        int profile_id PK
-        varchar profile_name
-        json permitted_screens
-        date creation_date
-        time creation_time
-        int creation_user_id FK
-        date modification_date
-        time modification_time
-        int modification_user_id FK
-    }
-
-    user_profiles {
-        int user_profile_id PK
-        int user_id FK
-        int profile_id FK
         date creation_date
         time creation_time
         int creation_user_id FK
@@ -213,8 +185,6 @@ erDiagram
         time operation_time
     }
 
-    users ||--o{ user_profiles : "has"
-    profiles ||--o{ user_profiles : "assigned via"
     users ||--o{ credentials : "owns"
     users ||--o{ audit_log : "generates"
 ```
@@ -242,31 +212,7 @@ CREATE TABLE users (
     modification_user_id INTEGER      REFERENCES users(user_id)
 );
 
--- profiles
-CREATE TABLE profiles (
-    profile_id       SERIAL PRIMARY KEY,
-    profile_name     VARCHAR(64) NOT NULL UNIQUE,
-    permitted_screens JSONB       NOT NULL DEFAULT '[]',
-    creation_date        DATE    NOT NULL,
-    creation_time        TIME    NOT NULL,
-    creation_user_id     INTEGER REFERENCES users(user_id),
-    modification_date    DATE,
-    modification_time    TIME,
-    modification_user_id INTEGER REFERENCES users(user_id)
-);
-
--- user_profiles
-CREATE TABLE user_profiles (
-    user_profile_id      SERIAL  PRIMARY KEY,
-    user_id              INTEGER NOT NULL REFERENCES users(user_id),
-    profile_id           INTEGER NOT NULL REFERENCES profiles(profile_id),
-    creation_date        DATE    NOT NULL,
-    creation_time        TIME    NOT NULL,
-    creation_user_id     INTEGER REFERENCES users(user_id),
-    modification_date    DATE,
-    modification_time    TIME,
-    modification_user_id INTEGER REFERENCES users(user_id)
-);
+-- profiles / user_profiles: dropped by migration 0006 (task 37.1)
 
 -- credentials
 CREATE TABLE credentials (
@@ -393,17 +339,18 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
 // Response 200
 [
   { "user_id": 42, "username": "alice", "email": "alice@example.com",
-    "role": "User", "profile": { "profile_id": 1, "profile_name": "Basic" } }
+    "role": "User", "email_verified": true }
 ]
 ```
 
-#### `PUT /api/admin/users/{user_id}/profile`
+#### `PUT /api/admin/users/{user_id}/role` *(task 37.1; replaces the profile assignment)*
 ```json
 // Request
-{ "profile_id": 2 }
+{ "role": "Admin" }
 
 // Response 200
-{ "user_id": 42, "profile_id": 2 }
+{ "user_id": 42, "role": "Admin" }
+// 400 { "detail": "You cannot change your own role." } · 404 if the user does not exist · 422 for any other role
 ```
 
 #### `POST /api/auth/refresh` / `POST /api/auth/logout` *(added in task 31.5)*
@@ -414,19 +361,9 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
 // logout — no body; 204, cookie cleared and token revoked
 ```
 
-#### `GET /api/admin/profiles` *(added in task 30.4)*
-```json
-// Response 200 — Admin role only
-[
-  { "profile_id": 1, "profile_name": "Basic", "permitted_screens": ["credentials"] },
-  { "profile_id": 2, "profile_name": "Full",
-    "permitted_screens": ["credentials", "credentials.new", "credentials.edit", "credentials.delete"] }
-]
-```
-
 #### `GET /api/credentials/{id}` *(added in task 30.3)*
 ```json
-// Response 200 — requires "credentials.edit"; password is always null
+// Response 200 — requires "credentials.view"; password is always null
 { "credential_id": 7, "website_name": "GitHub", "email_or_username": "alice@example.com",
   "is_username_login": false, "password": null }
 // 403 if owned by another user, 404 if it does not exist
@@ -435,8 +372,8 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
 #### `GET /api/profile/permissions` *(added in task 30.2)*
 ```json
 // Response 200 — any authenticated user
-{ "role": "User", "permissions": ["credentials", "credentials.new"] }
-// Admin: { "role": "Admin", "permissions": ["*"] }
+{ "role": "User", "permissions": ["credentials.create", "credentials.delete", "credentials.edit", "credentials.reveal", "credentials.view"] }
+// Admin: the same plus "users.manage" (task 37.1: explicit list, no "*")
 ```
 
 ---
@@ -480,32 +417,20 @@ JWT Configuration:
 
 ---
 
-## Role and Profile Permission System
+## Role and Permission System
+
+*(Task 37.1 — the owner chose one role per account and only User / Admin. Kiro's profiles, named lists of screens assigned per user, were retired by migration 0006: with two fixed roles they added a second, redundant source of truth.)*
 
 ```
-Role: Admin  →  hardcoded full access, bypasses profile check
-Role: User   →  access determined by assigned Profile
-
-Profile row: { profile_id, profile_name, permitted_screens: ["credentials", "credentials.new", ...] }
+User   →  credentials.view, credentials.create, credentials.edit, credentials.delete, credentials.reveal
+Admin  →  everything User has + users.manage   (later phases add administration permissions here)
 ```
 
-Seed data (task 30.5): on startup the backend idempotently creates the profiles **Basic** (`credentials`) and **Full** (`credentials`, `credentials.new`, `credentials.edit`, `credentials.delete`). Each new sign-up is linked to `DEFAULT_PROFILE` (default `Full`). The first Admin is created with `python -m app.cli create-admin`.
-
-Admin endpoints (`/api/admin/*`) use `require_admin`, which checks `role == "Admin"` only; profile contents can never grant them (Property 7).
-
-Backend middleware (`require_permission(screen: str)`):
-1. Decode JWT → `user_id`, `role`
-2. If `role == "Admin"` → allow
-3. Else fetch `user_profiles` → `profile.permitted_screens`
-4. If `screen` in `permitted_screens` → allow
-5. Else → 403 Forbidden
-
-Frontend `ProtectedRoute`:
-1. Read JWT from memory → decode claims
-2. If role == "Admin" → render children
-3. Else call `GET /api/profile/permissions` → check screen key
-4. If allowed → render children
-5. Else → redirect to `/403`
+- Permissions are names defined in `app/permissions.py` (`PERMISSIONS`, `ROLE_PERMISSIONS`). Asking for an unknown name fails when the module loads, so a typo cannot silently deny or allow.
+- Backend `require_permission(permission)`: decode the JWT → load the user → `permission in permissions_for(user.role)` → else 403 `Access denied.`. **No role bypass**: Admin passes because its set lists the permission. The role is read from the database on every request, so a role change applies to the next request rather than when the 15-minute token expires.
+- Credentials stay owner-only for every role: queries always filter by the caller's `user_id` (Property 10). Admin cannot see anyone else's vault.
+- Role change: `PUT /api/admin/users/{id}/role` (`users.manage`) sets the user's modification Audit_Columns; an Admin cannot change their own role, so at least one Admin always remains. New sign-ups are `User`; the first Admin comes from `python -m app.cli create-admin`.
+- Frontend: `GET /api/profile/permissions` returns the role and the explicit list; the menu and `ProtectedRoute` check the route's permission (redirect to `/403` otherwise).
 
 ---
 
@@ -659,9 +584,9 @@ Events logged:
 
 ---
 
-### Property 8: Profile Assignment Updates Audit Columns
+### Property 8: Role Change Updates Audit Columns
 
-*For any* profile assignment operation performed by an Admin, the updated `user_profiles` record SHALL have non-null `modification_date`, `modification_time`, and `modification_user_id` columns set to the current timestamp and the performing admin's `user_id`.
+*For any* role change performed by an Admin on another account, the updated `users` record SHALL have non-null `modification_date`, `modification_time`, and `modification_user_id` columns set to the current timestamp and the performing admin's `user_id` *(task 37.1; was the profile assignment)*.
 
 **Validates: Requirements 3.3**
 
@@ -741,7 +666,7 @@ Events logged:
 | Too many attempts | 429 | `{"detail": "Too many attempts. Please wait a minute and try again."}` + `Retry-After` |
 | Wrong account password on sensitive op | 401 | `{"detail": "Account password verification failed."}` |
 | Accessing another user's credential | 403 | `{"detail": "Forbidden."}` |
-| Missing profile permission | 403 | `{"detail": "Access denied."}` |
+| Missing permission | 403 | `{"detail": "Access denied."}` |
 | Resource not found | 404 | `{"detail": "Not found."}` (also Phase 2 endpoints while the feature is off) |
 | Unverified account past its deadline (login, link) | 403 | `{"detail": "Account deactivated."}` |
 | CAPTCHA missing or rejected | 400 | `{"detail": "CAPTCHA verification failed."}` |
@@ -762,7 +687,7 @@ Focus on:
 - `EncryptorService.encrypt` / `decrypt` round-trip with fixed and random inputs
 - `AuthService.check_account_password` correct and incorrect cases
 - Password strength validator: known-failing and known-passing examples
-- `ProfileService.get_user_permissions` for User and Admin roles
+- `permissions_for` for User and Admin roles; deny by default for unknown roles
 - `AuditService.log` call verification using mocked DB session
 
 ### Property-Based Tests (Hypothesis — Python)
@@ -790,12 +715,12 @@ Tag format used in test docstrings: `Feature: password-manager-website, Property
 | `test_wrong_password_rejects_sensitive_ops` | Property 14 | 100 |
 | `test_email_validation` | Property 16 | 200 |
 
-Properties 8 (profile audit columns) and 15 (concurrent isolation) use mocked DB sessions and SQLAlchemy in-memory SQLite for property-level isolation; true concurrency is verified in a separate integration test.
+Properties 8 (role change audit columns) and 15 (concurrent isolation) use mocked DB sessions and SQLAlchemy in-memory SQLite for property-level isolation; true concurrency is verified in a separate integration test.
 
 ### Integration Tests
 
 - Full login → create credential → reveal → edit → delete flow against a test PostgreSQL instance
-- Admin profile assignment and permission enforcement end-to-end
+- Admin role change and permission enforcement end-to-end
 - Concurrent writes from two simulated users verify row-level isolation
 - Phase 2 (`tests/test_phase2_verification.py`, also on PostgreSQL in CI): file/SMTP email backends, link lifecycle, resend keeps the deadline, deactivation at login/refresh/link, CLI reactivation, CAPTCHA (mocked hCaptcha, fails closed), settings validation; Playwright runs with verification on
 
@@ -841,7 +766,7 @@ Technical reference (written in task 28.2, after tasks 30–31) covering:
 - System component diagram
 - Encryption lifecycle (Save → Store → Retrieve → Display)
 - Authentication and session token flow
-- Role and profile permission model
+- Role and permission model
 - Database schema overview (tables, relationships, audit columns)
 - Fernet key management and rotation procedure
 - Audit log structure and querying

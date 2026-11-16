@@ -3,78 +3,44 @@ import { useTranslation } from "react-i18next";
 import axios from "axios";
 
 import apiClient from "../api/apiClient";
+import { useAuth } from "../context/AuthContext";
 
-// ── Types ────────────────────────────────────────────────────────────────────
-
-interface Profile {
-  profile_id: number;
-  profile_name: string;
-}
+type Role = "User" | "Admin";
 
 interface AdminUser {
   user_id: number;
   username: string;
   email: string;
-  role: "User" | "Admin";
-  profile: { profile_id: number; profile_name: string } | null;
+  role: Role;
+  email_verified: boolean;
 }
 
-// ── Component ────────────────────────────────────────────────────────────────
+type RowStatus = { status: "idle" | "saving" | "success" | "error"; message?: string };
+
+const ROLES: Role[] = ["User", "Admin"];
 
 /**
- * AdminUsersPage — /admin/users
+ * AdminUsersPage — /admin/users (permission `users.manage`).
  *
- * Admin-only page that lists all users and lets the Admin reassign profiles.
- *
- * Requirements 3.2, 3.3, 3.5, 3.7:
- *  3.2  Admin-only profile assignment page.
- *  3.3  On assignment the backend updates permission set and audit columns.
- *  3.5  Admin has access to all application screens.
- *  3.7  Page lists all users with currently assigned Profile and allows reassignment.
+ * Lists every account with its role and lets the Admin change another
+ * account's role (Requirements 3.6, 3.7, task 37.1). The Admin's own row is
+ * locked, so at least one Admin always remains; the backend enforces it too.
  */
 export default function AdminUsersPage() {
   const { t } = useTranslation();
-
-  // ── Users list ──────────────────────────────────────────────────────────
+  const { user: me } = useAuth();
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-
-  // ── Profiles (available options for the dropdown) ───────────────────────
-  // Fetched from /api/admin/profiles.
-
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-
-  // ── Per-row assignment state ─────────────────────────────────────────────
-  // Maps user_id → { status: "idle" | "saving" | "success" | "error"; message? }
-
-  type RowStatus = "idle" | "saving" | "success" | "error";
-  const [rowStatus, setRowStatus] = useState<
-    Record<number, { status: RowStatus; message?: string }>
-  >({});
-
-  // Track the currently-selected profile per row (controlled select)
-  const [selectedProfiles, setSelectedProfiles] = useState<
-    Record<number, number | "">
-  >({});
-
-  // ── Fetch users ──────────────────────────────────────────────────────────
+  const [rowStatus, setRowStatus] = useState<Record<number, RowStatus>>({});
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     setFetchError(null);
     try {
       const response = await apiClient.get<AdminUser[]>("/api/admin/users");
-      const data = response.data;
-      setUsers(data);
-
-      // Initialise the controlled select values from current assignments
-      const initial: Record<number, number | ""> = {};
-      for (const u of data) {
-        initial[u.user_id] = u.profile?.profile_id ?? "";
-      }
-      setSelectedProfiles(initial);
+      setUsers(response.data);
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
         // The apiClient response interceptor redirects to /login.
@@ -86,85 +52,40 @@ export default function AdminUsersPage() {
     }
   }, [t]);
 
-  // ── Fetch profiles ───────────────────────────────────────────────────────
-
-  const fetchProfiles = useCallback(async () => {
-    try {
-      const response = await apiClient.get<Profile[]>("/api/admin/profiles");
-      setProfiles(response.data);
-    } catch {
-      // Never guess profile ids: an empty list disables reassignment.
-      setProfiles([]);
-    }
-  }, []);
-
   useEffect(() => {
     fetchUsers();
-    fetchProfiles();
-  }, [fetchUsers, fetchProfiles]);
+  }, [fetchUsers]);
 
-  // ── Handle dropdown change ───────────────────────────────────────────────
-
-  async function handleProfileChange(userId: number, rawValue: string) {
-    const profileId = rawValue === "" ? null : parseInt(rawValue, 10);
-
-    // Update the controlled value immediately for responsive UI
-    setSelectedProfiles((prev) => ({
-      ...prev,
-      [userId]: profileId ?? "",
-    }));
-
-    if (profileId === null) {
-      // No-profile option selected — nothing to PUT
-      return;
-    }
-
-    setRowStatus((prev) => ({
-      ...prev,
-      [userId]: { status: "saving" },
-    }));
-
+  async function handleRoleChange(target: AdminUser, role: Role) {
+    if (role === target.role) return;
+    setRowStatus((prev) => ({ ...prev, [target.user_id]: { status: "saving" } }));
     try {
-      await apiClient.put(`/api/admin/users/${userId}/profile`, {
-        profile_id: profileId,
-      });
-
+      await apiClient.put(`/api/admin/users/${target.user_id}/role`, { role });
+      setUsers((prev) => prev.map((u) => (u.user_id === target.user_id ? { ...u, role } : u)));
       setRowStatus((prev) => ({
         ...prev,
-        [userId]: { status: "success", message: t("admin.assignProfileSuccess") },
+        [target.user_id]: { status: "success", message: t("admin.changeRoleSuccess") },
       }));
-
-      // Auto-clear success message after 3 s
       setTimeout(() => {
-        setRowStatus((prev) => ({
-          ...prev,
-          [userId]: { status: "idle" },
-        }));
+        setRowStatus((prev) => ({ ...prev, [target.user_id]: { status: "idle" } }));
       }, 3000);
     } catch (err: unknown) {
-      let message = t("admin.assignProfileError");
-      if (axios.isAxiosError(err) && err.response?.status === 403) {
-        message = t("errors.forbidden");
-      }
-      setRowStatus((prev) => ({
-        ...prev,
-        [userId]: { status: "error", message },
-      }));
+      const message =
+        axios.isAxiosError(err) && err.response?.status === 403
+          ? t("errors.forbidden")
+          : t("admin.changeRoleError");
+      setRowStatus((prev) => ({ ...prev, [target.user_id]: { status: "error", message } }));
     }
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────
+  const th =
+    "px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap";
 
   return (
     <main className="min-h-screen bg-gray-50 px-4 py-8 sm:py-12">
       <div className="mx-auto w-full max-w-5xl">
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">{t("admin.usersPageTitle")}</h1>
 
-        {/* ── Page heading ── */}
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">
-          {t("admin.usersPageTitle")}
-        </h1>
-
-        {/* ── Error banner ── */}
         {fetchError && (
           <div
             role="alert"
@@ -175,121 +96,54 @@ export default function AdminUsersPage() {
           </div>
         )}
 
-        {/* ── Loading indicator ── */}
         {isLoading && (
           <p className="text-sm text-gray-500 mb-4" aria-live="polite">
             {t("common.loading")}
           </p>
         )}
 
-        {/* ── Empty state ── */}
         {!isLoading && !fetchError && users.length === 0 && (
           <p className="text-sm text-gray-500" aria-live="polite">
             {t("admin.noUsers")}
           </p>
         )}
 
-        {/* ── Users table (Req 11.3 — horizontally scrollable on mobile) ── */}
+        {/* Req 11.3 — horizontally scrollable on mobile */}
         {!isLoading && users.length > 0 && (
           <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
             <table className="min-w-full divide-y divide-gray-200 bg-white">
               <thead className="bg-gray-50">
                 <tr>
-                  <th
-                    scope="col"
-                    className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"
-                  >
-                    {t("admin.tableHeaderUser")}
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"
-                  >
-                    {t("admin.tableHeaderEmail")}
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"
-                  >
-                    {t("admin.tableHeaderRole")}
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"
-                  >
-                    {t("admin.tableHeaderProfile")}
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"
-                  >
-                    {t("admin.tableHeaderActions")}
-                  </th>
+                  <th scope="col" className={th}>{t("admin.tableHeaderUser")}</th>
+                  <th scope="col" className={th}>{t("admin.tableHeaderEmail")}</th>
+                  <th scope="col" className={th}>{t("admin.tableHeaderRole")}</th>
                 </tr>
               </thead>
-
               <tbody className="divide-y divide-gray-100">
                 {users.map((user) => {
                   const rs = rowStatus[user.user_id] ?? { status: "idle" };
-                  const isSaving = rs.status === "saving";
-
+                  const isMe = me?.user_id === user.user_id;
+                  const selectId = `role-select-${user.user_id}`;
+                  const lockedId = `role-locked-${user.user_id}`;
                   return (
-                    <tr
-                      key={user.user_id}
-                      className="hover:bg-gray-50 transition-colors duration-100"
-                    >
-                      {/* Username */}
+                    <tr key={user.user_id} className="hover:bg-gray-50 transition-colors duration-100">
                       <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
                         {user.username}
+                        {isMe && <span className="ml-1 text-gray-500">{t("admin.youBadge")}</span>}
                       </td>
-
-                      {/* Email */}
-                      <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                        {user.email}
-                      </td>
-
-                      {/* Role */}
-                      <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                        <span
-                          className={[
-                            "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-                            user.role === "Admin"
-                              ? "bg-indigo-100 text-indigo-800"
-                              : "bg-gray-100 text-gray-700",
-                          ].join(" ")}
-                        >
-                          {user.role}
-                        </span>
-                      </td>
-
-                      {/* Current profile name */}
-                      <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                        {user.profile?.profile_name ?? (
-                          <span className="text-gray-400 italic">
-                            {t("admin.noProfileAssigned")}
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Actions — profile reassignment dropdown */}
+                      <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{user.email}</td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-                          {/* Label (sr-only on desktop to save space) */}
-                          <label
-                            htmlFor={`profile-select-${user.user_id}`}
-                            className="sr-only"
-                          >
-                            {t("admin.assignProfileLabel")} {user.username}
+                          <label htmlFor={selectId} className="sr-only">
+                            {t("admin.changeRoleLabel", { username: user.username })}
                           </label>
-
-                          {/* Profile dropdown */}
                           <select
-                            id={`profile-select-${user.user_id}`}
-                            value={selectedProfiles[user.user_id] ?? ""}
-                            onChange={(e) =>
-                              handleProfileChange(user.user_id, e.target.value)
-                            }
-                            disabled={isSaving}
+                            id={selectId}
+                            value={user.role}
+                            onChange={(e) => handleRoleChange(user, e.target.value as Role)}
+                            disabled={isMe || rs.status === "saving"}
+                            aria-describedby={isMe ? lockedId : undefined}
+                            title={isMe ? t("admin.ownRoleLocked") : undefined}
                             className={[
                               "block rounded-md border border-gray-300 bg-white",
                               "px-2 py-1.5 text-sm text-gray-900",
@@ -297,42 +151,30 @@ export default function AdminUsersPage() {
                               "min-h-[44px] md:min-h-[36px]",
                               "disabled:opacity-60 disabled:cursor-not-allowed",
                             ].join(" ")}
-                            aria-label={`${t("admin.assignProfileLabel")} ${user.username}`}
                           >
-                            <option value="">
-                              {t("admin.noProfileOption")}
-                            </option>
-                            {profiles.map((p) => (
-                              <option key={p.profile_id} value={p.profile_id}>
-                                {p.profile_name}
+                            {ROLES.map((role) => (
+                              <option key={role} value={role}>
+                                {t(`admin.roles.${role}`)}
                               </option>
                             ))}
                           </select>
-
-                          {/* Inline feedback */}
-                          {isSaving && (
-                            <span
-                              className="text-xs text-gray-500"
-                              aria-live="polite"
-                            >
+                          {isMe && (
+                            <span id={lockedId} className="text-xs text-gray-500">
+                              {t("admin.ownRoleLocked")}
+                            </span>
+                          )}
+                          {rs.status === "saving" && (
+                            <span className="text-xs text-gray-500" aria-live="polite">
                               {t("common.loading")}
                             </span>
                           )}
                           {rs.status === "success" && (
-                            <span
-                              className="text-xs text-green-600"
-                              role="status"
-                              aria-live="polite"
-                            >
+                            <span className="text-xs text-green-600" role="status" aria-live="polite">
                               {rs.message}
                             </span>
                           )}
                           {rs.status === "error" && (
-                            <span
-                              className="text-xs text-red-600"
-                              role="alert"
-                              aria-live="assertive"
-                            >
+                            <span className="text-xs text-red-600" role="alert" aria-live="assertive">
                               {rs.message}
                             </span>
                           )}

@@ -113,15 +113,10 @@ def _disable_fk(dbapi_conn, _record):  # pragma: no cover
     dbapi_conn.execute("PRAGMA foreign_keys = OFF")
 
 
-# Create only the tables this test needs.  Profile/UserProfile use JSONB
-# (PostgreSQL-only) and are excluded; we use Admin-role JWTs so the
-# permissions middleware bypasses the profile lookup entirely.
+# Create only the tables this test needs.
 User.__table__.create(bind=_ENGINE, checkfirst=True)
 Credential.__table__.create(bind=_ENGINE, checkfirst=True)
 AuditLog.__table__.create(bind=_ENGINE, checkfirst=True)
-from app.models import Profile as _Pf, UserProfile as _UPf  # noqa: E402
-_Pf.__table__.create(bind=_ENGINE, checkfirst=True)
-_UPf.__table__.create(bind=_ENGINE, checkfirst=True)
 from app.models import RefreshToken as _RT  # noqa: E402
 _RT.__table__.create(bind=_ENGINE, checkfirst=True)
 

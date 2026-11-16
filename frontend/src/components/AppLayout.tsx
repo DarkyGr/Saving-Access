@@ -11,33 +11,29 @@ import VerifyEmailModal from "./VerifyEmailModal";
  *
  * - Language toggle always visible in the header (Requirement 10.2).
  * - When authenticated: navigation filtered by the user's permissions
- *   (Requirements 3.4, 3.5) and a logout button.
+ *   (Requirement 3.5, task 37.1 — the same list for every role) and a logout button.
  */
 
 interface NavItem {
   to: string;
-  screen: string;
+  permission: string;
   labelKey: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: "/credentials", screen: "credentials", labelKey: "nav.credentials" },
-  { to: "/credentials/new", screen: "credentials.new", labelKey: "nav.saveCredential" },
-  { to: "/admin/users", screen: "admin.users", labelKey: "nav.adminUsers" },
-  { to: "/admin/profiles", screen: "admin.profiles", labelKey: "nav.adminProfiles" },
+  { to: "/credentials", permission: "credentials.view", labelKey: "nav.credentials" },
+  { to: "/credentials/new", permission: "credentials.create", labelKey: "nav.saveCredential" },
+  { to: "/admin/users", permission: "users.manage", labelKey: "nav.adminUsers" },
 ];
 
 function usePermissions(token: string | null, role: string | undefined): string[] {
+  // `role` is a dependency only so a role change in the token refetches.
   const [permissions, setPermissions] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     if (!token) {
       setPermissions([]);
-      return;
-    }
-    if (role === "Admin") {
-      setPermissions(["*"]);
       return;
     }
     apiClient
@@ -62,8 +58,7 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const permissions = usePermissions(token, user?.role);
 
-  const canSee = (screen: string) =>
-    permissions.includes("*") || permissions.includes(screen);
+  const canSee = (permission: string) => permissions.includes(permission);
 
   function handleLogout() {
     logout();
@@ -84,7 +79,7 @@ export default function AppLayout() {
 
           {token && (
             <nav aria-label={t("nav.main")} className="flex flex-wrap gap-1">
-              {NAV_ITEMS.filter((item) => canSee(item.screen)).map((item) => (
+              {NAV_ITEMS.filter((item) => canSee(item.permission)).map((item) => (
                 <NavLink key={item.to} to={item.to} end className={linkClass}>
                   {t(item.labelKey)}
                 </NavLink>

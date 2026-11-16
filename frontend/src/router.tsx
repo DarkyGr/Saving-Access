@@ -9,7 +9,6 @@ import ViewSearchPage from "./pages/ViewSearchPage";
 import SaveCredentialPage from "./pages/SaveCredentialPage";
 import EditCredentialPage from "./pages/EditCredentialPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
-import AdminProfilesPage from "./pages/AdminProfilesPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
 
 // ForbiddenPage is created in task 24.2. Lazy-loaded so this router file
@@ -24,15 +23,14 @@ const ForbiddenPage = React.lazy(() => import("./pages/ForbiddenPage"));
  *  /login                  → LoginPage (public)
  *  /signup                 → SignUpPage (public)
  *  /verify-email?token=…   → VerifyEmailPage (public, spec Phase 2)
- *  /credentials            → ProtectedRoute(screen="credentials")       → ViewSearchPage
- *  /credentials/new        → ProtectedRoute(screen="credentials.new")   → SaveCredentialPage
- *  /credentials/:id/edit   → ProtectedRoute(screen="credentials.edit")  → EditCredentialPage
- *  /admin/users            → ProtectedRoute(screen="admin.users")       → AdminUsersPage
- *  /admin/profiles         → ProtectedRoute(screen="admin.profiles")    → AdminProfilesPage
+ *  /credentials            → ProtectedRoute(permission="credentials.view")    → ViewSearchPage
+ *  /credentials/new        → ProtectedRoute(permission="credentials.create")  → SaveCredentialPage
+ *  /credentials/:id/edit   → ProtectedRoute(permission="credentials.edit")    → EditCredentialPage
+ *  /admin/users            → ProtectedRoute(permission="users.manage")        → AdminUsersPage
  *  /403                    → ForbiddenPage (public — shown after redirect)
  *  *                       → redirect to /login
  *
- * Requirements: 2.5, 3.4, 3.6, 10.1
+ * Requirements: 2.5, 3.5, 10.1 (permissions: task 37.1)
  */
 const router = createBrowserRouter([
   {
@@ -54,7 +52,7 @@ const router = createBrowserRouter([
       {
         path: "/credentials",
         element: (
-          <ProtectedRoute screen="credentials">
+          <ProtectedRoute permission="credentials.view">
             <ViewSearchPage />
           </ProtectedRoute>
         ),
@@ -62,7 +60,7 @@ const router = createBrowserRouter([
       {
         path: "/credentials/new",
         element: (
-          <ProtectedRoute screen="credentials.new">
+          <ProtectedRoute permission="credentials.create">
             <SaveCredentialPage />
           </ProtectedRoute>
         ),
@@ -70,7 +68,7 @@ const router = createBrowserRouter([
       {
         path: "/credentials/:id/edit",
         element: (
-          <ProtectedRoute screen="credentials.edit">
+          <ProtectedRoute permission="credentials.edit">
             <EditCredentialPage />
           </ProtectedRoute>
         ),
@@ -78,16 +76,8 @@ const router = createBrowserRouter([
       {
         path: "/admin/users",
         element: (
-          <ProtectedRoute screen="admin.users">
+          <ProtectedRoute permission="users.manage">
             <AdminUsersPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "/admin/profiles",
-        element: (
-          <ProtectedRoute screen="admin.profiles">
-            <AdminProfilesPage />
           </ProtectedRoute>
         ),
       },

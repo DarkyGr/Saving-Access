@@ -54,9 +54,6 @@ def _make_sqlite_session() -> Session:
         connect_args={"check_same_thread": False},
     )
     User.__table__.create(bind=engine, checkfirst=True)
-    from app.models import Profile as _Pf, UserProfile as _UPf
-    _Pf.__table__.create(bind=engine, checkfirst=True)
-    _UPf.__table__.create(bind=engine, checkfirst=True)
     from app.models import RefreshToken as _RT  # noqa: E402
     _RT.__table__.create(bind=engine, checkfirst=True)
     TestSession = sessionmaker(bind=engine, autocommit=False, autoflush=False)
@@ -71,9 +68,6 @@ def sqlite_engine():
         connect_args={"check_same_thread": False},
     )
     User.__table__.create(bind=engine, checkfirst=True)
-    from app.models import Profile as _Pf, UserProfile as _UPf
-    _Pf.__table__.create(bind=engine, checkfirst=True)
-    _UPf.__table__.create(bind=engine, checkfirst=True)
     from app.models import RefreshToken as _RT  # noqa: E402
     _RT.__table__.create(bind=engine, checkfirst=True)
     yield engine

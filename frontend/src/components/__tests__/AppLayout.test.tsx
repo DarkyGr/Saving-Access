@@ -59,8 +59,8 @@ describe("AppLayout", () => {
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
   });
 
-  it("shows only the screens a User's profile permits", async () => {
-    vi.spyOn(apiClient, "get").mockResolvedValue({ data: { permissions: ["credentials"] } });
+  it("shows only the screens the user's permissions allow", async () => {
+    vi.spyOn(apiClient, "get").mockResolvedValue({ data: { permissions: ["credentials.view"] } });
     renderLayout(userToken);
     expect(await screen.findByRole("link", { name: "My Credentials" })).toBeInTheDocument();
     expect(apiClient.get).toHaveBeenCalledWith("/api/profile/permissions");
@@ -69,12 +69,22 @@ describe("AppLayout", () => {
     expect(screen.getByTestId("current-user")).toHaveTextContent("alice");
   });
 
-  it("shows admin links to an Admin without calling the permissions API", async () => {
-    const get = vi.spyOn(apiClient, "get");
+  it("asks the API for an Admin too and shows what it grants (no bypass)", async () => {
+    const get = vi.spyOn(apiClient, "get").mockResolvedValue({
+      data: { permissions: ["credentials.view", "credentials.create", "users.manage"] },
+    });
     renderLayout(adminToken);
     expect(await screen.findByRole("link", { name: "Manage Users" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Profiles" })).toBeInTheDocument();
-    expect(get).not.toHaveBeenCalled();
+    expect(screen.getByRole("link", { name: "Save Credential" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Profiles" })).not.toBeInTheDocument();
+    expect(get).toHaveBeenCalledWith("/api/profile/permissions");
+  });
+
+  it("hides the admin link from an Admin token the API no longer grants", async () => {
+    vi.spyOn(apiClient, "get").mockResolvedValue({ data: { permissions: ["credentials.view"] } });
+    renderLayout(adminToken);
+    expect(await screen.findByRole("link", { name: "My Credentials" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Manage Users" })).not.toBeInTheDocument();
   });
 
   it("logout clears the session and returns to /login", async () => {

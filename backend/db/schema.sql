@@ -178,6 +178,14 @@ ALTER TABLE users ADD COLUMN last_verification_reminder_days SMALLINT;
 
 UPDATE alembic_version SET version_num='0005_verification_reminders' WHERE alembic_version.version_num = '0004_email_verification';
 
+-- Running upgrade 0005_verification_reminders -> 0006_retire_profiles
+
+DROP TABLE user_profiles;
+
+DROP TABLE profiles;
+
+UPDATE alembic_version SET version_num='0006_retire_profiles' WHERE alembic_version.version_num = '0005_verification_reminders';
+
 COMMIT;
 
 

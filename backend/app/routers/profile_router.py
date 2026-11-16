@@ -1,14 +1,14 @@
 """
-Profile router — exposes the current user's permitted screens.
+Profile router — the current user's role and permissions.
 
 Endpoints:
   GET  /api/profile/permissions        → 200 {"role": str, "permissions": list[str]}
   POST /api/profile/verification-email → 202, sends a new verification email
                                          (spec Phase 2, Requirement 2.8)
 
-Used by the frontend ``ProtectedRoute`` and navigation header to decide which
-screens a User-role account may open (Requirements 3.4, 3.6).  Admin accounts
-receive ``["*"]``.
+Used by the frontend ``ProtectedRoute`` and menu to decide which screens the
+user may open (Requirement 3.5). The list is explicit for every role, Admin
+included (task 37.1); the role is the one stored now, not the token's.
 """
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
@@ -25,7 +25,7 @@ from app.services.email_verification_service import (
     EmailVerificationService,
     build_verification_email,
 )
-from app.services.profile_service import ProfileService
+from app.permissions import permissions_for
 from app.utils.audit_columns import utc_date_time
 
 router = APIRouter()
@@ -39,21 +39,20 @@ class PermissionsResponse(BaseModel):
 @router.get(
     "/permissions",
     response_model=PermissionsResponse,
-    summary="List the screens the current user may access",
+    summary="The current user's role and permissions",
 )
 def get_my_permissions(
     claims: dict = Depends(get_current_claims),
     db: Session = Depends(get_db),
 ) -> PermissionsResponse:
-    try:
-        permissions = ProfileService(db).get_user_permissions(claims["user_id"])
-    except ValueError:
+    user = db.query(User.role).filter(User.user_id == claims["user_id"]).first()
+    if user is None:
         # User deleted after the token was issued.
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated.",
-        ) from None
-    return PermissionsResponse(role=claims.get("role", ""), permissions=permissions)
+        )
+    return PermissionsResponse(role=user.role, permissions=sorted(permissions_for(user.role)))
 
 
 class ResendVerificationRequest(BaseModel):

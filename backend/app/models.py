@@ -3,8 +3,6 @@ SQLAlchemy ORM models for the password manager application.
 
 Maps every table and column defined in the ERD:
   - users
-  - profiles
-  - user_profiles
   - credentials
   - audit_log
 
@@ -22,13 +20,11 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
-    JSON,
     LargeBinary,
     SmallInteger,
     String,
     Time,
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -38,7 +34,7 @@ class Base(DeclarativeBase):
 
 
 # ---------------------------------------------------------------------------
-# Mixin: the six audit columns shared by users, profiles, user_profiles,
+# Mixin: the six audit columns shared by users,
 # and credentials (Requirement 9.8)
 # ---------------------------------------------------------------------------
 
@@ -96,12 +92,6 @@ class User(AuditColumnsMixin, Base):
     )
 
     # Relationships
-    user_profiles = relationship(
-        "UserProfile",
-        back_populates="user",
-        foreign_keys="UserProfile.user_id",
-        cascade="all, delete-orphan",
-    )
     credentials = relationship(
         "Credential",
         back_populates="user",
@@ -112,74 +102,6 @@ class User(AuditColumnsMixin, Base):
         "AuditLog",
         back_populates="user",
         foreign_keys="AuditLog.user_id",
-    )
-
-
-# ---------------------------------------------------------------------------
-# profiles
-# ---------------------------------------------------------------------------
-
-class Profile(AuditColumnsMixin, Base):
-    """
-    Named permission sets that control which application screens a User
-    role may access.
-    Requirement 9.2 — columns: profile_id, profile_name, permitted_screens
-    + Audit_Columns.
-    """
-
-    __tablename__ = "profiles"
-
-    profile_id = Column(Integer, primary_key=True, autoincrement=True)
-    profile_name = Column(String(64), nullable=False, unique=True)
-    # JSONB stores the list of permitted screen keys, e.g. ["credentials", "credentials.new"]
-    # JSON variant lets the same model run on SQLite in tests.
-    permitted_screens = Column(
-        JSONB().with_variant(JSON(), "sqlite"), nullable=False, default=list
-    )
-
-    # Relationships
-    user_profiles = relationship(
-        "UserProfile",
-        back_populates="profile",
-        cascade="all, delete-orphan",
-    )
-
-
-# ---------------------------------------------------------------------------
-# user_profiles
-# ---------------------------------------------------------------------------
-
-class UserProfile(AuditColumnsMixin, Base):
-    """
-    Junction table mapping users to profiles (many-to-many).
-    Requirement 9.3 — columns: user_profile_id, user_id FK, profile_id FK
-    + Audit_Columns.
-    """
-
-    __tablename__ = "user_profiles"
-
-    user_profile_id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(
-        Integer,
-        ForeignKey("users.user_id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    profile_id = Column(
-        Integer,
-        ForeignKey("profiles.profile_id", ondelete="CASCADE"),
-        nullable=False,
-    )
-
-    # Relationships
-    user = relationship(
-        "User",
-        back_populates="user_profiles",
-        foreign_keys=[user_id],
-    )
-    profile = relationship(
-        "Profile",
-        back_populates="user_profiles",
-        foreign_keys=[profile_id],
     )
 
 

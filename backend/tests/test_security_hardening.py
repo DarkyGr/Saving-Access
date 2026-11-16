@@ -28,9 +28,8 @@ from sqlalchemy.orm import Session, sessionmaker  # noqa: E402
 from app import security  # noqa: E402
 from tests.conftest import make_test_engine  # noqa: E402
 from app.main import app  # noqa: E402
-from app.models import AuditLog, Credential, Profile, RefreshToken, User, UserProfile  # noqa: E402
+from app.models import AuditLog, Credential, RefreshToken, User  # noqa: E402
 from app.rate_limit import limiter  # noqa: E402
-from app.seed import seed_default_profiles  # noqa: E402
 from app.services.audit_service import AuditService  # noqa: E402
 
 _ENGINE = make_test_engine()  # PostgreSQL when TEST_DATABASE_URL is set
@@ -57,10 +56,9 @@ def client():
 @pytest.fixture(autouse=True)
 def _clean_db():
     with _Session() as db:
-        for model in (RefreshToken, AuditLog, Credential, UserProfile, Profile, User):
+        for model in (RefreshToken, AuditLog, Credential, User):
             db.query(model).delete()
         db.commit()
-        seed_default_profiles(db)
     yield
 
 

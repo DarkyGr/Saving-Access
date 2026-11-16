@@ -5,8 +5,7 @@ Responsibilities:
   - Instantiate the FastAPI app
   - Register CORSMiddleware with allowed origins from CORS_ORIGINS env var
   - Register global exception handlers for 401, 403, 404, 422, and 500
-  - On startup validate security settings and seed default profiles
-    (the schema itself is managed by Alembic)
+  - On startup validate security settings (the schema is managed by Alembic)
 
 Requirements 8.4 (HTTPS / CORS) and 8.6 (ORM / parameterized queries).
 """
@@ -38,28 +37,16 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    """Startup checks and seed data.
+    """Startup checks.
 
     - Refuse to start with missing or weak secrets (task 31.1).
     - The schema is managed by Alembic (``alembic upgrade head``, task 31.6);
-      the app no longer creates tables itself.
-    - Seed the default profiles (idempotent).
+      the app never creates tables itself. Permissions come from the role
+      (``app/permissions.py``), so there is no seed data (task 37.1).
     """
-    from app.database import SessionLocal
     from app.security import validate_settings
-    from app.seed import seed_default_profiles
 
     validate_settings()
-
-    db = SessionLocal()
-    try:
-        seed_default_profiles(db)
-    except Exception:  # noqa: BLE001 — e.g. migrations not applied yet
-        logger.exception(
-            "Could not seed default profiles. Did you run 'alembic upgrade head'?"
-        )
-    finally:
-        db.close()
     yield
 
 

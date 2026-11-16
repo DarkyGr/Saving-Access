@@ -4,7 +4,6 @@
     "credentials": "My Credentials",
     "saveCredential": "Save Credential",
     "adminUsers": "Manage Users",
-    "adminProfiles": "Profiles",
     "logout": "Log Out",
     "login": "Log In",
     "signup": "Sign Up"
@@ -143,38 +142,18 @@
   },
   "admin": {
     "usersPageTitle": "Manage Users",
-    "profilesPageTitle": "Permission Profiles",
     "tableHeaderUser": "Username",
     "tableHeaderEmail": "Email",
     "tableHeaderRole": "Role",
-    "tableHeaderProfile": "Assigned Profile",
-    "tableHeaderActions": "Actions",
-    "assignProfileLabel": "Assign Profile",
-    "assignProfileButton": "Assign",
-    "assignProfileSuccess": "Profile assigned successfully.",
-    "assignProfileError": "Failed to assign profile. Please try again.",
     "noUsers": "No users found.",
-    "noProfileAssigned": "None",
-    "noProfileOption": "— No profile —",
-    "profileNameLabel": "Profile Name",
-    "permittedScreensLabel": "Permitted Screens",
-    "noProfiles": "No profiles defined."
-  },
-  "adminProfiles": {
-    "description": "Profiles control which screens a User role can access. Assign a profile to a user on the Manage Users page.",
-    "adminNote": "Admin accounts always have full access to every screen and are not subject to profile restrictions.",
-    "profileId": "ID: {{id}}",
-    "permittedScreensLabel": "Permitted Screens",
-    "allScreensTitle": "All Available Screens",
-    "screenKeyHeader": "Screen Key",
-    "screenDescriptionHeader": "Description",
-    "screenNames": {
-      "credentials": "View & Search Credentials",
-      "credentials.new": "Save New Credential",
-      "credentials.edit": "Edit Credential",
-      "credentials.delete": "Delete Credential",
-      "admin.users": "Manage Users",
-      "admin.profiles": "Permission Profiles"
+    "changeRoleLabel": "Change the role of {{username}}",
+    "changeRoleSuccess": "Role updated.",
+    "changeRoleError": "Could not change the role. Please try again.",
+    "ownRoleLocked": "You cannot change your own role.",
+    "youBadge": "(you)",
+    "roles": {
+      "User": "User",
+      "Admin": "Admin"
     }
   },
   "forbidden": {

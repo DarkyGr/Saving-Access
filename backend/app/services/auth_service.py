@@ -162,13 +162,9 @@ class AuthService:
         self._db.commit()
         self._db.refresh(user)
 
-        # Back-fill creation_user_id with the new user's own id
+        # Back-fill creation_user_id with the new user's own id. The User role
+        # alone grants the vault permissions (Requirement 3.2, task 37.1).
         user.creation_user_id = user.user_id
-        # Give the account a usable profile (Requirement 3.4); without one
-        # a new User could not open any screen.
-        from app.seed import assign_default_profile
-
-        assign_default_profile(self._db, user.user_id)
         self._db.commit()
         self._db.refresh(user)
 

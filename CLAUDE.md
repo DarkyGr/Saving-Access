@@ -13,7 +13,7 @@ Reglas:
 - Tareas nuevas que no estaban en Kiro van como secciones nuevas al final de `tasks.md` (numeración 30+), referenciando requisitos.
 - Si un cambio contradice `design.md`, actualiza `design.md` en el mismo commit y explica por qué en el mensaje.
 - `tasks.meta.json` y `.config.kiro` son metadatos de Kiro: no editarlos a mano.
-- Estado (2026-11-14): tareas 1–34 hechas; la 35 es el backlog (35.1 y 35.2 omitidas por el dueño); la 36 es la instalación local en Windows (falta que el dueño corra los pasos de administrador). Las funciones nuevas de 35.5–35.8 necesitan requisitos en `requirements.md` y diseño en `design.md` antes de implementarse.
+- Estado (2026-11-16): tareas 1–34 hechas; la 35 es el backlog (35.1 y 35.2 omitidas; 35.5 y 35.6 pasaron a 37.5); la 36 es la instalación local en Windows (instalada; falta la prueba en el celular); la 37 trae lo de Savings Tool en el orden 37.1 → 37.6 (37.1 roles y permisos, hecha). Decisiones del dueño: registro abierto, 2FA obligatorio para todos, la contraseña se pide en cada revelar/editar/borrar, un solo rol por persona (User o Admin). Las funciones nuevas de 35.5–35.8 necesitan requisitos en `requirements.md` y diseño en `design.md` antes de implementarse.
 
 ## Stack
 
@@ -74,6 +74,7 @@ make up / make down / make test-backend / make test-frontend / make lint
 
 - Commits: Conventional Commits (`feat(frontend): …`, `fix(backend): …`, `test: …`, `docs(tasks): …`).
 - Toda operación sensible (save/reveal/edit/delete) re-verifica la contraseña de cuenta y escribe en `audit_log`.
+- Permisos: cada endpoint pide un permiso de `app/permissions.py` con `require_permission(...)`; nada de excepciones por rol. Un permiso nuevo se agrega ahí, al rol que corresponde y a `tests/test_permissions.py`. Ningún rol ve las credenciales de otra persona.
 - El JWT vive solo en memoria (nunca localStorage/cookies legibles por JS).
 - Todo texto de UI va por `t()`; cualquier clave nueva se añade a `en.json` y `es.json`.
 - Contratos de API: si el frontend llama a un endpoint, el backend debe tenerlo registrado y con test de integración.

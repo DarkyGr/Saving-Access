@@ -71,19 +71,21 @@ The system supports two roles — User and Admin — with a profile/permission s
 
 ---
 
-### Requirement 3: Role and Profile Management
+### Requirement 3: Roles and Permissions
 
-**User Story:** As an Admin, I want to assign profiles and permissions to users, so that I can control which screens each user role can access.
+*(Revised 2026-11-15, task 37.1, by the owner's decision: one role per account, only ordinary users and the administrator are kept apart. The Kiro profile model — named lists of screens assigned per user — was retired.)*
+
+**User Story:** As the Admin, I want every account to have one role that grants a fixed set of per-action permissions, so that ordinary users and the administrator are kept apart and nothing is allowed by accident.
 
 #### Acceptance Criteria
 
-1. THE System SHALL support exactly two roles: `User` and `Admin`.
-2. THE System SHALL provide an Admin-only profile assignment page where an Admin can assign a Profile to any User account.
-3. WHEN an Admin assigns or modifies a Profile, THE Backend SHALL update the user's permission set and record the change in Audit_Columns.
-4. WHILE a user is logged in with the `User` role, THE System SHALL restrict navigation to only the screens permitted by the user's assigned Profile.
-5. WHILE a user is logged in with the `Admin` role, THE System SHALL grant access to all application screens and all CRUD operations on all records.
-6. IF a User attempts to access a screen not permitted by their Profile, THEN THE System SHALL return a 403 Forbidden response and redirect to the user's permitted home screen.
-7. THE System SHALL include an Admin page listing all users with their currently assigned Profile, allowing the Admin to reassign Profiles.
+1. THE System SHALL support exactly two roles, `User` and `Admin`, and every account SHALL have exactly one of them.
+2. THE Backend SHALL define each role's permissions in code as named per-action permissions: `User` → `credentials.view`, `credentials.create`, `credentials.edit`, `credentials.delete`, `credentials.reveal`; `Admin` → the same plus `users.manage` (later phases add administration permissions to `Admin` only).
+3. THE Backend SHALL require a named permission on every non-public endpoint and SHALL deny any action whose permission the caller's role does not grant (deny by default, with no role bypass). THE role SHALL be read from the database on every request, so a role change applies to the next request.
+4. THE System SHALL keep credentials private to their owner: no role, including `Admin`, SHALL list, reveal, edit or delete another account's credentials (Property 10).
+5. THE Frontend SHALL show only the menu entries and screens whose permission the user holds; IF a user opens a screen without its permission, THEN THE System SHALL return 403 Forbidden and show the "no permission" page.
+6. THE System SHALL provide an Admin page listing all users with their role, where the Admin can change another account's role; THE Backend SHALL record the change in the user's Audit_Columns.
+7. THE Admin SHALL NOT be able to change their own role, so at least one `Admin` always remains. New sign-ups SHALL get the `User` role; the first `Admin` is created with the command-line tool.
 
 ---
 
@@ -235,3 +237,68 @@ The system supports two roles — User and Admin — with a profile/permission s
 1. THE System repository SHALL include a `requirements.md` file capturing all functional and non-functional requirements.
 2. THE System repository SHALL include a `README.md` file that describes all application screens and user workflows in simplified, user-facing language without exposing internal security implementation details.
 3. THE System repository SHALL include a `ARCHITECTURE.md` file that explains the technical flow from Database through Backend to Frontend, including the encryption lifecycle, authentication flow, and database schema overview.
+
+---
+
+## Planned requirements (task 37, decided by the owner on 2026-11-15)
+
+The owner's decisions behind them: sign-up stays **open**; two-factor authentication is **mandatory for everyone**; the account password is still asked on **every** reveal, edit and delete of a credential, while the session itself stays open for several minutes with idle and maximum limits; **one role per account** (User or Admin); phases in the order 37.1 → 37.6.
+
+### Requirement 13: Application Shell and Interface Patterns (task 37.2)
+
+**User Story:** As a user, I want a clear menu and consistent forms and lists, so that the application is easy to use on the laptop and on the phone.
+
+#### Acceptance Criteria
+
+1. THE Frontend SHALL show a side menu grouped by section (Home, Vault, Administration, Help), declared in one place with the permission of each entry; on wide screens it SHALL collapse to icons and remember that per device; on screens narrower than 768 px it SHALL open as a drawer.
+2. THE Frontend SHALL show an account menu (avatar, display name, user ID) with Settings and Sign out.
+3. THE Frontend SHALL provide a Home screen with the number of saved credentials and the most recently changed ones.
+4. Every list SHALL have accent-insensitive search, relevant filters, pagination with "X–Y of Z" and page sizes 10/20/30/50/100, distinct messages for "no data" and "no results", and a list/grid toggle saved in the account where the list is the main content.
+5. Every form SHALL mark required fields with an asterisk, show help in an info tooltip, show validation errors below the field (red border and focus on the first invalid field) in the application language, open clean on each visit, confirm destructive actions, and explain why a disabled button is disabled.
+
+### Requirement 14: Appearance and Personal Settings (task 37.3)
+
+**User Story:** As a user, I want to adjust how the application looks and manage my own account, so that it fits me.
+
+#### Acceptance Criteria
+
+1. THE System SHALL provide a Settings screen in the account menu with Profile (display name, avatar from 12 built-in icons or an uploaded picture validated and re-encoded, accent color, read-only immutable user ID `SP-XXXXXX`), Preferences (language, theme, start page, email notices), Password and Active sessions.
+2. THE Frontend SHALL support light, dark and system themes and six accent colors, saved in the account and applied before the page paints.
+3. THE Frontend SHALL offer a private mode (eye button in the top bar) that hides usernames and emails in lists; the choice is saved in the account.
+4. WHEN a user changes their password, THE Backend SHALL require the current password, apply the password policy, revoke the user's other sessions and send a security notice by email.
+5. THE Settings screen SHALL list the user's active sessions (device, last activity) and let the user end any of them.
+
+### Requirement 15: User Administration and Audit View (task 37.4)
+
+**User Story:** As the Admin, I want to manage accounts and see what happened, so that I can keep the system safe.
+
+#### Acceptance Criteria
+
+1. THE Admin users page SHALL search by name, email or user ID and filter by role and status (active, deactivated, locked, unverified).
+2. THE Admin SHALL be able to deactivate an account with a reason (the account's sessions are revoked and an email with the reason is sent), reactivate it, unlock it and reset its two-factor authentication; every action SHALL be recorded.
+3. THE Admin SHALL NOT be able to deactivate their own account.
+4. THE System SHALL provide an audit view (Admin only) of who did what and when, with filters; it SHALL never show passwords or credential contents.
+
+### Requirement 16: Account Security and System Parameters (task 37.5)
+
+**User Story:** As a user, I want strong protection of my account, so that nobody else can reach my passwords.
+
+#### Acceptance Criteria
+
+1. THE System SHALL require two-factor authentication (TOTP) for every account: an account without it SHALL set it up right after its first successful password check, before reaching any other screen; setup SHALL issue 10 one-time recovery codes and the user SHALL be warned when 3 or fewer remain.
+2. IF the password or the second-step code fails a configurable number of times in a row (default 5), THEN THE System SHALL lock the account and email the owner; it SHALL unlock by a one-time emailed link, by a valid TOTP or recovery code, by a password reset or by the Admin.
+3. THE System SHALL offer "forgot password": a one-time emailed link valid for 1 hour that sets a new password, revokes every session and does not skip the second step.
+4. THE System SHALL close a session after a configurable idle time and after a configurable maximum duration, warning one minute before with "Stay signed in" (idle) or "Extend N min" (maximum); activity in any tab counts for all tabs.
+5. THE System SHALL keep asking for the account password on every reveal, edit and delete of a credential (Requirements 5–7); administration actions SHALL ask for it at most once per configurable window (default 5 minutes, 0 = every time).
+6. WHEN a revealed password is copied, THE Frontend SHALL clear the clipboard after 30 seconds if it still holds that password.
+7. THE System SHALL email a security notice on every change of password, two-factor setup or recovery codes.
+8. THE System SHALL provide an Admin "System parameters" screen for the security values above (each with its range and suggested value), sign-up email verification on/off and outgoing email (SMTP) with a test button; the SMTP password SHALL be stored encrypted and never shown again.
+
+### Requirement 17: In-App Help (task 37.6)
+
+**User Story:** As a user, I want help inside the application, so that I do not depend on the repository documentation.
+
+#### Acceptance Criteria
+
+1. THE Frontend SHALL include a user guide (English and Spanish) with an index, accent-insensitive search with highlighting and a copyable link per section.
+2. THE Admin SHALL also see a technical guide.

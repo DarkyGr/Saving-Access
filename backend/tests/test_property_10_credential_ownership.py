@@ -96,8 +96,7 @@ def _disable_fk(dbapi_conn, _record):
     dbapi_conn.execute("PRAGMA foreign_keys = OFF")
 
 
-# Create only the tables used by this test.  Profile/UserProfile use JSONB
-# (PostgreSQL-only) and are deliberately excluded.
+# Create only the tables used by this test.
 User.__table__.create(bind=_SQLITE_ENGINE, checkfirst=True)
 Credential.__table__.create(bind=_SQLITE_ENGINE, checkfirst=True)
 AuditLog.__table__.create(bind=_SQLITE_ENGINE, checkfirst=True)

@@ -355,8 +355,8 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
     - _Requirements: 9.9_
   - [ ] 35.3 Monitoring and alerts: external check of `/api/health`, alert when a backup or reminder run fails, log retention
   - [ ] 35.4 GitHub Actions: move `actions/checkout`, `setup-python`, `setup-node`, `upload-artifact` to releases that run on Node 24 (Node 20 is deprecated on the runners)
-  - [ ] 35.5 "Forgot password": email reset link (one-time, short-lived), revokes refresh tokens; works because credentials are encrypted with the server key, not with the account password
-  - [ ] 35.6 Two-factor authentication (TOTP) at login, with recovery codes
+  - [ ] 35.5 → moved to 37.5. "Forgot password": email reset link (one-time, short-lived), revokes refresh tokens; works because credentials are encrypted with the server key, not with the account password
+  - [ ] 35.6 → moved to 37.5. Two-factor authentication (TOTP) at login, with recovery codes
   - [ ] 35.7 Password generator on the Save / Edit credential pages
   - [ ] 35.8 Self-service: export my credentials (re-entering the account password, audited) and delete my account
   - [ ] 35.9 Decide the encryption model: today the server decrypts with `FERNET_KEY` (database + key leak exposes every password). Client-side encryption with a key derived from the account password (zero-knowledge) would remove that risk but rules out 35.5 and needs a redesign — decide before real users
@@ -374,6 +374,20 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - [x] 36.6 Tools: `update-ip.cmd`, `reset-postgres-password.cmd`, `with-production.ps1`, `00-check.ps1`; development start/stop with one double click (`ops/local`, auto-stop after 30 min); dev ports only on 127.0.0.1, database on 5436 (5432 is a native service)
   - [x] 36.7 Rehearsed without administrator rights (two releases, API from the installed folder, privileges, backup + restore test, CLI); `tests/test_local_install.py`, client-IP tests
   - [ ] 36.8 Owner runs the administrator steps on the laptop (01, 02–05) and tests on the laptop and the phone
+
+- [ ] 37. Bring Savings Tool's administration, screens and personal settings to Save-Pass (owner's decisions of 2026-11-15: open sign-up, mandatory 2FA, password still asked on every credential reveal/edit/delete with idle and maximum session limits, one role per account, order 37.1 → 37.6)
+  - [x] 37.1 Per-action permissions with two fixed roles: `app/permissions.py`, every endpoint asks for one (no Admin bypass, role read from the database), profiles retired (migration 0006), Admin page changes roles (not their own), menu and routes by permission
+    - _Requirements: 3.1–3.7_
+  - [ ] 37.2 Application shell and interface patterns: grouped side menu (collapsible, drawer on the phone), account menu, Home, lists with search / filters / pagination / list-grid, form patterns
+    - _Requirements: 13.1–13.5_
+  - [ ] 37.3 Appearance and personal settings: Settings screen (profile, preferences, password, active sessions), light/dark/system theme, accent colors, avatar, private mode, user ID `SP-XXXXXX`
+    - _Requirements: 14.1–14.5_
+  - [ ] 37.4 User administration and audit view: search and filters, deactivate with reason, reactivate, unlock, reset 2FA, audit view
+    - _Requirements: 15.1–15.4_
+  - [ ] 37.5 Account security and system parameters: mandatory TOTP with recovery codes, lockout and unlock, forgot password, idle and maximum session limits with warning and extend, re-authentication window for administration, clipboard clearing, security emails, System parameters screen (absorbs 35.5 and 35.6)
+    - _Requirements: 16.1–16.8_
+  - [ ] 37.6 In-app help: user guide with search, technical guide for the Admin
+    - _Requirements: 17.1–17.2_
 
 ## Notes
 

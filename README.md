@@ -26,7 +26,7 @@ A full-stack secure password manager web application. Users can store, search, r
 - **Password confirmation prompt** — every sensitive operation (save, reveal, edit, delete) requires re-entering the account password.
 - **Timed password reveal** — revealed passwords are automatically masked after 60 seconds.
 - **Search** — case-insensitive partial match on website name or email/username.
-- **Role-based access control** — two roles (User, Admin) with a profile/permissions system. Admins control which screens each user can access.
+- **Role-based access control** — one role per account (User or Admin), each with fixed per-action permissions; the Admin manages accounts but never sees anyone else's passwords.
 - **Audit log** — every INSERT, SELECT, UPDATE, and DELETE is recorded with the user and timestamp.
 - **Internationalization** — English (default) and Spanish, switchable without reloading the page.
 - **Responsive** — works from 320 px mobile to 1920 px desktop.
@@ -93,7 +93,7 @@ The backend API is available at `http://localhost:8000`. Interactive API docs at
 
 ### 5. Create the first Admin
 
-On startup the backend seeds two permission profiles: **Basic** (view/search only) and **Full** (view, save, edit, delete). Every new sign-up gets **Full** by default (change with the `DEFAULT_PROFILE` env var).
+Every new sign-up is a **User** (view, save, edit, delete and reveal their own credentials). An **Admin** also manages accounts and roles; the first one is created with `python -m app.cli create-admin`.
 
 Admin accounts cannot be created from the sign-up page. Create the first one from the command line:
 
@@ -191,7 +191,6 @@ alembic upgrade head
 | `JWT_ALGORITHM` | JWT signing algorithm | `HS256` |
 | `JWT_EXPIRE_MINUTES` | Token lifetime in minutes | `15` |
 | `CORS_ORIGINS` | Comma-separated list of allowed frontend origins | `http://localhost:5173` |
-| `DEFAULT_PROFILE` | Profile assigned to every new sign-up (empty = none) | `Full` |
 | `REFRESH_EXPIRE_HOURS` | How long a login lasts without re-entering the password | `8` |
 | `COOKIE_SECURE` / `COOKIE_SAMESITE` | Refresh cookie flags | `true` / `strict` |
 | `RATE_LIMIT_ENABLED` / `RATE_LIMIT_STORAGE` | Rate limiting on/off and its store (Redis in production, shared by all workers) | `true` / `memory://` |
@@ -238,7 +237,7 @@ make test-backend
 ```
 
 The backend test suite includes:
-- Unit tests for `AuthService`, `EncryptorService`, `ProfileService`, and `AuditService`.
+- Unit tests for `AuthService`, `EncryptorService`, `AuditService` and the role permissions.
 - Property-based tests (Hypothesis) covering 14 correctness properties with 100–200 iterations each (ownership isolation, search filter correctness, wrong-password rejection, encryption invariant, etc.).
 - Integration tests for full credential lifecycle and admin permission flow.
 
@@ -258,7 +257,7 @@ make test-e2e
 # first time only: cd frontend && npx playwright install chromium
 ```
 
-Playwright starts its own backend (port 8001, throwaway SQLite database — or a disposable PostgreSQL database given in `E2E_POSTGRES_URL`) and frontend (port 5174), then drives a real browser through sign-up, login, save, search, reveal, edit, delete, language switch, logout and the admin profile assignment. No mocks and no Docker required.
+Playwright starts its own backend (port 8001, throwaway SQLite database — or a disposable PostgreSQL database given in `E2E_POSTGRES_URL`) and frontend (port 5174), then drives a real browser through sign-up, login, save, search, reveal, edit, delete, language switch, logout and the admin role change. No mocks and no Docker required.
 
 ---
 
@@ -279,15 +278,15 @@ save-pass/
 │
 ├── backend/
 │   ├── app/
-│   │   ├── main.py            # FastAPI app, lifespan (settings check + seed), CORS, error handlers
+│   │   ├── main.py            # FastAPI app, lifespan (settings check), CORS, error handlers
 │   │   ├── security.py        # Settings validation, bcrypt hashing, PyJWT encode/decode
 │   │   ├── rate_limit.py      # slowapi limiter and limits
 │   │   ├── models.py          # SQLAlchemy ORM models
 │   │   ├── database.py        # Engine and session factory
-│   │   ├── seed.py            # Default profiles (Basic, Full) + default profile on sign-up
-│   │   ├── cli.py             # python -m app.cli seed | create-admin | promote
+│   │   ├── permissions.py     # Permission names and what each role grants
+│   │   ├── cli.py             # python -m app.cli create-admin | promote | verify-email | ...
 │   │   ├── routers/           # auth, credentials, admin, profile
-│   │   ├── services/          # Auth, Encryptor, Profile, Audit, RefreshToken services
+│   │   ├── services/          # Auth, Encryptor, Audit, RefreshToken, email services
 │   │   ├── middleware/        # require_permission / require_admin / get_current_claims
 │   │   └── utils/             # audit_columns helpers, email validator
 │   ├── migrations/            # Alembic migrations — the schema's source of truth
@@ -301,7 +300,7 @@ save-pass/
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/             # Login, SignUp, ViewSearch, SaveCredential, EditCredential, AdminUsers, AdminProfiles, Forbidden
+│   │   ├── pages/             # Login, SignUp, ViewSearch, SaveCredential, EditCredential, AdminUsers, VerifyEmail, Forbidden
 │   │   ├── components/        # AppLayout, SessionBootstrap, ProtectedRoute, PasswordInput, modals, LanguageToggle
 │   │   ├── hooks/             # useVisibilityTimer
 │   │   ├── context/           # AuthContext (access token in memory only)
@@ -364,15 +363,11 @@ Pre-populated form with the existing credential data. The password field is mask
 
 ### Admin — Users (`/admin/users`) *(Admin only)*
 
-Lists all registered users with their currently assigned profile. Provides a dropdown per row to reassign profiles.
-
-### Admin — Profiles (`/admin/profiles`) *(Admin only)*
-
-Displays all available profiles and the screens each one permits.
+Lists all registered users with their role (User or Admin). A dropdown per row changes another user's role; your own row is locked so there is always an Admin. The Admin never sees other users' passwords.
 
 ### 403 Forbidden (`/403`)
 
-Shown when a User attempts to access a screen not covered by their profile.
+Shown when someone opens a screen their role does not allow (for example a User opening the user administration).
 
 ---
 
@@ -412,7 +407,6 @@ Technical details: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 | `make lint` | ruff + eslint |
 | `make smoke-prod` | Build and smoke-test the production stack locally (Docker) |
 | `make backup` | Take a production backup now |
-| `make seed` | Seed default profiles (Docker) |
 | `make create-admin USERNAME=.. EMAIL=..` | Create an Admin account (Docker) |
 | `make install-backend` | Install Python dependencies locally (no Docker) |
 | `make install-frontend` | Install Node.js dependencies locally (no Docker) |
@@ -438,11 +432,13 @@ All tasks from the Kiro plan (1–29) and the follow-up phases (30–34) are don
 | Deployment | `.env.prod` not git-ignored; health check pointed to a missing endpoint; CI broke on Ubuntu 26 | Ignored, `/api/health` added, runners pinned (32.6, 32.2) |
 | Spec Phase 2 | Email verification, deactivation and CAPTCHA not implemented | Done, with reminders (33, 34.4) |
 | Operations | No backups; rate limits per process | Daily backups + restore script; Redis (34.2, 34.3) |
+| Permissions | Per-user screen profiles, an Admin that bypassed every check | One role per account with per-action permissions, no bypass, role read on every request (37.1) |
 | Local use | Dev database clashed with the native PostgreSQL on 5432; no way to run it permanently on the laptop | Dev ports only on 127.0.0.1 (DB 5436); local installation with IIS, backups and per-device limits (36) |
 
-**Pending** (tasks 35–36)
+**Pending** (tasks 35–37)
 
-- Local installation on this laptop: built and rehearsed (task 36); the administrator steps are run by the owner.
+- Local installation on this laptop: installed on 2026-11-15 (task 36); the phone test is left.
+- Task 37 (decided 2026-11-15): bring Savings Tool's screens and settings — side menu and interface patterns, appearance and personal settings, user administration and audit view, mandatory 2FA and session limits, in-app help. 37.1 (roles and permissions) is done.
 - Monitoring and alerts. (A real server and cloud backups were dropped in favour of the local installation.)
 - GitHub Actions on Node 24.
 - Password reset, two-factor authentication, password generator, export and account deletion — outside the original spec.

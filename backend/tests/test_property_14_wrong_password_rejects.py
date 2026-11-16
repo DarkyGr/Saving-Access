@@ -68,14 +68,10 @@ def _make_test_engine():
     def _disable_fk(dbapi_conn, _record):
         dbapi_conn.execute("PRAGMA foreign_keys = OFF")
 
-    # Create only the tables needed for these tests (skip profiles/user_profiles
-    # which use JSONB — a PostgreSQL-only type that SQLite cannot parse).
+    # Create only the tables needed for these tests.
     User.__table__.create(bind=engine, checkfirst=True)
     Credential.__table__.create(bind=engine, checkfirst=True)
     AuditLog.__table__.create(bind=engine, checkfirst=True)
-    from app.models import Profile as _Pf, UserProfile as _UPf  # noqa: E402
-    _Pf.__table__.create(bind=engine, checkfirst=True)
-    _UPf.__table__.create(bind=engine, checkfirst=True)
     from app.models import RefreshToken as _RT  # noqa: E402
     _RT.__table__.create(bind=engine, checkfirst=True)
 
@@ -137,8 +133,8 @@ class _TestFixture:
             "password_confirmation": self.CORRECT_PASSWORD,
         })
 
-        # Override the user's role to Admin so the middleware allows access
-        # without needing a profile row (avoids JSONB table issue on SQLite).
+        # Admin also holds every vault permission (task 37.1); kept from the
+        # original test, which needed it before roles carried permissions.
         self._user.role = "Admin"
         self._db.commit()
         self._db.refresh(self._user)

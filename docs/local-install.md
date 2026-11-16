@@ -57,7 +57,10 @@ Already present on this laptop for Savings Tool: IIS, URL Rewrite 2.1, ARR 3.0,
 ## Update
 
 From an **administrator** terminal: `python scripts\release.py --to Y:\Apps\Save-Pass`.
-It checks the settings, migrates first, stops the API task, swaps `app` (the
+It checks the settings, stops the API task and waits until its Python has
+exited (killing it after 15 s), migrates, swaps `app` (retrying while Windows
+still holds the folder; on failure the previous app is put back and the task
+restarted) (the
 previous one stays in `app.old`), syncs `web\` (new files first, `index.html`
 last, stale files removed; the folder is not renamed because IIS watches it)
 and starts the task again.

@@ -13,11 +13,12 @@ task 36). Same model as Savings Tool's `npm run release`.
      installed for one user under C:\\Users,
   2. the frontend built for the same origin (frontend\\dist-release),
   3. <to>\\app.new with the backend; the settings are checked with the
-     backend's own validate_settings and the migrations applied with the
-     migrator role,
-  4. the API task stopped, app.new swapped in (the previous one stays in
-     app.old), <to>\\web synced (index.html last) with its web.config, the
-     operation jobs copied to <to>\\ops, the task started again.
+     backend's own validate_settings,
+  4. the API task stopped (waiting until its Python has exited), the
+     migrations applied with the migrator role, app.new swapped in (the
+     previous one stays in app.old), <to>\\web synced (index.html last) with
+     its web.config, the operation jobs copied to <to>\\ops, the task started
+     again.
 
 Logs, backups, data and settings in <to> are never touched.
 """
@@ -34,6 +35,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -193,6 +195,58 @@ def schtasks(verb: str) -> bool:
     return subprocess.run(["schtasks", verb, "/TN", TASK], capture_output=True).returncode == 0
 
 
+def installed_python_pids(target: Path) -> list[int]:
+    """Processes running the installation's own Python (the API, a job)."""
+    if os.name != "nt":
+        return []
+    folder = str(target / "python").replace("'", "''")
+    script = (
+        "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | "
+        f"Where-Object {{ $_.ExecutablePath -like '{folder}\\*' }} | "
+        "ForEach-Object { $_.ProcessId }"
+    )
+    out = subprocess.run(["powershell", "-NoProfile", "-Command", script],
+                         capture_output=True, text=True).stdout
+    return [int(x) for x in out.split() if x.isdigit()]
+
+
+def stop_api(target: Path, wait_seconds: float = 30.0) -> bool:
+    """End the API task and wait until its Python has really exited.
+
+    ``schtasks /End`` stops the task's ``cmd /c``; uvicorn under it can take a
+    moment to go, and while it runs Windows will not rename the folder it runs
+    from. After half the wait, whatever is left is killed.
+    """
+    stopped = schtasks("/End")
+    deadline = time.monotonic() + wait_seconds
+    killed = False
+    while (pids := installed_python_pids(target)):
+        if not killed and time.monotonic() > deadline - wait_seconds / 2:
+            for pid in pids:
+                subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)], capture_output=True)
+            killed = True
+        if time.monotonic() > deadline:
+            raise SystemExit(
+                f"The API is still running ({', '.join(map(str, pids))}). "
+                "Run this from an administrator terminal."
+            )
+        time.sleep(0.5)
+    return stopped
+
+
+def rename_with_retry(src: Path, dest: Path, attempts: int = 20, delay: float = 0.5) -> None:
+    """Rename, retrying while Windows still holds the folder (antivirus, a
+    process that is just exiting)."""
+    for attempt in range(attempts):
+        try:
+            src.rename(dest)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(delay)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--to", required=True)
@@ -237,17 +291,30 @@ def main(argv: list[str] | None = None) -> int:
     app_env = {**work_env, **settings}
     print("Checking the settings...")
     run([str(python), "-c", "from app.security import validate_settings; validate_settings()"], cwd=fresh, env=app_env)
+
+    # Stop first, then migrate: the old code never runs on the new schema.
+    print("Stopping the API...")
+    stopped = stop_api(target)
     if not args.skip_migrate:
         print("Applying migrations to the production database...")
         run([str(python), "-m", "alembic", "upgrade", "head"], cwd=fresh,
             env={**app_env, "DATABASE_URL": settings["DATABASE_URL_MIGRATOR"]})
 
-    stopped = schtasks("/End")
     current, old = target / "app", target / "app.old"
     shutil.rmtree(old, ignore_errors=True)
-    if current.exists():
-        current.rename(old)
-    fresh.rename(current)
+    try:
+        if current.exists():
+            rename_with_retry(current, old)
+        rename_with_retry(fresh, current)
+    except PermissionError as exc:
+        if not current.exists() and old.exists():
+            old.rename(current)
+        if stopped:
+            schtasks("/Run")
+        raise SystemExit(
+            f"Could not swap the app folder ({exc}). Close any window or terminal open in "
+            f"{current} and run the release again."
+        ) from None
     sync_web(dist, target / "web", settings["API_PORT"])
     ops = target / "ops"
     shutil.rmtree(ops, ignore_errors=True)

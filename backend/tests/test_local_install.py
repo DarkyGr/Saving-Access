@@ -168,3 +168,61 @@ def test_web_config_is_valid_xml():
     assert [r.get("name") for r in rules] == ["Save-Pass API", "Save-Pass SPA"]
     headers = {h.get("name") for h in root.findall("./system.webServer/httpProtocol/customHeaders/add")}
     assert {"Strict-Transport-Security", "Content-Security-Policy", "X-Frame-Options"} <= headers
+
+
+def test_stop_api_waits_for_the_installed_python_to_exit(tmp_path, monkeypatch):
+    calls = []
+    alive = [[4242], [4242], []]
+    monkeypatch.setattr(release, "schtasks", lambda verb: calls.append(verb) or True)
+    monkeypatch.setattr(release, "installed_python_pids", lambda target: alive.pop(0))
+    monkeypatch.setattr(release.time, "sleep", lambda s: None)
+    assert release.stop_api(tmp_path) is True
+    assert calls == ["/End"] and alive == []
+
+
+def test_stop_api_kills_a_python_that_does_not_exit(tmp_path, monkeypatch):
+    clock = iter(range(0, 1000))
+    killed = []
+    monkeypatch.setattr(release, "schtasks", lambda verb: True)
+    monkeypatch.setattr(release.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(release.time, "sleep", lambda s: None)
+    monkeypatch.setattr(release, "installed_python_pids", lambda target: [] if killed else [77])
+    monkeypatch.setattr(
+        release.subprocess, "run", lambda args, **kw: killed.append(args) or None
+    )
+    assert release.stop_api(tmp_path, wait_seconds=10) is True
+    assert killed and killed[0][:3] == ["taskkill", "/F", "/T"] and killed[0][-1] == "77"
+
+
+def test_stop_api_gives_up_when_the_process_never_goes(tmp_path, monkeypatch):
+    clock = iter(range(0, 1000))
+    monkeypatch.setattr(release, "schtasks", lambda verb: True)
+    monkeypatch.setattr(release.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(release.time, "sleep", lambda s: None)
+    monkeypatch.setattr(release, "installed_python_pids", lambda target: [77])
+    monkeypatch.setattr(release.subprocess, "run", lambda args, **kw: None)
+    with pytest.raises(SystemExit, match="still running"):
+        release.stop_api(tmp_path, wait_seconds=10)
+
+
+def test_rename_with_retry_waits_for_a_locked_folder(tmp_path, monkeypatch):
+    src, dest = tmp_path / "app", tmp_path / "app.old"
+    src.mkdir()
+    real_rename = Path.rename
+    failures = [PermissionError("locked"), PermissionError("locked")]
+
+    def flaky(self, target):
+        if failures:
+            raise failures.pop(0)
+        return real_rename(self, target)
+
+    monkeypatch.setattr(Path, "rename", flaky)
+    monkeypatch.setattr(release.time, "sleep", lambda s: None)
+    release.rename_with_retry(src, dest)
+    assert dest.is_dir() and not src.exists()
+
+    failures.extend([PermissionError("locked")] * 5)
+    other = tmp_path / "other"
+    other.mkdir()
+    with pytest.raises(PermissionError):
+        release.rename_with_retry(other, tmp_path / "x", attempts=3)

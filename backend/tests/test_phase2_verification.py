@@ -347,7 +347,11 @@ def test_open_session_ends_when_deadline_passes(client, outbox):
 
     _set_deadline(utc_today() - timedelta(days=1))
     assert client.post("/api/auth/refresh").status_code == 401
-    assert client.post("/api/profile/verification-email", headers=headers).status_code == 403
+    # The refused refresh ends the session, so its access token stops at once
+    # (task 37.3: the token carries its session as `sid`).
+    r = client.post("/api/profile/verification-email", headers=headers)
+    assert r.status_code == 401
+    assert r.json()["detail"] == "Session expired."
 
 
 def test_verified_account_is_never_deactivated(client, outbox):

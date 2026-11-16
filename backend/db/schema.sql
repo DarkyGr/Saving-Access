@@ -235,6 +235,26 @@ ALTER TABLE refresh_tokens ADD COLUMN client_ip VARCHAR(45);
 
 UPDATE alembic_version SET version_num='0008_settings' WHERE alembic_version.version_num = '0007_user_preferences';
 
+-- Running upgrade 0008_settings -> 0009_user_admin
+
+ALTER TABLE users ADD COLUMN deactivated_at TIMESTAMP WITHOUT TIME ZONE;
+
+ALTER TABLE users ADD COLUMN deactivation_reason VARCHAR(500);
+
+ALTER TABLE audit_log ADD COLUMN action VARCHAR(32);
+
+ALTER TABLE audit_log ADD COLUMN target_user_id INTEGER;
+
+ALTER TABLE audit_log ADD COLUMN detail VARCHAR(64);
+
+ALTER TABLE audit_log ADD CONSTRAINT fk_audit_log_target_user_id FOREIGN KEY(target_user_id) REFERENCES users (user_id);
+
+CREATE INDEX idx_audit_log_date ON audit_log (operation_date, operation_time);
+
+UPDATE audit_log SET action = CASE operation WHEN 'INSERT' THEN 'credential.create' WHEN 'UPDATE' THEN 'credential.edit' WHEN 'DELETE' THEN 'credential.delete' ELSE 'credential.reveal' END;
+
+UPDATE alembic_version SET version_num='0009_user_admin' WHERE alembic_version.version_num = '0008_settings';
+
 COMMIT;
 
 

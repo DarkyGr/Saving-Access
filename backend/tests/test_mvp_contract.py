@@ -127,7 +127,7 @@ def test_profile_permissions_admin_is_an_explicit_list():
     _make_admin("root")
     r = _client.get("/api/profile/permissions", headers=_login("root"))
     assert r.status_code == 200
-    assert r.json() == {"role": "Admin", "permissions": sorted(_VAULT + ["users.manage"])}
+    assert r.json() == {"role": "Admin", "permissions": sorted(_VAULT + ["users.manage", "audit.view"])}
 
 
 # ── B3: GET /api/credentials/{id} ────────────────────────────────────────────
@@ -181,7 +181,8 @@ def test_admin_lists_users_with_their_role():
     assert r.status_code == 200
     roles = {u["username"]: u["role"] for u in r.json()}
     assert roles == {"eve": "User", "root": "Admin"}
-    assert {"user_id", "username", "email", "role", "email_verified"} == set(r.json()[0])
+    assert {"user_id", "username", "email", "role", "email_verified", "user_code", "status"} <= set(r.json()[0])
+    assert "password_hash" not in r.json()[0]
 
 
 def test_user_cannot_reach_admin_endpoints():

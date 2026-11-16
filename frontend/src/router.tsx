@@ -10,6 +10,7 @@ import ViewSearchPage from "./pages/ViewSearchPage";
 import SaveCredentialPage from "./pages/SaveCredentialPage";
 import EditCredentialPage from "./pages/EditCredentialPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
+import AdminAuditPage from "./pages/AdminAuditPage";
 import SettingsPage from "./pages/SettingsPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
 
@@ -30,6 +31,7 @@ const ForbiddenPage = React.lazy(() => import("./pages/ForbiddenPage"));
  *  /credentials/new        → ProtectedRoute(permission="credentials.create")  → SaveCredentialPage
  *  /credentials/:id/edit   → ProtectedRoute(permission="credentials.edit")    → EditCredentialPage
  *  /admin/users            → ProtectedRoute(permission="users.manage")        → AdminUsersPage
+ *  /admin/audit            → ProtectedRoute(permission="audit.view")          → AdminAuditPage
  *  /settings               → ProtectedRoute (any signed-in user)              → SettingsPage (task 37.3)
  *  /403                    → ForbiddenPage (public — shown after redirect)
  *  *                       → redirect to /login
@@ -90,6 +92,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute permission="users.manage">
             <AdminUsersPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/admin/audit",
+        element: (
+          <ProtectedRoute permission="audit.view">
+            <AdminAuditPage />
           </ProtectedRoute>
         ),
       },

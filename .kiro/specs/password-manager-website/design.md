@@ -102,7 +102,7 @@ The `FERNET_KEY` is a 32-byte URL-safe base64 key read from a server-side enviro
 |--------|-----------|-----------------|
 | `auth_router` | `/api/auth` | Register, login, logout, token refresh, `GET /config` (CAPTCHA site key, verification on/off), `POST /verify-email` (Phase 2) |
 | `credentials_router` | `/api/credentials` | CRUD for credentials; reveal endpoint |
-| `admin_router` | `/api/admin` | User listing and role change (`users.manage`) |
+| `admin_router` | `/api/admin` | Accounts: listing, role change, deactivate / reactivate (`users.manage`); audit view (`audit.view`) |
 | `profile_router` | `/api/profile` | The caller's role and permissions; resend the verification email |
 
 ### Backend Services
@@ -125,6 +125,7 @@ The `FERNET_KEY` is a 32-byte URL-safe base64 key read from a server-side enviro
 | `/credentials/new` | `SaveCredentialPage` | `credentials.create` |
 | `/credentials/:id/edit` | `EditCredentialPage` | `credentials.edit` |
 | `/admin/users` | `AdminUsersPage` | `users.manage` (Admin) |
+| `/admin/audit` | `AdminAuditPage` | `audit.view` (Admin, task 37.4) |
 | `/settings` | `SettingsPage` | any signed-in user (task 37.3) |
 
 ### Frontend Shared Components
@@ -197,6 +198,9 @@ erDiagram
         int affected_record_id
         date operation_date
         time operation_time
+        varchar action "task 37.4"
+        int target_user_id FK
+        varchar detail
     }
 
     users ||--o| user_preferences : "chooses"
@@ -220,6 +224,8 @@ CREATE TABLE users (
     last_verification_reminder_days SMALLINT, -- task 34.4: last reminder sent (days before deadline)
     user_code            VARCHAR(9)   NOT NULL UNIQUE, -- task 37.3: SP-XXXXXX, never changes
     display_name         VARCHAR(60),
+    deactivated_at       TIMESTAMP,                    -- task 37.4: set by the Admin (UTC)
+    deactivation_reason  VARCHAR(500),                 -- emailed to the person
     -- Audit columns
     creation_date        DATE         NOT NULL,
     creation_time        TIME         NOT NULL,
@@ -273,7 +279,10 @@ CREATE TABLE audit_log (
     operation          VARCHAR(16) NOT NULL CHECK (operation IN ('SELECT','INSERT','UPDATE','DELETE')),
     affected_record_id INTEGER,
     operation_date     DATE    NOT NULL,
-    operation_time     TIME    NOT NULL
+    operation_time     TIME    NOT NULL,
+    action             VARCHAR(32),                        -- task 37.4: e.g. credential.reveal, user.deactivate
+    target_user_id     INTEGER REFERENCES users(user_id),  -- the account an admin action was done to
+    detail             VARCHAR(64)                         -- short, never secret (e.g. User→Admin)
 );
 
 -- Indexes
@@ -281,6 +290,7 @@ CREATE INDEX idx_credentials_user_id        ON credentials(user_id);
 CREATE INDEX idx_credentials_website_name   ON credentials(website_name);
 CREATE INDEX idx_credentials_email_username ON credentials(email_or_username);
 CREATE INDEX idx_audit_log_user_id          ON audit_log(user_id);
+CREATE INDEX idx_audit_log_date             ON audit_log(operation_date, operation_time);  -- task 37.4
 ```
 
 ### Application Database Role
@@ -402,11 +412,29 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
 
 #### `GET /api/admin/users`
 ```json
-// Response 200
+// Response 200 (task 37.4 adds the user ID, status and deactivation)
 [
-  { "user_id": 42, "username": "alice", "email": "alice@example.com",
-    "role": "User", "email_verified": true }
+  { "user_id": 42, "user_code": "SP-7K3M9Q", "username": "alice", "display_name": null,
+    "email": "alice@example.com", "role": "User", "email_verified": true,
+    "status": "deactivated",            // active | deactivated | unverified
+    "deactivated_by": "admin",          // admin | deadline | null
+    "deactivated_at": "2026-11-16T10:00:00Z", "deactivation_reason": "Left the team",
+    "created": "2026-11-01T09:30:00Z" }
 ]
+```
+
+#### Account and audit endpoints *(task 37.4)*
+```json
+// POST /api/admin/users/{id}/deactivate  { "reason": "Left the team" }  (users.manage)
+//   → 200 the account as in GET /users; 400 own account; 404; 409 already deactivated; 422 reason < 3 or > 500
+// POST /api/admin/users/{id}/reactivate  (users.manage)
+//   → 200 the account; 400 own account; 404; 409 not deactivated
+// GET /api/admin/audit?action=user.role&q=alice&date_from=2026-11-01&date_to=2026-11-30  (audit.view)
+{ "items": [ { "log_id": 9, "at": "2026-11-16T10:00:00Z", "action": "user.role",
+               "actor":  { "user_id": 1, "user_code": "SP-AB23CD", "username": "boss" },
+               "target": { "user_id": 42, "user_code": "SP-7K3M9Q", "username": "alice" },
+               "record_id": null, "detail": "User→Admin" } ],
+  "truncated": false }   // at most 1000 rows; 422 for an unknown action
 ```
 
 #### `PUT /api/admin/users/{user_id}/role` *(task 37.1; replaces the profile assignment)*
@@ -439,7 +467,7 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
 ```json
 // Response 200 — any authenticated user
 { "role": "User", "permissions": ["credentials.create", "credentials.delete", "credentials.edit", "credentials.reveal", "credentials.view"] }
-// Admin: the same plus "users.manage" (task 37.1: explicit list, no "*")
+// Admin: the same plus "users.manage" and "audit.view" (explicit list, no "*")
 ```
 
 ---
@@ -496,13 +524,23 @@ JWT Configuration:
 
 ---
 
+### User Administration and Audit View *(task 37.4, Requirement 15)*
+
+- **Status** of an account (computed, not stored): `deactivated` when `users.deactivated_at` is set by the Admin, or when the email was not verified before `deactivation_deadline` (Requirement 2.9); otherwise `unverified` while verification is still pending; otherwise `active`. `is_deactivated()` (`app/phase2.py`) covers both causes, so sign-in (403 `Account deactivated.`, only after the password matched), refresh and the verification link all refuse a deactivated account.
+- **Deactivate** (`POST /api/admin/users/{id}/deactivate`, `users.manage`): reason of 3–500 characters (spaces collapsed), never the Admin's own account (400), 409 if already deactivated. Sets `deactivated_at` / `deactivation_reason`, ends every session of the account (`revoke_all`, so its access tokens stop at once through `sid`), writes `user.deactivate` to `audit_log` and emails the reason in the person's language. Credentials are kept.
+- **Reactivate** (`POST /api/admin/users/{id}/reactivate`): clears the Admin's deactivation; an account closed by the deadline gets a new one (same period as sign-up) and its reminders start again — it is not marked verified. 409 when the account is not deactivated. Emails the person.
+- **Audit log** (`/admin/audit`, permission `audit.view`): `audit_log` gains `action` (`account.register|login|password`, `credential.create|edit|delete|reveal`, `user.role|deactivate|reactivate`), `target_user_id` and a short non-secret `detail` (`User→Admin`). Migration 0009 names the rows written before as their credential action. `GET /api/admin/audit?action=&q=&date_from=&date_to=` returns the latest 1000 matches newest first (`truncated` says when there were more); `q` matches the username, email or user ID of whoever did it or whoever it was done to (`%` and `_` are literal). Credentials appear by number only, never their site, login or password.
+- Unlock and 2FA reset belong to 37.5 (they need the lockout and TOTP state).
+
+---
+
 ## Role and Permission System
 
 *(Task 37.1 — the owner chose one role per account and only User / Admin. Kiro's profiles, named lists of screens assigned per user, were retired by migration 0006: with two fixed roles they added a second, redundant source of truth.)*
 
 ```
 User   →  credentials.view, credentials.create, credentials.edit, credentials.delete, credentials.reveal
-Admin  →  everything User has + users.manage   (later phases add administration permissions here)
+Admin  →  everything User has + users.manage, audit.view   (later phases add administration permissions here)
 ```
 
 - Permissions are names defined in `app/permissions.py` (`PERMISSIONS`, `ROLE_PERMISSIONS`). Asking for an unknown name fails when the module loads, so a typo cannot silently deny or allow.

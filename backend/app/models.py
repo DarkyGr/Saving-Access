@@ -94,6 +94,9 @@ class User(AuditColumnsMixin, Base):
     # Task 37.3: public immutable ID (SP-XXXXXX) and the name shown in the app.
     user_code = Column(String(9), nullable=False, default=new_user_code)
     display_name = Column(String(60), nullable=True)
+    # Task 37.4: set by the Admin (with the reason shown to the user); NULL = active.
+    deactivated_at = Column(DateTime, nullable=True)
+    deactivation_reason = Column(String(500), nullable=True)
 
     __table_args__ = (
         CheckConstraint("role IN ('User', 'Admin')", name="ck_users_role"),
@@ -227,6 +230,11 @@ class AuditLog(Base):
     affected_record_id = Column(Integer, nullable=True)
     operation_date = Column(Date, nullable=False)
     operation_time = Column(Time, nullable=False)
+    # Task 37.4: what happened (e.g. "credential.reveal", "user.deactivate"),
+    # the account it was done to and a short non-secret detail ("User→Admin").
+    action = Column(String(32), nullable=True)
+    target_user_id = Column(Integer, ForeignKey("users.user_id"), nullable=True)
+    detail = Column(String(64), nullable=True)
 
     __table_args__ = (
         CheckConstraint(
@@ -235,6 +243,8 @@ class AuditLog(Base):
         ),
         # Requirement 9.7 — index on audit_log.user_id
         Index("idx_audit_log_user_id", "user_id"),
+        # Task 37.4: the audit view lists newest first and filters by date.
+        Index("idx_audit_log_date", "operation_date", "operation_time"),
     )
 
     # Relationships

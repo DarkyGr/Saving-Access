@@ -274,10 +274,10 @@ The owner's decisions behind them: sign-up stays **open**; two-factor authentica
 
 #### Acceptance Criteria
 
-1. THE Admin users page SHALL search by name, email or user ID and filter by role and status (active, deactivated, locked, unverified).
-2. THE Admin SHALL be able to deactivate an account with a reason (the account's sessions are revoked and an email with the reason is sent), reactivate it, unlock it and reset its two-factor authentication; every action SHALL be recorded.
+1. THE Admin users page SHALL search by name, email or user ID and filter by role and status (active, deactivated, locked, unverified). *(37.4 ships active, deactivated and unverified; "locked" arrives with the lockout of 37.5.)*
+2. THE Admin SHALL be able to deactivate an account with a reason (the account's sessions are revoked and an email with the reason is sent), reactivate it, unlock it and reset its two-factor authentication; every action SHALL be recorded. *(37.4 ships deactivate and reactivate; unlock and 2FA reset need the lockout and TOTP of 37.5 and are delivered there. Reactivating an account closed for not verifying its email in time gives it a new deadline instead of marking it verified.)*
 3. THE Admin SHALL NOT be able to deactivate their own account.
-4. THE System SHALL provide an audit view (Admin only) of who did what and when, with filters; it SHALL never show passwords or credential contents.
+4. THE System SHALL provide an audit view (Admin only) of who did what and when, with filters; it SHALL never show passwords or credential contents. *(37.4: sign-up, sign-in and password change, the four credential operations, and role change / deactivation / reactivation; filters by action, person and UTC date; credentials appear by number only.)*
 
 ### Requirement 16: Account Security and System Parameters (task 37.5)
 

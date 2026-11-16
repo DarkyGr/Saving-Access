@@ -303,6 +303,43 @@ test("admin: create via CLI, change a user's role, permissions follow", async ({
     window.dispatchEvent(new PopStateEvent("popstate"));
   });
   await expect(page).toHaveURL(/\/403$/);
+  await logOut(page);
+
+  // Task 37.4: deactivate with a reason, the person cannot sign in, reactivate.
+  await logIn(page, admin);
+  await page.getByRole("link", { name: "Manage Users" }).click();
+  await expect(page.getByLabel(`Deactivate ${admin}`)).toHaveCount(0);
+  await page.getByLabel(`Deactivate ${user}`).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Reason (sent to the person)").fill("Testing the deactivation");
+  await dialog.getByRole("button", { name: "Deactivate" }).click();
+  await expect(page.getByRole("status")).toHaveText(`${user} was deactivated.`);
+  await expect(page.getByText("Reason: Testing the deactivation")).toBeVisible();
+  await logOut(page);
+
+  await page.goto("/login");
+  await page.getByPlaceholder("Enter your username").fill(user);
+  await page.getByPlaceholder("Enter your password").fill(ACCOUNT_PW);
+  await page.getByRole("button", { name: "Log In", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("This account is deactivated");
+
+  await logIn(page, admin);
+  await page.getByRole("link", { name: "Manage Users" }).click();
+  await page.getByLabel(`Reactivate ${user}`).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Reactivate" }).click();
+  await expect(page.getByRole("status")).toHaveText(`${user} was reactivated.`);
+
+  // The audit log shows it, newest first.
+  await page.getByRole("link", { name: "Audit log" }).click();
+  await expect(page.getByRole("heading", { name: "Audit log" })).toBeVisible();
+  const rows = page.getByRole("row");
+  await expect(rows.nth(1)).toContainText("Reactivated an account");
+  await expect(page.getByRole("cell", { name: "Deactivated an account" })).toHaveCount(1);
+  await page.getByLabel("Action").selectOption("user.role");
+  await expect(page.getByRole("cell", { name: "Changed a role" })).toHaveCount(2);
+  await logOut(page);
+
+  await logIn(page, user, { unverified: true });
 });
 
 function backend(args: string[]) {

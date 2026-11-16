@@ -47,6 +47,7 @@ from app.rate_limit import (
     client_ip,
     limiter,
 )
+from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
 from app.services.captcha_service import verify_captcha
 from app.services.email_sender import send_email
@@ -157,7 +158,8 @@ def register(
     language = normalize_language(body.language)
     if language:
         user.preferred_language = language
-        db.commit()
+    AuditService(db).log(user.user_id, "INSERT", user.user_id, commit=False, action="account.register")
+    db.commit()
     if email_verification_enabled():
         raw = EmailVerificationService(db).issue(user)
         db.commit()
@@ -196,6 +198,7 @@ def login(
     raw_refresh = sessions.issue(
         user_id, user_agent=request.headers.get("user-agent"), client_ip=client_ip(request)
     )
+    AuditService(db).log(user_id, "SELECT", user_id, commit=False, action="account.login")
     db.commit()
     _set_refresh_cookie(response, raw_refresh)
     user = db.query(User).filter(User.user_id == user_id).one()

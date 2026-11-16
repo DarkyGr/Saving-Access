@@ -382,9 +382,9 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
     - _Requirements: 13.1–13.5_
   - [x] 37.3 Appearance and personal settings: Settings screen (profile, preferences, password, active sessions), light/dark/system theme, accent colors, avatar, private mode, user ID `SP-XXXXXX`
     - _Requirements: 14.1–14.5_
-  - [ ] 37.4 User administration and audit view: search and filters, deactivate with reason, reactivate, unlock, reset 2FA, audit view
+  - [x] 37.4 User administration and audit view: search and filters, deactivate with reason, reactivate, audit view (unlock and reset 2FA moved to 37.5, which brings lockout and TOTP)
     - _Requirements: 15.1–15.4_
-  - [ ] 37.5 Account security and system parameters: mandatory TOTP with recovery codes, lockout and unlock, forgot password, idle and maximum session limits with warning and extend, re-authentication window for administration, clipboard clearing, security emails, System parameters screen (absorbs 35.5 and 35.6)
+  - [ ] 37.5 Account security and system parameters: mandatory TOTP with recovery codes, lockout and unlock (with the Admin's unlock and 2FA reset and the "locked" status filter from 15.1–15.2), forgot password, idle and maximum session limits with warning and extend, re-authentication window for administration, clipboard clearing, security emails, System parameters screen (absorbs 35.5 and 35.6)
     - _Requirements: 16.1–16.8_
   - [ ] 37.6 In-app help: user guide with search, technical guide for the Admin
     - _Requirements: 17.1–17.2_

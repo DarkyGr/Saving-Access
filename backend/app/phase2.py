@@ -87,11 +87,17 @@ def verification_required(user: User) -> bool:
 
 
 def is_deactivated(user: User, today: date) -> bool:
-    """Requirement 2.9: unverified and past the deadline.
+    """Deactivated by the Admin (task 37.4), or Requirement 2.9: unverified
+    and past the deadline.
 
     Accounts without a deadline (created before the feature was enabled, or
     by the admin CLI) are never deactivated automatically.
     """
+    return user.deactivated_at is not None or deadline_passed(user, today)
+
+
+def deadline_passed(user: User, today: date) -> bool:
+    """Requirement 2.9 only: still unverified after the deadline."""
     return (
         verification_required(user)
         and user.deactivation_deadline is not None

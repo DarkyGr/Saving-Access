@@ -56,6 +56,8 @@ graph TD
 
 **Settings and sessions (task 37.3).** `/settings` holds profile (immutable `SP-XXXXXX` user ID, display name, avatar), preferences (language, theme, accent, start page, private mode), password change and active sessions. Theme and accent are CSS variables (`src/theme.css`): dark mode reverses the palettes, so pages need no `dark:` classes; `public/theme-init.js` paints the saved theme first. Each access token carries its session (`sid`); the API rejects it once that session ends, so logout, ending a session from Settings or changing the password cut access at once.
 
+**User administration and audit (task 37.4).** The Admin deactivates another account with a reason (sessions end at once, the person gets the reason by email, credentials are kept) and reactivates it from `/admin/users`, which also searches by user ID and filters by status. `/admin/audit` (`audit.view`) lists sign-ups, sign-ins, password changes, credential operations and admin actions with filters; `audit_log.action` names each event and credentials appear by number only.
+
 ---
 
 ## 2. Encryption lifecycle
@@ -205,6 +207,8 @@ erDiagram
         varchar role "User | Admin"
         boolean email_verified
         date deactivation_deadline
+        timestamp deactivated_at
+        varchar deactivation_reason
     }
     credentials {
         int credential_id PK
@@ -221,6 +225,8 @@ erDiagram
         int affected_record_id
         date operation_date
         time operation_time
+        varchar action
+        int target_user_id FK
     }
     user_preferences {
         int user_id PK "FK users"
@@ -257,6 +263,7 @@ erDiagram
 | `0006_retire_profiles` | drops profiles and user_profiles (permissions come from the role); its downgrade restores them and links every User to Full |
 | `0007_user_preferences` | user_preferences (list / cards per listing, saved in the account; task 37.2) |
 | `0008_settings` | users.user_code (backfilled, unique) and display_name; theme, accent, start page, private mode and avatar in user_preferences; user agent and IP on refresh_tokens (task 37.3) |
+| `0009_user_admin` | users.deactivated_at and deactivation_reason; audit_log.action (backfilled for old rows), target_user_id, detail and a date index (task 37.4) |
 
 - Docker (`migrate` service in production) and the E2E tests run `alembic upgrade head` before the API starts. The app never creates tables.
 - `backend/db/schema.sql` is **generated** from the migrations (`python db/generate_schema_sql.py`) and includes the `app_user` role with SELECT/INSERT/UPDATE/DELETE only (Requirement 9.9).

@@ -9,20 +9,39 @@ import { useListView } from "../hooks/useListView";
 import { matchesQuery } from "../lib/text";
 import { usePrivacy } from "../context/PreferencesContext";
 import { FilterSelect, ListToolbar, Pagination, SearchBox, ViewToggle } from "../components/list/ListControls";
+import ConfirmDialog from "../components/ConfirmDialog";
+import DeactivateDialog from "../components/admin/DeactivateDialog";
 
 type Role = "User" | "Admin";
+type Status = "active" | "deactivated" | "unverified";
 
-interface AdminUser {
+export interface AdminUser {
   user_id: number;
+  user_code: string;
   username: string;
+  display_name: string | null;
   email: string;
   role: Role;
   email_verified: boolean;
+  status: Status;
+  deactivated_by: "admin" | "deadline" | null;
+  deactivated_at: string | null;
+  deactivation_reason: string | null;
+  created: string | null;
 }
 
 type RowStatus = { status: "idle" | "saving" | "success" | "error"; message?: string };
 
 const ROLES: Role[] = ["User", "Admin"];
+const STATUSES: Status[] = ["active", "deactivated", "unverified"];
+
+const STATUS_STYLE: Record<Status, string> = {
+  active: "bg-green-50 text-green-700",
+  unverified: "bg-amber-50 text-amber-700",
+  deactivated: "bg-red-50 text-red-700",
+};
+
+type Pending = { kind: "deactivate" | "reactivate"; user: AdminUser } | null;
 
 /**
  * AdminUsersPage — /admin/users (permission `users.manage`).
@@ -31,7 +50,9 @@ const ROLES: Role[] = ["User", "Admin"];
  * (Requirements 3.6, 3.7, task 37.1). The Admin's own row is locked, so one
  * Admin always remains (the backend enforces it too). Task 37.2 adds search
  * by name or email, filters by role and verification, pagination and the
- * list / grid view saved in the account (Requirement 13.4).
+ * list / grid view saved in the account (Requirement 13.4). Task 37.4 adds
+ * the user ID to the search, the status filter, and deactivating (with a
+ * reason that is emailed) or reactivating another account (Requirement 15).
  */
 export default function AdminUsersPage() {
   const { t, i18n } = useTranslation();
@@ -45,7 +66,11 @@ export default function AdminUsersPage() {
 
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
-  const [verifiedFilter, setVerifiedFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [pending, setPending] = useState<Pending>(null);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [view, setView] = useListView("users", "list");
 
   const filtered = useMemo(
@@ -53,14 +78,14 @@ export default function AdminUsersPage() {
       users
         .filter(
           (u) =>
-            matchesQuery(query, [u.username, u.email]) &&
+            matchesQuery(query, [u.username, u.email, u.user_code, u.display_name ?? ""]) &&
             (roleFilter === "" || u.role === roleFilter) &&
-            (verifiedFilter === "" || (verifiedFilter === "verified") === u.email_verified)
+            (statusFilter === "" || u.status === statusFilter)
         )
         .sort((a, b) => a.username.localeCompare(b.username, i18n.language)),
-    [users, query, roleFilter, verifiedFilter, i18n.language]
+    [users, query, roleFilter, statusFilter, i18n.language]
   );
-  const paged = usePaged(filtered, view === "grid" ? 30 : 10, `${query}|${roleFilter}|${verifiedFilter}|${view}`);
+  const paged = usePaged(filtered, view === "grid" ? 30 : 10, `${query}|${roleFilter}|${statusFilter}|${view}`);
 
   const fetchUsers = useCallback(async () => {
     setFetchError(null);
@@ -102,6 +127,86 @@ export default function AdminUsersPage() {
           : t("admin.changeRoleError");
       setRowStatus((prev) => ({ ...prev, [target.user_id]: { status: "error", message } }));
     }
+  }
+
+  const closeDialog = useCallback(() => {
+    setPending(null);
+    setActionError(null);
+  }, []);
+
+  async function runAction(reason?: string) {
+    if (!pending) return;
+    const { kind, user } = pending;
+    setActionBusy(true);
+    setActionError(null);
+    try {
+      const res = await apiClient.post<AdminUser>(
+        `/api/admin/users/${user.user_id}/${kind}`,
+        kind === "deactivate" ? { reason } : undefined
+      );
+      setUsers((prev) => prev.map((u) => (u.user_id === user.user_id ? { ...u, ...res.data } : u)));
+      setNotice(t(`admin.${kind}.done`, { username: user.username }));
+      setPending(null);
+    } catch (err: unknown) {
+      const code = axios.isAxiosError(err) ? err.response?.status : undefined;
+      setActionError(code === 409 ? t(`admin.${kind}.conflict`) : t("errors.generic"));
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  function statusCell(user: AdminUser) {
+    return (
+      <div className="flex flex-col gap-1">
+        <span className={`inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[user.status]}`}>
+          {t(`admin.status.${user.status}`)}
+        </span>
+        {user.deactivated_by === "admin" && user.deactivation_reason && (
+          <span className="max-w-[16rem] whitespace-normal break-words text-xs text-gray-500">
+            {t("admin.deactivatedReason", { reason: user.deactivation_reason })}
+          </span>
+        )}
+        {user.deactivated_by === "deadline" && (
+          <span className="max-w-[16rem] whitespace-normal text-xs text-gray-500">{t("admin.deactivatedDeadline")}</span>
+        )}
+      </div>
+    );
+  }
+
+  function actionButton(user: AdminUser) {
+    if (me?.user_id === user.user_id) return null;
+    const deactivated = user.status === "deactivated";
+    const kind = deactivated ? "reactivate" : "deactivate";
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setNotice(null);
+          setPending({ kind, user });
+        }}
+        aria-label={t(`admin.${kind}.label`, { username: user.username })}
+        className={[
+          "min-h-[44px] md:min-h-[36px] rounded-md border px-3 text-sm font-medium",
+          deactivated
+            ? "border-gray-300 text-gray-700 hover:bg-gray-50"
+            : "border-red-200 text-red-700 hover:bg-red-50",
+        ].join(" ")}
+      >
+        {t(`admin.${kind}.button`)}
+      </button>
+    );
+  }
+
+  function userCell(user: AdminUser, strong = "font-medium") {
+    return (
+      <>
+        <span className={`text-gray-900 ${strong}`}>
+          {user.username}
+          {me?.user_id === user.user_id && <span className="ml-1 font-normal text-gray-500">{t("admin.youBadge")}</span>}
+        </span>
+        <span className="block font-mono text-xs text-gray-500">{user.user_code}</span>
+      </>
+    );
   }
 
   function roleControl(user: AdminUser) {
@@ -159,19 +264,6 @@ export default function AdminUsersPage() {
     );
   }
 
-  function verifiedBadge(user: AdminUser) {
-    return (
-      <span
-        className={[
-          "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
-          user.email_verified ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700",
-        ].join(" ")}
-      >
-        {user.email_verified ? t("admin.verified") : t("admin.unverified")}
-      </span>
-    );
-  }
-
   const th = "px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap";
   const showList = !isLoading && !fetchError && paged.total > 0;
 
@@ -190,16 +282,19 @@ export default function AdminUsersPage() {
             options={ROLES.map((r) => ({ value: r, label: t(`admin.roles.${r}`) }))}
           />
           <FilterSelect
-            id="user-verified-filter"
-            label={t("admin.filterEmail")}
-            value={verifiedFilter}
-            onChange={setVerifiedFilter}
-            options={[
-              { value: "verified", label: t("admin.verified") },
-              { value: "unverified", label: t("admin.unverified") },
-            ]}
+            id="user-status-filter"
+            label={t("admin.tableHeaderStatus")}
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={STATUSES.map((s) => ({ value: s, label: t(`admin.status.${s}`) }))}
           />
         </ListToolbar>
+
+        {notice && (
+          <div role="status" className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            {notice}
+          </div>
+        )}
 
         {fetchError && (
           <div
@@ -236,20 +331,21 @@ export default function AdminUsersPage() {
                 <tr>
                   <th scope="col" className={th}>{t("admin.tableHeaderUser")}</th>
                   <th scope="col" className={th}>{t("admin.tableHeaderEmail")}</th>
-                  <th scope="col" className={th}>{t("admin.filterEmail")}</th>
+                  <th scope="col" className={th}>{t("admin.tableHeaderStatus")}</th>
                   <th scope="col" className={th}>{t("admin.tableHeaderRole")}</th>
+                  <th scope="col" className={th}>
+                    <span className="sr-only">{t("admin.tableHeaderActions")}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {paged.pageItems.map((user) => (
                   <tr key={user.user_id} className="hover:bg-gray-50 transition-colors duration-100">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
-                      {user.username}
-                      {me?.user_id === user.user_id && <span className="ml-1 text-gray-500">{t("admin.youBadge")}</span>}
-                    </td>
+                    <td className="px-4 py-3 text-sm whitespace-nowrap">{userCell(user)}</td>
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{mask(user.email)}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{verifiedBadge(user)}</td>
+                    <td className="px-4 py-3 align-top">{statusCell(user)}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{roleControl(user)}</td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">{actionButton(user)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -261,19 +357,40 @@ export default function AdminUsersPage() {
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {paged.pageItems.map((user) => (
               <li key={user.user_id} className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                <p className="truncate text-base font-semibold text-gray-900">
-                  {user.username}
-                  {me?.user_id === user.user_id && <span className="ml-1 font-normal text-gray-500">{t("admin.youBadge")}</span>}
-                </p>
+                <p className="truncate text-base">{userCell(user, "font-semibold")}</p>
                 <p className="truncate text-sm text-gray-600">{mask(user.email)}</p>
-                <div>{verifiedBadge(user)}</div>
-                <div className="mt-auto border-t border-gray-100 pt-2">{roleControl(user)}</div>
+                <div>{statusCell(user)}</div>
+                <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-2">
+                  {roleControl(user)}
+                  {actionButton(user)}
+                </div>
               </li>
             ))}
           </ul>
         )}
 
         {showList && <Pagination paged={paged} id="users-pages" />}
+
+        {pending?.kind === "deactivate" && (
+          <DeactivateDialog
+            username={pending.user.username}
+            onConfirm={(reason) => void runAction(reason)}
+            onCancel={closeDialog}
+            busy={actionBusy}
+            error={actionError}
+          />
+        )}
+        {pending?.kind === "reactivate" && (
+          <ConfirmDialog
+            title={t("admin.reactivate.title", { username: pending.user.username })}
+            message={actionError ?? t("admin.reactivate.message")}
+            confirmLabel={t("admin.reactivate.confirm")}
+            cancelLabel={t("common.cancel")}
+            onConfirm={() => void runAction()}
+            onCancel={closeDialog}
+            busy={actionBusy}
+          />
+        )}
       </div>
     </main>
   );

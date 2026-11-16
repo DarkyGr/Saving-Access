@@ -19,6 +19,25 @@ from app.utils.audit_columns import utc_date_time
 # the AuditLog ORM model.
 _VALID_OPERATIONS = frozenset({"SELECT", "INSERT", "UPDATE", "DELETE"})
 
+# Task 37.4: the audit view names what happened. Credential routes pass only
+# the operation, which maps to these; other events name their action.
+_CREDENTIAL_ACTIONS = {
+    "INSERT": "credential.create",
+    "UPDATE": "credential.edit",
+    "DELETE": "credential.delete",
+    "SELECT": "credential.reveal",
+}
+
+ACTIONS: tuple[str, ...] = (
+    *_CREDENTIAL_ACTIONS.values(),
+    "account.register",
+    "account.login",
+    "account.password",
+    "user.role",
+    "user.deactivate",
+    "user.reactivate",
+)
+
 
 class AuditService:
     """Provides a single :meth:`log` method that persists an audit entry."""
@@ -33,6 +52,9 @@ class AuditService:
         affected_record_id: int | None = None,
         *,
         commit: bool = True,
+        action: str | None = None,
+        target_user_id: int | None = None,
+        detail: str | None = None,
     ) -> AuditLog:
         """Write an audit_log row and commit synchronously.
 
@@ -52,6 +74,10 @@ class AuditService:
                 f"Must be one of: {', '.join(sorted(_VALID_OPERATIONS))}."
             )
 
+        action = action or _CREDENTIAL_ACTIONS[operation]
+        if action not in ACTIONS:
+            raise ValueError(f"Invalid action '{action}'.")
+
         op_date, op_time = utc_date_time()
         entry = AuditLog(
             user_id=user_id,
@@ -59,6 +85,9 @@ class AuditService:
             affected_record_id=affected_record_id,
             operation_date=op_date,
             operation_time=op_time,
+            action=action,
+            target_user_id=target_user_id,
+            detail=detail,
         )
 
         self._db.add(entry)

@@ -20,7 +20,8 @@
     "menu": "Menú",
     "openMenu": "Abrir el menú",
     "closeMenu": "Cerrar el menú",
-    "settings": "Configuración"
+    "settings": "Configuración",
+    "adminAudit": "Auditoría"
   },
   "language": {
     "toggle": "Idioma",
@@ -43,7 +44,7 @@
     "sessionExpired": "Tu sesión ha expirado. Inicia sesión de nuevo.",
     "registered": "Cuenta creada. Ya puedes iniciar sesión.",
     "registeredVerify": "Cuenta creada. Te enviamos un correo para verificar tu dirección; verifícala en un plazo de 30 días.",
-    "accountDeactivated": "Esta cuenta está desactivada porque su correo no se verificó en 30 días. Contacta con el administrador.",
+    "accountDeactivated": "Esta cuenta está desactivada: la cerró el administrador o su correo no se verificó en 30 días. Contacta con el administrador.",
     "captchaRequired": "Completa el desafío CAPTCHA.",
     "captchaFailed": "La comprobación CAPTCHA falló. Inténtalo de nuevo.",
     "captchaUnavailable": "No se pudo cargar el CAPTCHA. Revisa tu conexión o desactiva los bloqueadores para este sitio.",
@@ -174,11 +175,37 @@
       "User": "Usuario",
       "Admin": "Administrador"
     },
-    "searchPlaceholder": "Buscar por nombre o correo",
-    "filterEmail": "Verificación",
-    "verified": "Verificado",
-    "unverified": "Sin verificar",
-    "noResults": "Ningún usuario coincide con la búsqueda o los filtros."
+    "searchPlaceholder": "Buscar por nombre, correo o ID de usuario",
+    "noResults": "Ningún usuario coincide con la búsqueda o los filtros.",
+    "tableHeaderStatus": "Estado",
+    "tableHeaderActions": "Acciones",
+    "status": {
+      "active": "Activa",
+      "deactivated": "Desactivada",
+      "unverified": "Correo sin verificar"
+    },
+    "deactivatedReason": "Motivo: {{reason}}",
+    "deactivatedDeadline": "No verificó el correo a tiempo.",
+    "deactivate": {
+      "button": "Desactivar",
+      "label": "Desactivar a {{username}}",
+      "title": "¿Desactivar a {{username}}?",
+      "message": "No podrá iniciar sesión y todas sus sesiones abiertas terminan ahora. Sus contraseñas guardadas se conservan. Recibirá un correo con el motivo.",
+      "reason": "Motivo (se le envía a la persona)",
+      "reasonRequired": "Escribe un motivo de al menos 3 caracteres.",
+      "confirm": "Desactivar",
+      "done": "Se desactivó a {{username}}.",
+      "conflict": "Esa cuenta ya estaba desactivada. Recarga la página."
+    },
+    "reactivate": {
+      "button": "Reactivar",
+      "label": "Reactivar a {{username}}",
+      "title": "¿Reactivar a {{username}}?",
+      "message": "Podrá iniciar sesión de nuevo y recibirá un correo. Una cuenta cerrada por no verificar su correo recibe un plazo nuevo.",
+      "confirm": "Reactivar",
+      "done": "Se reactivó a {{username}}.",
+      "conflict": "Esa cuenta no está desactivada. Recarga la página."
+    }
   },
   "forbidden": {
     "title": "403 — Acceso Prohibido",
@@ -339,5 +366,40 @@
     "endWithLogout": "Usa Cerrar sesión para terminarla",
     "endSessionTitle": "¿Cerrar esta sesión?",
     "endSessionMessage": "Ese dispositivo sale de inmediato y tendrá que iniciar sesión otra vez."
+  },
+  "audit": {
+    "title": "Auditoría",
+    "intro": "Quién hizo qué y cuándo, lo más reciente primero. Las credenciales aparecen solo por número; nunca se muestra su contenido.",
+    "searchPlaceholder": "Persona: nombre, correo o ID de usuario",
+    "action": "Acción",
+    "from": "Desde",
+    "to": "Hasta",
+    "utcNote": "Los filtros de fecha usan días en UTC; las horas se muestran en tu zona horaria.",
+    "when": "Cuándo",
+    "who": "Quién",
+    "target": "Cuenta afectada",
+    "detail": "Detalle",
+    "empty": "No hay nada con estos filtros.",
+    "truncated": "Se muestran las últimas {{count}} entradas. Acota los filtros para ver las anteriores.",
+    "roleChange": "{{from}} → {{to}}",
+    "credentialNumber": "Credencial n.º {{id}}",
+    "actions": {
+      "account": {
+        "register": "Se registró",
+        "login": "Inició sesión",
+        "password": "Cambió su contraseña"
+      },
+      "credential": {
+        "create": "Guardó una credencial",
+        "edit": "Editó una credencial",
+        "delete": "Borró una credencial",
+        "reveal": "Reveló una contraseña"
+      },
+      "user": {
+        "role": "Cambió un rol",
+        "deactivate": "Desactivó una cuenta",
+        "reactivate": "Reactivó una cuenta"
+      }
+    }
   }
 }

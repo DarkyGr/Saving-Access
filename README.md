@@ -371,7 +371,11 @@ Pre-populated form with the existing credential data. The password field is mask
 
 ### Admin — Users (`/admin/users`) *(Admin only)*
 
-Lists all registered users with their role (User or Admin) and whether their email is verified, with search by name or email, filters by role and verification, pages and table/cards view. A dropdown per row changes another user's role; your own row is locked so there is always an Admin. The Admin never sees other users' passwords.
+Lists all registered users with their user ID, role (User or Admin) and status (active, deactivated, email not verified), with search by name, email or user ID, filters by role and status, pages and table/cards view. A dropdown per row changes another user's role; your own row is locked so there is always an Admin. **Deactivate** asks for a reason, signs the person out everywhere at once and emails them the reason; their saved passwords are kept. **Reactivate** lets them sign in again (an account closed for not verifying its email gets a new deadline). The Admin never sees other users' passwords.
+
+### Admin — Audit log (`/admin/audit`) *(Admin only)*
+
+Who did what and when, newest first: sign-ups, sign-ins, password changes, saving / editing / deleting / revealing a credential, and role changes, deactivations and reactivations. Filter by action, by person (name, email or user ID of whoever did it or whoever it was done to) and by date. Credentials appear only by number; their site, login and password are never shown.
 
 ### Settings (`/settings`)
 
@@ -450,7 +454,7 @@ All tasks from the Kiro plan (1–29) and the follow-up phases (30–34) are don
 **Pending** (tasks 35–37)
 
 - Local installation on this laptop: installed on 2026-11-15 (task 36); the phone test is left.
-- Task 37 (decided 2026-11-15): bring Savings Tool's screens and settings — side menu and interface patterns, appearance and personal settings, user administration and audit view, mandatory 2FA and session limits, in-app help. 37.1 (roles and permissions), 37.2 (menu, Home, lists and form patterns) and 37.3 (settings, theme, avatar, private mode, password change, active sessions) are done.
+- Task 37 (decided 2026-11-15): bring Savings Tool's screens and settings — side menu and interface patterns, appearance and personal settings, user administration and audit view, mandatory 2FA and session limits, in-app help. 37.1 (roles and permissions), 37.2 (menu, Home, lists and form patterns) 37.3 (settings, theme, avatar, private mode, password change, active sessions) and 37.4 (deactivate / reactivate accounts, audit log) are done.
 - Monitoring and alerts. (A real server and cloud backups were dropped in favour of the local installation.)
 - GitHub Actions on Node 24.
 - Password reset, two-factor authentication, password generator, export and account deletion — outside the original spec.

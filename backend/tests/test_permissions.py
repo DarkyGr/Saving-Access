@@ -37,7 +37,7 @@ def test_user_role_has_exactly_the_vault():
 
 
 def test_admin_role_adds_administration_only():
-    assert permissions_for("Admin") == _VAULT | {"users.manage"}
+    assert permissions_for("Admin") == _VAULT | {"users.manage", "audit.view"}
 
 
 def test_roles_only_grant_known_permissions():
@@ -57,6 +57,7 @@ def test_property_7_unknown_roles_get_nothing(role):
 @given(st.sampled_from([r for r in ROLES if r != "Admin"]))
 def test_property_7_no_non_admin_role_manages_users(role):
     assert "users.manage" not in permissions_for(role)
+    assert "audit.view" not in permissions_for(role)
 
 
 def test_unknown_permission_fails_when_declared():
@@ -135,6 +136,9 @@ def test_credential_and_admin_endpoints_name_their_permission():
         ("POST", "/api/credentials/{credential_id}/reveal"): "credentials.reveal",
         ("GET", "/api/admin/users"): "users.manage",
         ("PUT", "/api/admin/users/{user_id}/role"): "users.manage",
+        ("POST", "/api/admin/users/{user_id}/deactivate"): "users.manage",
+        ("POST", "/api/admin/users/{user_id}/reactivate"): "users.manage",
+        ("GET", "/api/admin/audit"): "audit.view",
     }
     seen = {}
     for path, route in _api_routes():

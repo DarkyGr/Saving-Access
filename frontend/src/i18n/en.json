@@ -20,7 +20,8 @@
     "menu": "Menu",
     "openMenu": "Open the menu",
     "closeMenu": "Close the menu",
-    "settings": "Settings"
+    "settings": "Settings",
+    "adminAudit": "Audit log"
   },
   "language": {
     "toggle": "Language",
@@ -43,7 +44,7 @@
     "sessionExpired": "Your session has expired. Please log in again.",
     "registered": "Account created. You can log in now.",
     "registeredVerify": "Account created. We sent you an email to verify your address — please verify it within 30 days.",
-    "accountDeactivated": "This account is deactivated because its email was not verified within 30 days. Contact the administrator.",
+    "accountDeactivated": "This account is deactivated: the administrator closed it, or its email was not verified within 30 days. Contact the administrator.",
     "captchaRequired": "Please complete the CAPTCHA challenge.",
     "captchaFailed": "The CAPTCHA check failed. Please try again.",
     "captchaUnavailable": "The CAPTCHA could not be loaded. Check your connection or disable blockers for this site.",
@@ -174,11 +175,37 @@
       "User": "User",
       "Admin": "Admin"
     },
-    "searchPlaceholder": "Search by name or email",
-    "filterEmail": "Verification",
-    "verified": "Verified",
-    "unverified": "Not verified",
-    "noResults": "No users match the search or filters."
+    "searchPlaceholder": "Search by name, email or user ID",
+    "noResults": "No users match the search or filters.",
+    "tableHeaderStatus": "Status",
+    "tableHeaderActions": "Actions",
+    "status": {
+      "active": "Active",
+      "deactivated": "Deactivated",
+      "unverified": "Email not verified"
+    },
+    "deactivatedReason": "Reason: {{reason}}",
+    "deactivatedDeadline": "Did not verify the email in time.",
+    "deactivate": {
+      "button": "Deactivate",
+      "label": "Deactivate {{username}}",
+      "title": "Deactivate {{username}}?",
+      "message": "They will not be able to sign in and every open session ends now. Their saved passwords are kept. They get an email with the reason.",
+      "reason": "Reason (sent to the person)",
+      "reasonRequired": "Write a reason of at least 3 characters.",
+      "confirm": "Deactivate",
+      "done": "{{username}} was deactivated.",
+      "conflict": "That account was already deactivated. Reload the page."
+    },
+    "reactivate": {
+      "button": "Reactivate",
+      "label": "Reactivate {{username}}",
+      "title": "Reactivate {{username}}?",
+      "message": "They will be able to sign in again and will get an email. An account closed for not verifying its email gets a new deadline.",
+      "confirm": "Reactivate",
+      "done": "{{username}} was reactivated.",
+      "conflict": "That account is not deactivated. Reload the page."
+    }
   },
   "forbidden": {
     "title": "403 — Access Forbidden",
@@ -339,5 +366,40 @@
     "endWithLogout": "Use Log out to end it",
     "endSessionTitle": "End this session?",
     "endSessionMessage": "That device is signed out at once and has to log in again."
+  },
+  "audit": {
+    "title": "Audit log",
+    "intro": "Who did what and when, newest first. Credentials appear by number only; their contents are never shown.",
+    "searchPlaceholder": "Person: name, email or user ID",
+    "action": "Action",
+    "from": "From",
+    "to": "To",
+    "utcNote": "The date filters use UTC days; times are shown in your time zone.",
+    "when": "When",
+    "who": "Who",
+    "target": "Account affected",
+    "detail": "Detail",
+    "empty": "Nothing matches these filters.",
+    "truncated": "Showing the latest {{count}} entries. Narrow the filters to see older ones.",
+    "roleChange": "{{from}} → {{to}}",
+    "credentialNumber": "Credential #{{id}}",
+    "actions": {
+      "account": {
+        "register": "Signed up",
+        "login": "Signed in",
+        "password": "Changed their password"
+      },
+      "credential": {
+        "create": "Saved a credential",
+        "edit": "Edited a credential",
+        "delete": "Deleted a credential",
+        "reveal": "Revealed a password"
+      },
+      "user": {
+        "role": "Changed a role",
+        "deactivate": "Deactivated an account",
+        "reactivate": "Reactivated an account"
+      }
+    }
   }
 }

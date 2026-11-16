@@ -157,6 +157,13 @@ export const EyeOffIcon = (p: P) => (
     <path d="m1 1 22 22" />
   </Icon>
 );
+export const HistoryIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+    <path d="M3 3v5h5" />
+    <path d="M12 7v5l3 2" />
+  </Icon>
+);
 export const LogOutIcon = (p: P) => (
   <Icon {...p}>
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

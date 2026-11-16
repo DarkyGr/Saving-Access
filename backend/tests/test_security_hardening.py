@@ -253,7 +253,7 @@ def test_credential_insert_rolls_back_when_audit_write_fails(client):
     assert r.status_code == 201
     with _Session() as db:
         assert db.query(Credential).count() == 1
-        assert db.query(AuditLog).filter(AuditLog.operation == "INSERT").count() == 1
+        assert db.query(AuditLog).filter(AuditLog.action == "credential.create").count() == 1
 
 
 # ── 31.5 Refresh token cookie ────────────────────────────────────────────────

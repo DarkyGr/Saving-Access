@@ -33,6 +33,7 @@ from app.rate_limit import ACCOUNT_PASSWORD_LIMIT, RESEND_VERIFICATION_LIMIT, li
 from app.security import hash_password, verify_password
 from app.services.auth_service import validate_password_strength
 from app.services.refresh_token_service import RefreshTokenService
+from app.services.audit_service import AuditService
 from app.services.security_notice import password_changed_email
 from app.services.email_sender import send_email
 from app.services.email_verification_service import (
@@ -379,6 +380,7 @@ def change_password(
     user.password_hash = hash_password(body.new_password)
     set_modification_audit(user, user_id=user.user_id)
     RefreshTokenService(db).revoke_all(user.user_id, keep_family=claims.get("sid"))
+    AuditService(db).log(user.user_id, "UPDATE", user.user_id, commit=False, action="account.password")
     db.commit()
     background_tasks.add_task(send_email, password_changed_email(user))
     return Response(status_code=status.HTTP_204_NO_CONTENT)

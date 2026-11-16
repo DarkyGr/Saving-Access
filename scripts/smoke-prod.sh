@@ -51,7 +51,7 @@ echo "• SPA served with history fallback"
 "${CURL[@]}" "$BASE/credentials" | grep -qi '<div id="root">'
 
 PW='Str0ngPassw0rd!'
-echo "• register → login → save → reveal → refresh → logout"
+echo "• register → login → save → reveal → refresh"
 "${CURL[@]}" -H 'Content-Type: application/json' \
   -d "{\"username\":\"smoke\",\"email\":\"smoke@example.com\",\"password\":\"$PW\",\"password_confirmation\":\"$PW\"}" \
   "$BASE/api/auth/register" >/dev/null
@@ -65,7 +65,6 @@ CID=$("${CURL[@]}" "${AUTH[@]}" \
   "$BASE/api/credentials" | python3 -c 'import json,sys; print(json.load(sys.stdin)["credential_id"])')
 "${CURL[@]}" "${AUTH[@]}" -d "{\"account_password\":\"$PW\"}" "$BASE/api/credentials/$CID/reveal" | grep -q gh-secret
 "${CURL[@]}" -b "$JAR" -c "$JAR" -X POST "$BASE/api/auth/refresh" | grep -q access_token
-"${CURL[@]}" -b "$JAR" -X POST "$BASE/api/auth/logout" -o /dev/null
 
 echo "• login rate limit is shared by the API workers (Redis)"
 codes=""
@@ -80,8 +79,10 @@ echo "  $codes"
 "${COMPOSE[@]}" exec -T redis redis-cli --scan --pattern 'LIMITS:*' | grep -q .
 
 echo "• audit rows written"
+# Task 37.4: every row names its action (failed logins write none).
 "${COMPOSE[@]}" exec -T db psql -U savepass_owner -d savepass -tAc \
-  "select string_agg(operation, ',' order by operation) from audit_log" | grep -qx 'INSERT,SELECT'
+  "select string_agg(distinct action, ',' order by action) from audit_log" \
+  | grep -qx 'account.login,account.register,credential.create,credential.reveal'
 
 echo "• backup, data loss, restore"
 "${COMPOSE[@]}" exec -T backup sh /usr/local/bin/backup.sh once
@@ -98,6 +99,10 @@ for _ in $(seq 1 60); do
 done
 # The restored rows are readable by the API as app_user and still decrypt.
 "${CURL[@]}" "${AUTH[@]}" -d "{\"account_password\":\"$PW\"}" "$BASE/api/credentials/$CID/reveal" | grep -q gh-secret
+
+echo "• logout ends the session and its access token at once"
+"${CURL[@]}" -b "$JAR" -X POST "$BASE/api/auth/logout" -o /dev/null
+[ "$(curl -sk -o /dev/null -w '%{http_code}' "${AUTH[@]}" "$BASE/api/credentials")" = "401" ]
 
 echo "• reminder scheduler runs as app_user"
 psql_owner "UPDATE users SET deactivation_deadline = current_date + 1 WHERE username = 'smoke'" >/dev/null

@@ -74,6 +74,8 @@ def _make_test_engine():
     AuditLog.__table__.create(bind=engine, checkfirst=True)
     from app.models import RefreshToken as _RT  # noqa: E402
     _RT.__table__.create(bind=engine, checkfirst=True)
+    from app.models import SystemSetting as _SS  # noqa: E402  (task 37.5 parameters)
+    _SS.__table__.create(bind=engine, checkfirst=True)
 
     return engine
 

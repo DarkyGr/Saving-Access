@@ -100,6 +100,8 @@ def _disable_fk(dbapi_conn, _record):
 User.__table__.create(bind=_SQLITE_ENGINE, checkfirst=True)
 Credential.__table__.create(bind=_SQLITE_ENGINE, checkfirst=True)
 AuditLog.__table__.create(bind=_SQLITE_ENGINE, checkfirst=True)
+from app.models import SystemSetting as _SS  # noqa: E402  (task 37.5 parameters)
+_SS.__table__.create(bind=_SQLITE_ENGINE, checkfirst=True)
 
 _TestingSessionLocal = sessionmaker(
     bind=_SQLITE_ENGINE,

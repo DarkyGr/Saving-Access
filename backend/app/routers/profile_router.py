@@ -19,6 +19,7 @@ included (task 37.1); the role is the one stored now, not the token's.
 """
 
 import re
+from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
@@ -36,6 +37,7 @@ from app.services.refresh_token_service import RefreshTokenService
 from app.services.audit_service import AuditService
 from app.services.security_notice import password_changed_email, recovery_codes_email, two_factor_enabled_email
 from app.services.two_factor import TwoFactorService, two_factor_required
+from app.services.system_settings import get_int
 from app.services.email_sender import send_email
 from app.services.email_verification_service import (
     EmailVerificationService,
@@ -586,4 +588,77 @@ def two_factor_recovery_codes(
     db.commit()
     background_tasks.add_task(send_email, recovery_codes_email(user))
     return RecoveryCodesResponse(recovery_codes=codes)
+
+
+# --- Session limits and re-authentication (task 37.5, Requirement 16.4–16.5) ---
+
+
+class SessionLimits(BaseModel):
+    idle_seconds: int
+    expires_in_seconds: int | None
+    extend_minutes: int
+    reauth_minutes: int
+
+
+def _live_session(db: Session, claims: dict):
+    sid = claims.get("sid")
+    row = RefreshTokenService(db).live(sid, claims["user_id"]) if sid else None
+    if row is None:
+        raise HTTPException(status_code=401, detail="Session expired.")
+    return row
+
+
+def _limits(db: Session, row) -> SessionLimits:
+    now = datetime.now(UTC).replace(tzinfo=None)
+    left = int((row.session_expires_at - now).total_seconds()) if row.session_expires_at else None
+    return SessionLimits(
+        idle_seconds=get_int(db, "session_idle_minutes") * 60,
+        expires_in_seconds=max(left, 0) if left is not None else None,
+        extend_minutes=get_int(db, "session_extend_minutes"),
+        reauth_minutes=get_int(db, "admin_reauth_minutes"),
+    )
+
+
+@router.get("/session", response_model=SessionLimits, summary="This session's limits")
+def session_limits(claims: dict = Depends(get_current_claims), db: Session = Depends(get_db)) -> SessionLimits:
+    """Seconds, not timestamps, so the browser's clock does not matter."""
+    return _limits(db, _live_session(db, claims))
+
+
+@router.post("/session/ping", status_code=status.HTTP_204_NO_CONTENT, summary="Activity in the browser")
+def session_ping(claims: dict = Depends(get_current_claims), db: Session = Depends(get_db)) -> Response:
+    """Sent at most once a minute while the person uses any tab; without it
+    the session ends after ``session_idle_minutes``."""
+    row = _live_session(db, claims)
+    RefreshTokenService(db).touch(row)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/session/extend", response_model=SessionLimits, summary="Push the maximum length back")
+def session_extend(claims: dict = Depends(get_current_claims), db: Session = Depends(get_db)) -> SessionLimits:
+    row = _live_session(db, claims)
+    RefreshTokenService(db).extend(row)
+    db.commit()
+    return _limits(db, row)
+
+
+class ReauthRequest(BaseModel):
+    account_password: str = Field(max_length=256)
+
+
+@router.post("/session/reauth", status_code=status.HTTP_204_NO_CONTENT, summary="Confirm the password for administration")
+@limiter.limit(ACCOUNT_PASSWORD_LIMIT, key_func=user_or_ip_key)
+def session_reauth(
+    request: Request,
+    body: ReauthRequest,
+    claims: dict = Depends(get_current_claims),
+    db: Session = Depends(get_db),
+) -> Response:
+    user = _user(db, claims)
+    row = _live_session(db, claims)
+    _check_password(user, body.account_password)
+    RefreshTokenService(db).mark_reauth(row)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 

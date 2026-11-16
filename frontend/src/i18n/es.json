@@ -100,7 +100,10 @@
     "loginTypeEmail": "Correo",
     "loginTypeUsername": "Usuario",
     "noData": "Todavía no has guardado credenciales.",
-    "deleting": "Eliminando…"
+    "deleting": "Eliminando…",
+    "copy": "Copiar",
+    "copied": "Copiada · se borra en 30 s",
+    "copyPassword": "Copiar la contraseña de {{site}}"
   },
   "visibilityTimer": {
     "label": "Se oculta en",
@@ -536,5 +539,14 @@
     "done": "Se cambió tu contraseña. Entra con ella (y tu código de dos pasos).",
     "invalid": "Este enlace no es válido: ya se usó, caducó o se envió uno más reciente.",
     "askAgain": "Pide uno nuevo"
+  },
+  "session": {
+    "warningTitle": "Tu sesión está por terminar",
+    "idleWarning": "Sin actividad desde hace un rato: se cerrará la sesión en {{seconds}} s.",
+    "maxWarning": "Esta sesión llega a su duración máxima en {{seconds}} s.",
+    "stay": "Seguir conectado",
+    "extend": "Extender {{minutes}} min",
+    "endedIdle": "Se cerró tu sesión tras un rato sin actividad. Vuelve a entrar.",
+    "endedMax": "Tu sesión llegó a su duración máxima. Vuelve a entrar."
   }
 }

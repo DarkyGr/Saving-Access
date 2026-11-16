@@ -294,6 +294,11 @@ class RefreshToken(AuditColumnsMixin, Base):
     # Task 37.3 — shown in "Active sessions" (device and last activity).
     user_agent = Column(String(256), nullable=True)
     client_ip = Column(String(45), nullable=True)
+    # Task 37.5 (Requirement 16.4–16.5), copied to each rotated token of the
+    # session: when it ends at the latest, last activity, last password check.
+    session_expires_at = Column(DateTime, nullable=True)
+    last_activity_at = Column(DateTime, nullable=True)
+    reauth_at = Column(DateTime, nullable=True)
 
     __table_args__ = (
         Index("idx_refresh_tokens_user_id", "user_id"),

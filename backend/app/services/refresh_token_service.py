@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 
 from app.models import RefreshToken, User
 from app.phase2 import is_deactivated
+from app.services.system_settings import get_int
 from app.utils.audit_columns import set_creation_audit, set_modification_audit
 
 
@@ -56,16 +57,28 @@ class RefreshTokenService:
         *,
         user_agent: str | None = None,
         client_ip: str | None = None,
+        carry: RefreshToken | None = None,
     ) -> str:
-        """Create a new refresh token row and return the raw token. Caller commits."""
+        """Create a new refresh token row and return the raw token. Caller commits.
+
+        A new session (no *carry*) starts its limits now (task 37.5): it ends
+        after ``session_max_minutes`` at the latest, and signing in counts as
+        the latest activity and password check. A rotation carries them over.
+        """
         raw = secrets.token_urlsafe(48)
+        now = _now()
         row = RefreshToken(
             user_id=user_id,
             token_hash=_hash(raw),
             family_id=family_id or secrets.token_hex(16),
-            expires_at=_now() + refresh_lifetime(),
+            expires_at=now + refresh_lifetime(),
             user_agent=(user_agent or "")[:256] or None,
             client_ip=(client_ip or "")[:45] or None,
+            session_expires_at=(
+                carry.session_expires_at if carry else now + timedelta(minutes=get_int(self._db, "session_max_minutes"))
+            ),
+            last_activity_at=carry.last_activity_at if carry else now,
+            reauth_at=carry.reauth_at if carry else now,
         )
         set_creation_audit(row, user_id=user_id)
         self._db.add(row)
@@ -76,19 +89,62 @@ class RefreshTokenService:
         row = self._db.query(RefreshToken.family_id).filter(RefreshToken.token_hash == _hash(raw)).first()
         return row.family_id if row else None
 
-    def is_active(self, family_id: str, user_id: int) -> bool:
-        """True while the family has an unrevoked, unexpired token."""
-        return (
-            self._db.query(RefreshToken.refresh_token_id)
+    def live(self, family_id: str, user_id: int) -> RefreshToken | None:
+        """The session's current token while it is open: not revoked, not
+        expired, within its maximum length and not idle too long."""
+        now = _now()
+        row = (
+            self._db.query(RefreshToken)
             .filter(
                 RefreshToken.family_id == family_id,
                 RefreshToken.user_id == user_id,
                 RefreshToken.revoked_at.is_(None),
-                RefreshToken.expires_at > _now(),
+                RefreshToken.expires_at > now,
             )
+            .order_by(RefreshToken.refresh_token_id.desc())
             .first()
-            is not None
         )
+        if row is None or not self._within_limits(row, now):
+            return None
+        return row
+
+    def is_active(self, family_id: str, user_id: int) -> bool:
+        return self.live(family_id, user_id) is not None
+
+    def _within_limits(self, row: RefreshToken, now: datetime) -> bool:
+        if row.session_expires_at is not None and now >= row.session_expires_at:
+            return False
+        if row.last_activity_at is not None:
+            # One minute of grace: the browser reports activity once a minute.
+            idle = timedelta(minutes=get_int(self._db, "session_idle_minutes") + 1)
+            if now - row.last_activity_at > idle:
+                return False
+        return True
+
+    # ── Session limits (task 37.5, Requirement 16.4–16.5) ─────────────────
+    def touch(self, row: RefreshToken) -> None:
+        """Activity in the browser. Caller commits."""
+        row.last_activity_at = _now()
+
+    def extend(self, row: RefreshToken) -> None:
+        """"Extend": push the maximum by ``session_extend_minutes``. Caller commits."""
+        now = _now()
+        base = max(row.session_expires_at or now, now)
+        row.session_expires_at = base + timedelta(minutes=get_int(self._db, "session_extend_minutes"))
+        row.last_activity_at = now
+
+    def mark_reauth(self, row: RefreshToken) -> None:
+        """The account password was just confirmed in this session. Caller commits."""
+        row.reauth_at = _now()
+
+    def recent_reauth(self, row: RefreshToken) -> bool:
+        """Within the administration window; 0 minutes = only a check made
+        in the last 2 minutes, used once (the caller clears it)."""
+        if row.reauth_at is None:
+            return False
+        minutes = get_int(self._db, "admin_reauth_minutes")
+        window = timedelta(minutes=minutes) if minutes else timedelta(minutes=2)
+        return _now() - row.reauth_at <= window
 
     def active_sessions(self, user_id: int) -> list[dict]:
         """One entry per signed-in device: newest activity first."""
@@ -161,6 +217,11 @@ class RefreshTokenService:
             return None
         if row.expires_at <= now:
             return None
+        if not self._within_limits(row, now):
+            # Idle too long or past its maximum (task 37.5): the session ends.
+            self._revoke_family(row.family_id, row.user_id)
+            self._db.commit()
+            return None
 
         user = self._db.query(User).filter(User.user_id == row.user_id).first()
         if user is None:
@@ -178,20 +239,22 @@ class RefreshTokenService:
             family_id=row.family_id,
             user_agent=user_agent or row.user_agent,
             client_ip=client_ip or row.client_ip,
+            carry=row,
         )
         self._db.commit()
         return user, new_raw
 
     def revoke(self, raw: str) -> None:
-        """Revoke *raw* (logout). Unknown tokens are ignored. Commits."""
+        """Log out: end the whole session *raw* belongs to, so a refresh that
+        rotated it at the same moment cannot keep it alive. Unknown tokens
+        are ignored. Commits."""
         row = (
             self._db.query(RefreshToken)
             .filter(RefreshToken.token_hash == _hash(raw))
             .first()
         )
-        if row is not None and row.revoked_at is None:
-            row.revoked_at = _now()
-            set_modification_audit(row, user_id=row.user_id)
+        if row is not None:
+            self._revoke_family(row.family_id, row.user_id)
             self._db.commit()
 
     def _revoke_family(self, family_id: str, user_id: int) -> None:

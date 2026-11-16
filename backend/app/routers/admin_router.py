@@ -26,7 +26,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session, aliased
 
 from app.database import get_db
-from app.middleware.permissions import require_permission
+from app.middleware.permissions import require_permission, require_recent_auth
 from app.models import AuditLog, User
 from app.phase2 import deactivation_deadline_for, deadline_passed, verification_required
 from app.services.audit_service import ACTIONS, AuditService
@@ -187,6 +187,7 @@ def change_user_role(
     user_id: int,
     body: ChangeRoleRequest,
     claims: dict = Depends(require_permission("users.manage")),
+    _recent: None = Depends(require_recent_auth),
     db: Session = Depends(get_db),
 ) -> ChangeRoleResponse:
     """Set *user_id*'s role and its modification Audit_Columns (Property 8).
@@ -219,6 +220,7 @@ def deactivate_user(
     body: DeactivateRequest,
     background_tasks: BackgroundTasks,
     claims: dict = Depends(require_permission("users.manage")),
+    _recent: None = Depends(require_recent_auth),
     db: Session = Depends(get_db),
 ) -> UserListItem:
     """Requirement 15.2–15.3: the account can no longer sign in, every session
@@ -254,6 +256,7 @@ def reactivate_user(
     user_id: int,
     background_tasks: BackgroundTasks,
     claims: dict = Depends(require_permission("users.manage")),
+    _recent: None = Depends(require_recent_auth),
     db: Session = Depends(get_db),
 ) -> UserListItem:
     """Requirement 15.2: lifts the Admin's deactivation. An account that was
@@ -289,6 +292,7 @@ def reactivate_user(
 def unlock_user(
     user_id: int,
     claims: dict = Depends(require_permission("users.manage")),
+    _recent: None = Depends(require_recent_auth),
     db: Session = Depends(get_db),
 ) -> UserListItem:
     """Requirement 16.2 / 15.2: the Admin unlocks an account locked by wrong
@@ -318,6 +322,7 @@ def reset_two_factor(
     user_id: int,
     background_tasks: BackgroundTasks,
     claims: dict = Depends(require_permission("users.manage")),
+    _recent: None = Depends(require_recent_auth),
     db: Session = Depends(get_db),
 ) -> UserListItem:
     """Requirement 15.2: for a person who lost their device and codes. Their
@@ -381,6 +386,7 @@ def get_settings(
 def put_settings(
     body: dict[str, int],
     claims: dict = Depends(require_permission("settings.manage")),
+    _recent: None = Depends(require_recent_auth),
     db: Session = Depends(get_db),
 ) -> list[ParameterItem]:
     """Requirement 16.8: every value is checked against its range before any

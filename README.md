@@ -377,6 +377,10 @@ Lists all registered users with their user ID, role (User or Admin) and status (
 
 From the login page: type your username or email and, if the account exists, you get a link valid for 1 hour that works once. The new password follows the sign-up rules; your saved passwords are kept, every session is closed, and signing in still asks for your two-step code. It also unlocks a locked account.
 
+### Session limits
+
+A session ends after 15 minutes without activity in any tab, and after 8 hours at most (both set in System parameters). A minute before, a notice offers **Stay signed in** or **Extend 30 min**. Administration changes ask for your password again if it was last confirmed more than 5 minutes ago in this session. A copied password is wiped from the clipboard after 30 seconds if it is still there.
+
 ### Two-step verification
 
 Every account uses a second step: after the password, a 6-digit code from an authenticator app (Google Authenticator, Microsoft Authenticator, Aegis, 2FAS…). The first sign-in asks you to set it up — scan the QR code, type a code — and shows 10 recovery codes once; each lets you in once if you lose your phone, and a banner warns when 3 or fewer remain. In **Settings → Two-step verification** you can move it to a new phone or create new recovery codes (both need your password and send you an email). If someone loses both, the administrator resets it from Manage Users; if the administrator loses theirs: `python -m app.cli reset-2fa --username <name>` on the server.

@@ -6,6 +6,8 @@ import { useAuth } from "../context/AuthContext";
 import { visibleItems } from "../config/navigation";
 import { usePermissions } from "../hooks/usePermissions";
 import { usePreferences } from "../context/PreferencesContext";
+import { ReauthProvider } from "../context/ReauthContext";
+import SessionGuard, { type EndReason } from "./layout/SessionGuard";
 import { readLocal, writeLocal } from "../lib/storage";
 import LanguageToggle from "./LanguageToggle";
 import VerifyEmailModal from "./VerifyEmailModal";
@@ -58,6 +60,11 @@ export default function AppLayout() {
     // False when someone signed in again while the session was being
     // revoked: then they stay where that sign-in took them.
     if (await logout()) navigate("/login", { replace: true });
+  }
+
+  /** Requirement 16.4: idle too long or at the maximum length. */
+  async function handleSessionEnd(reason: EndReason) {
+    if (await logout()) navigate("/login", { replace: true, state: { sessionEnded: reason } });
   }
 
   if (!token || !user) {
@@ -141,8 +148,11 @@ export default function AppLayout() {
           </div>
         </header>
         <RecoveryCodesWarning />
-        <Outlet />
+        <ReauthProvider>
+          <Outlet />
+        </ReauthProvider>
       </div>
+      <SessionGuard onEnd={(reason) => void handleSessionEnd(reason)} />
 
       {verificationNotice && (
         <VerifyEmailModal deadline={verificationNotice.deadline} onClose={dismissVerificationNotice} />

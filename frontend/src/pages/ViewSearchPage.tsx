@@ -8,6 +8,7 @@ import { useVisibilityTimer } from "../hooks/useVisibilityTimer";
 import { usePaged } from "../hooks/usePaged";
 import { useListView } from "../hooks/useListView";
 import { matchesQuery } from "../lib/text";
+import { clearLaterIfCopied, copySecret } from "../lib/clipboard";
 import { usePrivacy } from "../context/PreferencesContext";
 import PasswordConfirmModal from "../components/PasswordConfirmModal";
 import AlreadyVisibleModal from "../components/AlreadyVisibleModal";
@@ -143,6 +144,8 @@ export default function ViewSearchPage() {
   // ── Reveal state (one row at a time, Req 5.10) ──────────────────────────
 
   const [revealedRow, setRevealedRow] = useState<RevealedRow | null>(null);
+  // Task 37.5: "Copied" next to the password that was copied (cleared in 30 s).
+  const [copied, setCopied] = useState<number | null>(null);
   const timer = useVisibilityTimer(60_000);
 
   useEffect(() => {
@@ -279,8 +282,18 @@ export default function ViewSearchPage() {
   function passwordCell(cred: Credential) {
     const isRevealed = revealedRow?.credentialId === cred.credential_id;
     return isRevealed ? (
-      <span className="inline-flex items-center gap-2">
-        <span className="font-mono text-gray-900 break-all">{revealedRow!.plaintext}</span>
+      <span className="inline-flex flex-wrap items-center gap-2">
+        <span className="font-mono text-gray-900 break-all" onCopy={() => clearLaterIfCopied(revealedRow!.plaintext)}>
+          {revealedRow!.plaintext}
+        </span>
+        <button
+          type="button"
+          onClick={async () => setCopied((await copySecret(revealedRow!.plaintext)) ? cred.credential_id : null)}
+          aria-label={t("credentials.copyPassword", { site: cred.website_name })}
+          className="rounded border border-gray-300 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+        >
+          {copied === cred.credential_id ? t("credentials.copied") : t("credentials.copy")}
+        </button>
         {timer.secondsRemaining > 0 && (
           <span
             className="text-xs text-gray-400 tabular-nums"

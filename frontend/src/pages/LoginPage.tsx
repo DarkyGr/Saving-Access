@@ -71,6 +71,8 @@ export default function LoginPage() {
   const justRegistered = Boolean(
     (location.state as { registered?: boolean } | null)?.registered
   );
+  // Task 37.5: why the previous session ended, when it ended by itself.
+  const sessionEnded = (location.state as { sessionEnded?: "idle" | "max" } | null)?.sessionEnded;
 
   const [config, setConfig] = useState<AuthConfig | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -261,6 +263,12 @@ export default function LoginPage() {
                 {config?.email_verification
                   ? t("login.registeredVerify")
                   : t("login.registered")}
+              </div>
+            )}
+
+            {sessionEnded && !apiError && (
+              <div role="status" className="mb-5 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                {sessionEnded === "idle" ? t("session.endedIdle") : t("session.endedMax")}
               </div>
             )}
 

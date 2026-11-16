@@ -11,6 +11,7 @@ import { usePrivacy } from "../context/PreferencesContext";
 import { FilterSelect, ListToolbar, Pagination, SearchBox, ViewToggle } from "../components/list/ListControls";
 import ConfirmDialog from "../components/ConfirmDialog";
 import DeactivateDialog from "../components/admin/DeactivateDialog";
+import { ReauthCancelled, useReauth } from "../context/ReauthContext";
 
 type Role = "User" | "Admin";
 type Status = "active" | "deactivated" | "locked" | "unverified";
@@ -61,6 +62,7 @@ export default function AdminUsersPage() {
   const { t, i18n } = useTranslation();
   const { user: me } = useAuth();
   const { mask } = usePrivacy();
+  const withReauth = useReauth();
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -114,7 +116,7 @@ export default function AdminUsersPage() {
     if (role === target.role) return;
     setRowStatus((prev) => ({ ...prev, [target.user_id]: { status: "saving" } }));
     try {
-      await apiClient.put(`/api/admin/users/${target.user_id}/role`, { role });
+      await withReauth(() => apiClient.put(`/api/admin/users/${target.user_id}/role`, { role }));
       setUsers((prev) => prev.map((u) => (u.user_id === target.user_id ? { ...u, role } : u)));
       setRowStatus((prev) => ({
         ...prev,
@@ -124,6 +126,10 @@ export default function AdminUsersPage() {
         setRowStatus((prev) => ({ ...prev, [target.user_id]: { status: "idle" } }));
       }, 3000);
     } catch (err: unknown) {
+      if (err instanceof ReauthCancelled) {
+        setRowStatus((prev) => ({ ...prev, [target.user_id]: { status: "idle" } }));
+        return;
+      }
       const message =
         axios.isAxiosError(err) && err.response?.status === 403
           ? t("errors.forbidden")
@@ -143,14 +149,14 @@ export default function AdminUsersPage() {
     setActionBusy(true);
     setActionError(null);
     try {
-      const res = await apiClient.post<AdminUser>(
-        `/api/admin/users/${user.user_id}/${kind}`,
-        kind === "deactivate" ? { reason } : undefined
+      const res = await withReauth(() =>
+        apiClient.post<AdminUser>(`/api/admin/users/${user.user_id}/${kind}`, kind === "deactivate" ? { reason } : undefined)
       );
       setUsers((prev) => prev.map((u) => (u.user_id === user.user_id ? { ...u, ...res.data } : u)));
       setNotice(t(`admin.${kind}.done`, { username: user.username }));
       setPending(null);
     } catch (err: unknown) {
+      if (err instanceof ReauthCancelled) return;
       const code = axios.isAxiosError(err) ? err.response?.status : undefined;
       setActionError(code === 409 ? t(`admin.${kind}.conflict`) : t("errors.generic"));
     } finally {

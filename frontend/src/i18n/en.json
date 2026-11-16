@@ -100,7 +100,10 @@
     "loginTypeEmail": "Email",
     "loginTypeUsername": "Username",
     "noData": "You have not saved any credentials yet.",
-    "deleting": "Deleting…"
+    "deleting": "Deleting…",
+    "copy": "Copy",
+    "copied": "Copied · clears in 30 s",
+    "copyPassword": "Copy the password of {{site}}"
   },
   "visibilityTimer": {
     "label": "Auto-hides in",
@@ -536,5 +539,14 @@
     "done": "Your password was changed. Sign in with it (and your two-step code).",
     "invalid": "This link is not valid: it was already used, it expired or a newer one was sent.",
     "askAgain": "Ask for a new one"
+  },
+  "session": {
+    "warningTitle": "Your session is about to end",
+    "idleWarning": "No activity for a while: you will be signed out in {{seconds}} s.",
+    "maxWarning": "This session reaches its maximum length in {{seconds}} s.",
+    "stay": "Stay signed in",
+    "extend": "Extend {{minutes}} min",
+    "endedIdle": "You were signed out after a while without activity. Sign in again.",
+    "endedMax": "Your session reached its maximum length. Sign in again."
   }
 }

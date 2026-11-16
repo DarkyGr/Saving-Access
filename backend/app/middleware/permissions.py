@@ -87,3 +87,30 @@ def require_permission(permission: str) -> Callable:
         return {**claims, "role": user.role}
 
     return _dependency
+
+
+REAUTH_REQUIRED = "Re-authentication required."
+
+
+def require_recent_auth(
+    claims: dict = Depends(get_current_claims),
+    db: Session = Depends(get_db),
+) -> None:
+    """Administration actions (Requirement 16.5, task 37.5): the account
+    password must have been confirmed in this session within
+    ``admin_reauth_minutes`` (signing in counts). Otherwise 403
+    ``Re-authentication required.``: the browser asks for the password,
+    calls ``POST /api/profile/session/reauth`` and retries. With 0 minutes
+    every action asks, so the check is used up here.
+    """
+    from app.services.system_settings import get_int
+
+    sid = claims.get("sid")
+    sessions = RefreshTokenService(db)
+    row = sessions.live(sid, claims["user_id"]) if sid else None
+    if row is None or not sessions.recent_reauth(row):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=REAUTH_REQUIRED)
+    if get_int(db, "admin_reauth_minutes") == 0:
+        row.reauth_at = None
+        db.commit()
+

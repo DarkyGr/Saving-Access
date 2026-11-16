@@ -5,6 +5,7 @@ import axios from "axios";
 import apiClient from "../api/apiClient";
 import HelpTip from "../components/form/HelpTip";
 import { useFocusFirstError } from "../hooks/useFocusFirstError";
+import { ReauthCancelled, useReauth } from "../context/ReauthContext";
 
 export interface Parameter {
   key: string;
@@ -32,6 +33,7 @@ export default function SystemSettingsPage() {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [tried, setTried] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const withReauth = useReauth();
   const focusFirstError = useFocusFirstError(formRef);
 
   useEffect(() => {
@@ -73,11 +75,12 @@ export default function SystemSettingsPage() {
     }
     setSaving(true);
     try {
-      const res = await apiClient.put<Parameter[]>("/api/admin/settings", changes);
+      const res = await withReauth(() => apiClient.put<Parameter[]>("/api/admin/settings", changes));
       setParams(res.data);
       setDraft(Object.fromEntries(res.data.map((p) => [p.key, String(p.value)])));
       setMessage({ ok: true, text: t("system.saved") });
     } catch (err: unknown) {
+      if (err instanceof ReauthCancelled) return;
       const status = axios.isAxiosError(err) ? err.response?.status : undefined;
       setMessage({ ok: false, text: status === 422 ? t("system.invalid") : t("errors.generic") });
     } finally {

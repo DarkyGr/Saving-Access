@@ -331,6 +331,16 @@ CREATE INDEX idx_recovery_codes_user_id ON recovery_codes (user_id);
 
 UPDATE alembic_version SET version_num='0011_two_factor' WHERE alembic_version.version_num = '0010_lockout_settings';
 
+-- Running upgrade 0011_two_factor -> 0012_session_limits
+
+ALTER TABLE refresh_tokens ADD COLUMN session_expires_at TIMESTAMP WITHOUT TIME ZONE;
+
+ALTER TABLE refresh_tokens ADD COLUMN last_activity_at TIMESTAMP WITHOUT TIME ZONE;
+
+ALTER TABLE refresh_tokens ADD COLUMN reauth_at TIMESTAMP WITHOUT TIME ZONE;
+
+UPDATE alembic_version SET version_num='0012_session_limits' WHERE alembic_version.version_num = '0011_two_factor';
+
 COMMIT;
 
 

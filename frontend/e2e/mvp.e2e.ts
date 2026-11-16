@@ -53,6 +53,9 @@ async function logIn(
 async function logOut(page: Page) {
   await page.getByRole("button", { name: /^Account menu of/ }).click();
   await page.getByRole("button", { name: "Log Out" }).click();
+  // The session is revoked before the app shows the login page; a reload
+  // before that could still find it.
+  await expect(page).toHaveURL(/\/login$/);
 }
 
 /** Links to *route* emailed to *email*, oldest first (file email backend). */

@@ -128,6 +128,7 @@ The `FERNET_KEY` is a 32-byte URL-safe base64 key read from a server-side enviro
 | `/admin/audit` | `AdminAuditPage` | `audit.view` (Admin, task 37.4) |
 | `/admin/settings` | `SystemSettingsPage` | `settings.manage` (Admin, task 37.5) |
 | `/unlock?token=…` | `UnlockPage` | public (task 37.5) |
+| `/help`, `/help/technical` | `HelpPage` | `credentials.view`; `users.manage` (task 37.6) |
 | `/forgot-password`, `/reset-password?token=…` | `ForgotPasswordPage`, `ResetPasswordPage` | public (task 37.5) |
 | `/settings` | `SettingsPage` | any signed-in user (task 37.3) |
 
@@ -570,6 +571,15 @@ Sign-in: `POST /api/auth/login` checks the password (counting failures) and then
 **Email settings (16.8).** System parameters also holds sign-up email verification on/off and the outgoing SMTP server (host, port, STARTTLS / SSL / none, user, sender, password). They are rows `email_verification` and `smtp` in `system_settings`; code without a database session (background email, Phase 2 checks) reads them from a per-process cache that an app-wide dependency refreshes at most every `SETTINGS_CACHE_SECONDS` (default 10; tests use 0). A value never set falls back to the environment (`EMAIL_VERIFICATION_ENABLED`, `EMAIL_BACKEND`, `SMTP_*`), and an empty SMTP host means "use the environment". The SMTP password is Fernet-encrypted and write-only (`GET /api/admin/settings/email` says only `has_password`; an empty password keeps it, `clear_password` removes it). Verification can be turned on only when `APP_BASE_URL` is set. `POST /api/admin/settings/email/test` sends now (not in the background) to the Admin or a given address and returns the result (`ok`, backend, error class and message). Saving needs the recent password check like the other administration changes.
 
 **Security emails (16.7).** Password changed (in Settings or by a reset link), two-step verification set up, new recovery codes, 2FA reset by the Admin, account locked (with the unlock link), deactivated / reactivated — always in the account's language, never with a secret.
+
+---
+
+### In-App Help *(task 37.6, Requirement 17)*
+
+- **`/help`** (user guide, permission `credentials.view`) and **`/help/technical`** (technical guide, `users.manage`), both in the menu's Help group. One `HelpPage` renders either guide.
+- Content lives in the frontend (`src/help/userGuide.ts`, `technicalGuide.ts`) as sections `{id, title, blocks}` in English and Spanish with the same ids (a test checks it); a block is a paragraph or a list. The page follows the interface language.
+- Index of sections; search with `matchesQuery` (all words, no case or accents) that hides non-matching sections and highlights matches with `<mark>` (`lib/highlight.ts` folds character by character so positions map back to the original text); a "Copy link" button per section copies `<origin>/help#<id>`, and opening such a link scrolls to it.
+- The guides describe the application only; they never contain data from any other system.
 
 ---
 

@@ -22,7 +22,9 @@
     "closeMenu": "Cerrar el menú",
     "settings": "Configuración",
     "adminAudit": "Auditoría",
-    "adminSettings": "Parámetros del sistema"
+    "adminSettings": "Parámetros del sistema",
+    "userGuide": "Guía de usuario",
+    "technicalGuide": "Guía técnica"
   },
   "language": {
     "toggle": "Idioma",
@@ -577,5 +579,20 @@
     "extend": "Extender {{minutes}} min",
     "endedIdle": "Se cerró tu sesión tras un rato sin actividad. Vuelve a entrar.",
     "endedMax": "Tu sesión llegó a su duración máxima. Vuelve a entrar."
+  },
+  "helpPage": {
+    "userTitle": "Guía de usuario",
+    "technicalTitle": "Guía técnica",
+    "userIntro": "Cómo usar Save-Pass. La búsqueda ignora mayúsculas y acentos.",
+    "technicalIntro": "Administración, instalación y mantenimiento. Solo el Admin ve esta guía.",
+    "toTechnical": "Abrir la guía técnica",
+    "search": "Buscar en la guía",
+    "results_one": "{{count}} sección coincide.",
+    "results_other": "{{count}} secciones coinciden.",
+    "none": "Ninguna sección coincide con la búsqueda.",
+    "index": "Contenido",
+    "link": "Copiar enlace",
+    "linkCopied": "Enlace copiado",
+    "copyLink": "Copiar un enlace a “{{title}}”"
   }
 }

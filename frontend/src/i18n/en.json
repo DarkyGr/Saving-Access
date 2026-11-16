@@ -22,7 +22,9 @@
     "closeMenu": "Close the menu",
     "settings": "Settings",
     "adminAudit": "Audit log",
-    "adminSettings": "System parameters"
+    "adminSettings": "System parameters",
+    "userGuide": "User guide",
+    "technicalGuide": "Technical guide"
   },
   "language": {
     "toggle": "Language",
@@ -577,5 +579,20 @@
     "extend": "Extend {{minutes}} min",
     "endedIdle": "You were signed out after a while without activity. Sign in again.",
     "endedMax": "Your session reached its maximum length. Sign in again."
+  },
+  "helpPage": {
+    "userTitle": "User guide",
+    "technicalTitle": "Technical guide",
+    "userIntro": "How to use Save-Pass. Search ignores capitals and accents.",
+    "technicalIntro": "Administration, installation and maintenance. Only the Admin sees this guide.",
+    "toTechnical": "Open the technical guide",
+    "search": "Search the guide",
+    "results_one": "{{count}} section matches.",
+    "results_other": "{{count}} sections match.",
+    "none": "No section matches the search.",
+    "index": "Contents",
+    "link": "Copy link",
+    "linkCopied": "Link copied",
+    "copyLink": "Copy a link to “{{title}}”"
   }
 }

@@ -386,7 +386,7 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
     - _Requirements: 15.1–15.4_
   - [x] 37.5 Account security and system parameters: mandatory TOTP with recovery codes, lockout and unlock (with the Admin's unlock and 2FA reset and the "locked" status filter from 15.1–15.2), forgot password, idle and maximum session limits with warning and extend, re-authentication window for administration, clipboard clearing, security emails, System parameters screen (absorbs 35.5 and 35.6)
     - _Requirements: 16.1–16.8_
-  - [ ] 37.6 In-app help: user guide with search, technical guide for the Admin
+  - [x] 37.6 In-app help: user guide with search, technical guide for the Admin
     - _Requirements: 17.1–17.2_
 
 ## Notes

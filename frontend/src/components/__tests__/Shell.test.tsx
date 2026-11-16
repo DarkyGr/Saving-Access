@@ -57,7 +57,10 @@ describe("Application shell (task 37.2)", () => {
     expect(await within(nav).findByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
     expect(within(nav).getByRole("button", { name: "Vault" })).toBeInTheDocument();
     expect(within(nav).queryByRole("button", { name: "Administration" })).not.toBeInTheDocument();
-    expect(within(nav).queryByRole("button", { name: "Help" })).not.toBeInTheDocument();
+    // Task 37.6: everyone gets the user guide; the technical guide is the Admin's.
+    expect(within(nav).getByRole("button", { name: "Help" })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "User guide" })).toHaveAttribute("href", "/help");
+    expect(within(nav).queryByRole("link", { name: "Technical guide" })).not.toBeInTheDocument();
   });
 
   it("closes a group by its title, remembers it, and keeps the current group open", async () => {

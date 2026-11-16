@@ -13,6 +13,7 @@ import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminAuditPage from "./pages/AdminAuditPage";
 import SystemSettingsPage from "./pages/SystemSettingsPage";
 import UnlockPage from "./pages/UnlockPage";
+import HelpPage from "./pages/HelpPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -37,6 +38,8 @@ const ForbiddenPage = React.lazy(() => import("./pages/ForbiddenPage"));
  *  /admin/users            → ProtectedRoute(permission="users.manage")        → AdminUsersPage
  *  /admin/audit            → ProtectedRoute(permission="audit.view")          → AdminAuditPage
  *  /admin/settings         → ProtectedRoute(permission="settings.manage")     → SystemSettingsPage
+ *  /help                   → ProtectedRoute(permission="credentials.view")    → HelpPage (user guide, task 37.6)
+ *  /help/technical         → ProtectedRoute(permission="users.manage")        → HelpPage (technical guide)
  *  /unlock?token=…         → UnlockPage (public, task 37.5)
  *  /forgot-password        → ForgotPasswordPage (public, task 37.5)
  *  /reset-password?token=… → ResetPasswordPage (public, task 37.5)
@@ -120,6 +123,22 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute permission="audit.view">
             <AdminAuditPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/help",
+        element: (
+          <ProtectedRoute permission="credentials.view">
+            <HelpPage guide="user" />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/help/technical",
+        element: (
+          <ProtectedRoute permission="users.manage">
+            <HelpPage guide="technical" />
           </ProtectedRoute>
         ),
       },

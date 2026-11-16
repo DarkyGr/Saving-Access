@@ -377,6 +377,10 @@ Lists all registered users with their user ID, role (User or Admin) and status (
 
 From the login page: type your username or email and, if the account exists, you get a link valid for 1 hour that works once. The new password follows the sign-up rules; your saved passwords are kept, every session is closed, and signing in still asks for your two-step code. It also unlocks a locked account.
 
+### Help (`/help`)
+
+The **User guide** (menu → Help) explains every screen in English and Spanish: an index, a search that ignores capitals and accents and highlights what it finds, and a **Copy link** button on each section to share it. The administrator also has the **Technical guide**: accounts, audit log, System parameters, email, updates, backups and command-line tools.
+
 ### Session limits
 
 A session ends after 15 minutes without activity in any tab, and after 8 hours at most (both set in System parameters). A minute before, a notice offers **Stay signed in** or **Extend 30 min**. Administration changes ask for your password again if it was last confirmed more than 5 minutes ago in this session. A copied password is wiped from the clipboard after 30 seconds if it is still there.
@@ -474,7 +478,7 @@ All tasks from the Kiro plan (1–29) and the follow-up phases (30–34) are don
 **Pending** (tasks 35–37)
 
 - Local installation on this laptop: installed on 2026-11-15 (task 36); the phone test is left.
-- Task 37 (decided 2026-11-15): bring Savings Tool's screens and settings — side menu and interface patterns, appearance and personal settings, user administration and audit view, mandatory 2FA and session limits, in-app help. 37.1 (roles and permissions), 37.2 (menu, Home, lists and form patterns) 37.3 (settings, theme, avatar, private mode, password change, active sessions), 37.4 (deactivate / reactivate accounts, audit log) and 37.5 (two-step verification, lockout, forgot password, session limits, re-authentication, clipboard clearing, System parameters) are done.
+- Task 37 (decided 2026-11-15): bring Savings Tool's screens and settings — side menu and interface patterns, appearance and personal settings, user administration and audit view, mandatory 2FA and session limits, in-app help. 37.1 (roles and permissions), 37.2 (menu, Home, lists and form patterns) 37.3 (settings, theme, avatar, private mode, password change, active sessions), 37.4 (deactivate / reactivate accounts, audit log), 37.5 (two-step verification, lockout, forgot password, session limits, re-authentication, clipboard clearing, System parameters) and 37.6 (in-app help) are done.
 - Monitoring and alerts. (A real server and cloud backups were dropped in favour of the local installation.)
 - GitHub Actions on Node 24.
 - Password reset, two-factor authentication, password generator, export and account deletion — outside the original spec.

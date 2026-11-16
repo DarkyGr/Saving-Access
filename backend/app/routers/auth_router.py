@@ -26,6 +26,7 @@ Requirements: 1.1–1.10, 2.1–2.9
 """
 
 import os
+from typing import Literal
 
 from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
@@ -51,7 +52,9 @@ from app.rate_limit import (
 )
 from app.services.account_token_service import AccountTokenService
 from app.services.audit_service import AuditService
-from app.services.auth_service import AuthService
+from app.services.auth_service import ACCOUNT_LOCKED, AuthService
+from app.services.security_notice import two_factor_enabled_email
+from app.services.two_factor import TwoFactorService, two_factor_required
 from app.services.captcha_service import verify_captcha
 from app.services.email_sender import send_email
 from app.services.email_verification_service import (
@@ -106,11 +109,35 @@ class RegisterResponse(BaseModel):
 
 
 class LoginResponse(BaseModel):
-    access_token: str
-    token_type: str
-    expires_in: int
+    """A session (access token + refresh cookie), or — after a right
+    password — the second step to take (task 37.5): ``mfa`` is ``code`` or
+    ``setup`` and ``mfa_token`` carries the sign-in to that step."""
+
+    access_token: str | None = None
+    token_type: str = "bearer"
+    expires_in: int | None = None
     email_verification_required: bool = False
     deactivation_deadline: str | None = None
+    mfa: Literal["code", "setup"] | None = None
+    mfa_token: str | None = None
+    # Only right after setting 2FA up (shown once).
+    recovery_codes: list[str] | None = None
+    # When signing in with a recovery code: how many are left.
+    recovery_codes_left: int | None = None
+
+
+class SecondStepRequest(BaseModel):
+    mfa_token: str = Field(min_length=1, max_length=2048)
+    code: str = Field(min_length=1, max_length=32)
+
+
+class SetupStartRequest(BaseModel):
+    mfa_token: str = Field(min_length=1, max_length=2048)
+
+
+class SetupStartResponse(BaseModel):
+    secret: str
+    otpauth_uri: str
 
 
 # ---------------------------------------------------------------------------
@@ -196,28 +223,127 @@ def login(
         raise HTTPException(status_code=400, detail=CAPTCHA_FAILED)
     service = AuthService(db)
     try:
-        token_data = service.login(body.model_dump(exclude={"captcha_token"}))
+        user = service.authenticate(body.model_dump(exclude={"captcha_token"}))
     except HTTPException as error:
-        notice = getattr(service, "lock_notice", None)
-        if notice is None:
-            raise
-        # The lock email goes out after the (still generic) response.
-        return JSONResponse(
-            status_code=error.status_code,
-            content={"detail": error.detail},
-            background=BackgroundTask(send_email, notice),
-        )
-    user_id = service.verify_token(token_data["access_token"])["user_id"]
+        return _failure(service, error)
+
+    # Task 37.5: with 2FA on, the password only opens the second step — also
+    # for a locked account, which a valid code unlocks (Requirement 16.2).
+    if TwoFactorService.enabled(user):
+        return LoginResponse(mfa="code", mfa_token=service.issue_challenge(user, "code"))
+    if user.locked_at is not None:
+        raise HTTPException(status_code=423, detail=ACCOUNT_LOCKED)
+    if two_factor_required():
+        return LoginResponse(mfa="setup", mfa_token=service.issue_challenge(user, "setup"))
+    return _open_session(request, response, db, user)
+
+
+def _failure(service: AuthService, error: HTTPException) -> JSONResponse:
+    """Re-raise *error*, or answer it with the lock email attached when this
+    failure locked the account (sent after the still generic response)."""
+    notice = getattr(service, "lock_notice", None)
+    if notice is None:
+        raise error
+    return JSONResponse(
+        status_code=error.status_code,
+        content={"detail": error.detail},
+        background=BackgroundTask(send_email, notice),
+    )
+
+
+def _open_session(
+    request: Request,
+    response: Response,
+    db: Session,
+    user: User,
+    *,
+    detail: str | None = None,
+    extra: dict | None = None,
+) -> LoginResponse:
+    """Finish a sign-in: refresh cookie, access token bound to the new
+    session (sid, task 37.3), audit row; resets failures and lifts a lock."""
+    service = AuthService(db)
+    user.failed_attempts = 0
+    user.locked_at = None
     sessions = RefreshTokenService(db)
     raw_refresh = sessions.issue(
-        user_id, user_agent=request.headers.get("user-agent"), client_ip=client_ip(request)
+        user.user_id, user_agent=request.headers.get("user-agent"), client_ip=client_ip(request)
     )
-    AuditService(db).log(user_id, "SELECT", user_id, commit=False, action="account.login")
+    AuditService(db).log(user.user_id, "SELECT", user.user_id, commit=False, action="account.login", detail=detail)
     db.commit()
     _set_refresh_cookie(response, raw_refresh)
-    user = db.query(User).filter(User.user_id == user_id).one()
-    # Same body, now bound to the new session (sid, task 37.3).
-    return LoginResponse(**service.issue_access_token(user, session_id=sessions.last_family_id))
+    return LoginResponse(**service.issue_access_token(user, session_id=sessions.last_family_id), **(extra or {}))
+
+
+@router.post(
+    "/login/verify",
+    response_model=LoginResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Second sign-in step: a code from the app or a recovery code",
+)
+@limiter.limit(LOGIN_LIMIT)
+def login_verify(
+    request: Request,
+    response: Response,
+    body: SecondStepRequest,
+    db: Session = Depends(get_db),
+) -> LoginResponse | JSONResponse:
+    """Requirement 16.1–16.2. A wrong code counts like a wrong password and
+    can lock the account; a valid one opens the session and unlocks it."""
+    service = AuthService(db)
+    user = service.read_challenge(body.mfa_token, "code")
+    two_factor = TwoFactorService(db)
+    kind = two_factor.check(user, body.code)
+    if kind is None:
+        service.lock_notice = service.register_failure(user)
+        return _failure(service, HTTPException(status_code=401, detail="Invalid code."))
+    extra = {}
+    if kind == "recovery":
+        extra["recovery_codes_left"] = two_factor.recovery_left(user)
+    return _open_session(request, response, db, user, detail=kind, extra=extra)
+
+
+@router.post(
+    "/2fa/setup",
+    response_model=SetupStartResponse,
+    status_code=status.HTTP_200_OK,
+    summary="First sign-in without 2FA: get a secret for the authenticator app",
+)
+@limiter.limit(LOGIN_LIMIT)
+def setup_start(
+    request: Request,
+    body: SetupStartRequest,
+    db: Session = Depends(get_db),
+) -> SetupStartResponse:
+    user = AuthService(db).read_challenge(body.mfa_token, "setup")
+    secret, uri = TwoFactorService(db).start_setup(user)
+    db.commit()
+    return SetupStartResponse(secret=secret, otpauth_uri=uri)
+
+
+@router.post(
+    "/2fa/confirm",
+    response_model=LoginResponse,
+    status_code=status.HTTP_200_OK,
+    summary="First sign-in without 2FA: confirm it with a code and sign in",
+)
+@limiter.limit(LOGIN_LIMIT)
+def setup_confirm(
+    request: Request,
+    response: Response,
+    body: SecondStepRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+) -> LoginResponse:
+    """Requirement 16.1: the right code turns 2FA on, returns the 10 recovery
+    codes once, emails a security notice and opens the session."""
+    user = AuthService(db).read_challenge(body.mfa_token, "setup")
+    codes = TwoFactorService(db).confirm_setup(user, body.code)
+    if codes is None:
+        raise HTTPException(status_code=400, detail="Invalid code.")
+    AuditService(db).log(user.user_id, "UPDATE", user.user_id, commit=False, action="account.2fa_setup")
+    background_tasks.add_task(send_email, two_factor_enabled_email(user))
+    return _open_session(request, response, db, user, extra={"recovery_codes": codes})
 
 
 @router.post(

@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
+import { createHmac } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -442,3 +443,64 @@ test("spec Phase 2: verify email, resend, deactivation and reactivation", async 
   await expect(page.getByRole("alert")).toContainText("already used");
   await logIn(page, fresh); // no modal any more
 });
+
+/** RFC 6238 code for *secret* (base32) at *time* (ms). */
+function totpCode(secret: string, time = Date.now()): string {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = "";
+  for (const ch of secret.replace(/\s/g, "").toUpperCase()) bits += alphabet.indexOf(ch).toString(2).padStart(5, "0");
+  const key = Buffer.from(bits.match(/.{8}/g)!.map((b) => parseInt(b, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(time / 30000)));
+  const digest = createHmac("sha1", key).update(counter).digest();
+  const offset = digest[digest.length - 1] & 0x0f;
+  return String((digest.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).padStart(6, "0");
+}
+
+test("two-step verification: set up in Settings, sign in with a code and a recovery code", async ({ page }) => {
+  test.setTimeout(120_000);
+  const name = `totp_${run}`;
+  await signUp(page, name);
+  await logIn(page, name, { unverified: true });
+  await page.getByRole("button", { name: /^Account menu of/ }).click();
+  await page.getByRole("link", { name: "Settings" }).click();
+
+  const card = page.getByRole("region", { name: "Two-step verification" });
+  await expect(card).toContainText("Not set up yet.");
+  await card.getByRole("button", { name: "Set up" }).click();
+  await card.getByLabel("Current password *").fill(ACCOUNT_PW);
+  await card.getByRole("button", { name: "Continue" }).click();
+  await expect(card.getByRole("img", { name: /QR code/ })).toBeVisible();
+  const secret = (await card.getByTestId("totp-secret").textContent()) ?? "";
+  await card.getByLabel("6-digit code").fill(totpCode(secret));
+  await card.getByRole("button", { name: "Confirm" }).click();
+  const codes = card.getByRole("list", { name: "Save your recovery codes" }).getByRole("listitem");
+  await expect(codes).toHaveCount(10);
+  const recovery = (await codes.first().textContent()) ?? "";
+  await card.getByLabel("I saved my recovery codes").check();
+  await card.getByRole("button", { name: "Done" }).click();
+  await expect(card).toContainText("10 recovery codes left.");
+  await logOut(page);
+
+  // A code is accepted once: wait for the next 30-second step.
+  await page.waitForTimeout(30_000 - (Date.now() % 30_000) + 1_000);
+  await page.goto("/login");
+  await page.getByPlaceholder("Enter your username").fill(name);
+  await page.getByPlaceholder("Enter your password").fill(ACCOUNT_PW);
+  await page.getByRole("button", { name: "Log In", exact: true }).click();
+  await page.getByLabel("6-digit code").fill(totpCode(secret));
+  await page.getByRole("button", { name: "Verify" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await page.getByRole("dialog", { name: "Verify your email" }).getByRole("button", { name: "Close" }).click();
+  await logOut(page);
+
+  await page.goto("/login");
+  await page.getByPlaceholder("Enter your username").fill(name);
+  await page.getByPlaceholder("Enter your password").fill(ACCOUNT_PW);
+  await page.getByRole("button", { name: "Log In", exact: true }).click();
+  await page.getByRole("button", { name: "Use a recovery code" }).click();
+  await page.getByLabel("Recovery code").fill(recovery);
+  await page.getByRole("button", { name: "Verify" }).click();
+  await expect(page).toHaveURL(/\/$/);
+});
+

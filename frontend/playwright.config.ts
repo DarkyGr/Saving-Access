@@ -50,6 +50,10 @@ const backendEnv = {
   // Limits stay on, but the whole suite signs in more than 10 times a minute
   // from one address; the 429 behaviour itself is covered by backend tests.
   RATE_LIMIT_LOGIN: "100/minute",
+  // Task 37.5: the suite signs in with the password only; the
+  // "two-step verification" test turns it on for its own account, and the
+  // mandatory setup at sign-in is covered by backend and unit tests.
+  TWO_FACTOR_REQUIRED: "false",
 };
 
 export default defineConfig({

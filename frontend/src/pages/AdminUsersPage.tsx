@@ -28,6 +28,7 @@ export interface AdminUser {
   deactivated_at: string | null;
   deactivation_reason: string | null;
   locked_at: string | null;
+  two_factor: boolean;
   created: string | null;
 }
 
@@ -43,7 +44,7 @@ const STATUS_STYLE: Record<Status, string> = {
   locked: "bg-amber-50 text-amber-800",
 };
 
-type Pending = { kind: "deactivate" | "reactivate" | "unlock"; user: AdminUser } | null;
+type Pending = { kind: "deactivate" | "reactivate" | "unlock" | "reset-2fa"; user: AdminUser } | null;
 
 /**
  * AdminUsersPage — /admin/users (permission `users.manage`).
@@ -188,6 +189,23 @@ export default function AdminUsersPage() {
         className="min-h-[44px] md:min-h-[36px] rounded-md border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
       >
         {t("admin.unlock.button")}
+      </button>
+    );
+  }
+
+  function resetTwoFactorButton(user: AdminUser) {
+    if (me?.user_id === user.user_id || !user.two_factor) return null;
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setNotice(null);
+          setPending({ kind: "reset-2fa", user });
+        }}
+        aria-label={t("admin.reset-2fa.label", { username: user.username })}
+        className="min-h-[44px] md:min-h-[36px] rounded-md border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+      >
+        {t("admin.reset-2fa.button")}
       </button>
     );
   }
@@ -367,6 +385,7 @@ export default function AdminUsersPage() {
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <div className="flex justify-end gap-2">
                         {unlockButton(user)}
+                        {resetTwoFactorButton(user)}
                         {actionButton(user)}
                       </div>
                     </td>
@@ -386,8 +405,9 @@ export default function AdminUsersPage() {
                 <div>{statusCell(user)}</div>
                 <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-2">
                   {roleControl(user)}
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {unlockButton(user)}
+                    {resetTwoFactorButton(user)}
                     {actionButton(user)}
                   </div>
                 </div>
@@ -405,6 +425,17 @@ export default function AdminUsersPage() {
             onCancel={closeDialog}
             busy={actionBusy}
             error={actionError}
+          />
+        )}
+        {pending?.kind === "reset-2fa" && (
+          <ConfirmDialog
+            title={t("admin.reset-2fa.title", { username: pending.user.username })}
+            message={actionError ?? t("admin.reset-2fa.message")}
+            confirmLabel={t("admin.reset-2fa.confirm")}
+            cancelLabel={t("common.cancel")}
+            onConfirm={() => void runAction()}
+            onCancel={closeDialog}
+            busy={actionBusy}
           />
         )}
         {pending?.kind === "unlock" && (

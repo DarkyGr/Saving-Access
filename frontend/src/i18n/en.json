@@ -217,6 +217,15 @@
       "confirm": "Unlock",
       "done": "{{username}} was unlocked.",
       "conflict": "That account is not locked. Reload the page."
+    },
+    "reset-2fa": {
+      "button": "Reset 2FA",
+      "label": "Reset two-step verification of {{username}}",
+      "title": "Reset two-step verification of {{username}}?",
+      "message": "For someone who lost their phone and recovery codes. Their sessions end and they set it up again at the next sign-in. They get an email.",
+      "confirm": "Reset",
+      "done": "Two-step verification of {{username}} was reset.",
+      "conflict": "That account has no two-step verification. Reload the page."
     }
   },
   "forbidden": {
@@ -400,7 +409,9 @@
         "register": "Signed up",
         "login": "Signed in",
         "password": "Changed their password",
-        "unlock": "Unlocked their account"
+        "unlock": "Unlocked their account",
+        "2fa_setup": "Set up two-step verification",
+        "recovery_codes": "Created new recovery codes"
       },
       "credential": {
         "create": "Saved a credential",
@@ -412,7 +423,8 @@
         "role": "Changed a role",
         "deactivate": "Deactivated an account",
         "reactivate": "Reactivated an account",
-        "unlock": "Unlocked an account"
+        "unlock": "Unlocked an account",
+        "reset_2fa": "Reset two-step verification"
       },
       "settings": {
         "update": "Changed system parameters"
@@ -461,5 +473,50 @@
         "help": "How much longer a session lasts when someone presses Extend near the maximum."
       }
     }
+  },
+  "twoFactor": {
+    "cardTitle": "Two-step verification",
+    "setupTitle": "Set up two-step verification",
+    "codeTitle": "Two-step verification",
+    "codesTitle": "Save your recovery codes",
+    "setupRequired": "Every Save-Pass account uses a second step: a 6-digit code from an authenticator app on your phone. Set it up now; it takes a minute.",
+    "step1": "Install an authenticator app (Google Authenticator, Microsoft Authenticator, Aegis, 2FAS…).",
+    "step2": "Scan the code with the app, or type the key below.",
+    "step3": "Enter the 6-digit code the app shows.",
+    "qrLabel": "QR code to add Save-Pass to your authenticator app",
+    "openInApp": "Open in the authenticator app on this device",
+    "manual": "Can't scan? Type this key in the app:",
+    "codeLabel": "6-digit code",
+    "codeFormat": "Type the 6 digits the app shows.",
+    "wrongCode": "That code is not valid. Check the time on your phone and use the newest code.",
+    "expired": "The sign-in took too long. Start again.",
+    "confirm": "Confirm",
+    "verify": "Verify",
+    "codeIntro": "Open your authenticator app and type the code for Save-Pass.",
+    "recoveryIntro": "Type one of your recovery codes. Each one works once.",
+    "recoveryLabel": "Recovery code",
+    "recoveryFormat": "A recovery code has 10 letters and digits, like ABCDE-23456.",
+    "useRecovery": "Use a recovery code",
+    "useApp": "Use the app instead",
+    "startOver": "Start over",
+    "codesIntro": "If you lose your phone, each of these codes lets you sign in once. Keep them somewhere safe, away from this device. They are shown only now.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "download": "Download .txt",
+    "savedThem": "I saved my recovery codes",
+    "continue": "Continue",
+    "done": "Done",
+    "enabledSince": "On since {{date}}.",
+    "notEnabled": "Not set up yet.",
+    "codesLeft_one": "{{count}} recovery code left.",
+    "codesLeft_other": "{{count}} recovery codes left.",
+    "setUp": "Set up",
+    "newDevice": "Use a new phone",
+    "newCodes": "New recovery codes",
+    "newDeviceIntro": "Confirm your password. Your current phone keeps working until the new one is confirmed with a code.",
+    "newCodesIntro": "Confirm your password and a code from the app. The old recovery codes stop working.",
+    "lowCodes_one": "Only {{count}} recovery code left.",
+    "lowCodes_other": "Only {{count}} recovery codes left.",
+    "lowCodesLink": "Create new ones in Settings"
   }
 }

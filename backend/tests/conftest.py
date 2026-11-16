@@ -17,6 +17,9 @@ import os
 # Rate limiting would make the Hypothesis suites (hundreds of logins) fail
 # with 429; tests that cover limits re-enable the limiter explicitly.
 os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
+# Most suites sign in with the password only; tests/test_two_factor.py turns
+# the mandatory second step on (task 37.5).
+os.environ.setdefault("TWO_FACTOR_REQUIRED", "false")
 
 
 

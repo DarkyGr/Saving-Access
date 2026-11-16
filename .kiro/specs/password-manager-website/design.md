@@ -552,6 +552,12 @@ Delivered in parts; each part is listed here when it lands.
 | `session_max_minutes` | 480 | 60–1440 |
 | `session_extend_minutes` | 30 | 5–240 |
 
+**Two-step verification (16.1, 16.7).** TOTP per RFC 6238 (SHA-1, 6 digits, 30 s, ±1 step) in `app/utils/totp.py`, standard library only; a code is accepted once (`users.totp_last_step`). The secret is Fernet-encrypted like credentials (`users.totp_secret`; `rotate-fernet-key` rotates it too); a new device waits in `totp_pending_secret` until a code confirms it, so the working one is never lost halfway. 10 recovery codes `XXXXX-XXXXX` (≈50 bits) in `recovery_codes`, only SHA-256 stored; new codes replace all old ones.
+
+Sign-in: `POST /api/auth/login` checks the password (counting failures) and then answers `{"mfa": "code" | "setup", "mfa_token"}` instead of a session — a 5-minute JWT of type `mfa` that no other endpoint accepts. `code` → `POST /api/auth/login/verify {mfa_token, code}` takes an app code or a recovery code (the response says `recovery_codes_left`); a wrong one counts toward the lockout, a valid one opens the session and lifts a lock (so a locked account with 2FA reaches the code step after the right password). `setup` (account without 2FA while `TWO_FACTOR_REQUIRED` is on) → `POST /api/auth/2fa/setup {mfa_token}` returns the secret and `otpauth://` link (QR drawn in the browser), `POST /api/auth/2fa/confirm {mfa_token, code}` turns it on, returns the 10 codes once, emails a notice and opens the session.
+
+`TWO_FACTOR_REQUIRED` defaults to true and production refuses false at start-up; backend tests and the E2E server turn it off (an account that has 2FA always needs it). Settings → *Two-step verification* (`GET /api/profile/me` → `two_factor`): use a new phone (`POST /api/profile/2fa/setup {account_password}` + `/2fa/confirm {code}`), new recovery codes (`POST /api/profile/2fa/recovery-codes {account_password, code}`, app code only); both email a notice. A banner warns when 3 or fewer codes remain. The Admin resets another account's 2FA (`POST /api/admin/users/{id}/reset-2fa`: sessions end, email, next sign-in sets it up); for the Admin's own lost phone, `python -m app.cli reset-2fa --username <name>` (also unlocks).
+
 ---
 
 ## Role and Permission System

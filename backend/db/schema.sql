@@ -300,6 +300,37 @@ CREATE TABLE system_settings (
 
 UPDATE alembic_version SET version_num='0010_lockout_settings' WHERE alembic_version.version_num = '0009_user_admin';
 
+-- Running upgrade 0010_lockout_settings -> 0011_two_factor
+
+ALTER TABLE users ADD COLUMN totp_secret BYTEA;
+
+ALTER TABLE users ADD COLUMN totp_pending_secret BYTEA;
+
+ALTER TABLE users ADD COLUMN totp_enabled_at TIMESTAMP WITHOUT TIME ZONE;
+
+ALTER TABLE users ADD COLUMN totp_last_step INTEGER;
+
+CREATE TABLE recovery_codes (
+    recovery_code_id SERIAL NOT NULL, 
+    user_id INTEGER NOT NULL, 
+    code_hash VARCHAR(64) NOT NULL, 
+    used_at TIMESTAMP WITHOUT TIME ZONE, 
+    creation_date DATE NOT NULL, 
+    creation_time TIME WITHOUT TIME ZONE NOT NULL, 
+    creation_user_id INTEGER, 
+    modification_date DATE, 
+    modification_time TIME WITHOUT TIME ZONE, 
+    modification_user_id INTEGER, 
+    PRIMARY KEY (recovery_code_id), 
+    FOREIGN KEY(user_id) REFERENCES users (user_id) ON DELETE CASCADE, 
+    FOREIGN KEY(creation_user_id) REFERENCES users (user_id), 
+    FOREIGN KEY(modification_user_id) REFERENCES users (user_id)
+);
+
+CREATE INDEX idx_recovery_codes_user_id ON recovery_codes (user_id);
+
+UPDATE alembic_version SET version_num='0011_two_factor' WHERE alembic_version.version_num = '0010_lockout_settings';
+
 COMMIT;
 
 

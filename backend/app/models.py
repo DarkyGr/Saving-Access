@@ -101,6 +101,12 @@ class User(AuditColumnsMixin, Base):
     # lock they cause (NULL = not locked). Only an unlock clears it.
     failed_attempts = Column(SmallInteger, nullable=False, default=0, server_default="0")
     locked_at = Column(DateTime, nullable=True)
+    # Task 37.5 (Requirement 16.1): TOTP secret (Fernet), a new one waiting
+    # for its first code, when it was turned on and the last step accepted.
+    totp_secret = Column(LargeBinary, nullable=True)
+    totp_pending_secret = Column(LargeBinary, nullable=True)
+    totp_enabled_at = Column(DateTime, nullable=True)
+    totp_last_step = Column(Integer, nullable=True)
 
     __table_args__ = (
         CheckConstraint("role IN ('User', 'Admin')", name="ck_users_role"),
@@ -371,3 +377,29 @@ class SystemSetting(AuditColumnsMixin, Base):
 
     key = Column(String(64), primary_key=True)
     value = Column(String(2000), nullable=False)
+
+
+# ---------------------------------------------------------------------------
+# recovery_codes  (task 37.5)
+# ---------------------------------------------------------------------------
+
+class RecoveryCode(AuditColumnsMixin, Base):
+    """
+    One-time recovery code for the second factor (Requirement 16.1). Only the
+    SHA-256 of the code is stored; ``used_at`` marks it spent.
+    """
+
+    __tablename__ = "recovery_codes"
+
+    recovery_code_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    code_hash = Column(String(64), nullable=False)
+    used_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        Index("idx_recovery_codes_user_id", "user_id"),
+    )

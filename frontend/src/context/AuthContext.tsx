@@ -4,6 +4,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useRef,
   type ReactNode,
 } from "react";
 import { registerSessionHandlers, revokeSession, setAuthToken } from "../api/apiClient";
@@ -34,7 +35,7 @@ export interface AuthContextValue {
   /** Clear all auth state and revoke the session on the server. The promise
    *  settles once the server answered, so a reload right after cannot
    *  restore the session with a refresh cookie that is still valid. */
-  logout: () => Promise<void>;
+  logout: () => Promise<boolean>;
   /** Pending "verify your email" notice, or null. */
   verificationNotice: VerificationNotice | null;
   dismissVerificationNotice: () => void;
@@ -106,6 +107,7 @@ interface AuthProviderProps {
  *   current auth state synchronously without a separate hook call.
  */
 export function AuthProvider({ children }: AuthProviderProps) {
+  const signedIn = useRef(false);
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<JwtUser | null>(null);
   const [verificationNotice, setVerificationNotice] = useState<VerificationNotice | null>(null);
@@ -127,6 +129,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // Keep axios interceptor in sync
     setAuthToken(newToken);
+    signedIn.current = true;
 
     // Keep ProtectedRoute's module-level cache in sync
     setAuthStateForProtectedRoute({ token: newToken, user: decoded });
@@ -140,6 +143,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // Clear axios interceptor token
     setAuthToken(null);
+    signedIn.current = false;
 
     // Clear ProtectedRoute cache
     setAuthStateForProtectedRoute({ token: null, user: null });
@@ -148,7 +152,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // User-initiated logout: also revoke the httpOnly refresh cookie (task 31.5).
   const logout = useCallback(() => {
     clearSession();
-    return revokeSession();
+    // Resolves to false when someone signed in again before the revoke ended.
+    return Promise.resolve(revokeSession()).then(() => !signedIn.current);
   }, [clearSession]);
 
   // Let the axios interceptor store silently refreshed tokens / drop the session.

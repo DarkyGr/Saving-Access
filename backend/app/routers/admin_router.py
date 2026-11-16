@@ -7,6 +7,7 @@ Endpoints:
   POST /api/admin/users/{user_id}/deactivate   → deactivate another account, with a reason
   POST /api/admin/users/{user_id}/reactivate   → let a deactivated account sign in again
   POST /api/admin/users/{user_id}/unlock       → clear a lockout (task 37.5)
+  POST /api/admin/users/{user_id}/reset-2fa    → set two-factor up again (task 37.5)
   GET  /api/admin/audit                        → who did what and when (newest first)
   GET  /api/admin/settings                     → system parameters (task 37.5)
   PUT  /api/admin/settings                     → change some of them
@@ -32,7 +33,12 @@ from app.services.audit_service import ACTIONS, AuditService
 from app.services.email_sender import send_email
 from app.services.refresh_token_service import RefreshTokenService
 from app.services import system_settings
-from app.services.security_notice import account_deactivated_email, account_reactivated_email
+from app.services.security_notice import (
+    account_deactivated_email,
+    account_reactivated_email,
+    two_factor_reset_email,
+)
+from app.services.two_factor import TwoFactorService
 from app.utils.audit_columns import set_modification_audit, utc_date_time
 
 router = APIRouter()
@@ -78,6 +84,7 @@ class UserListItem(BaseModel):
     deactivated_at: str | None
     deactivation_reason: str | None
     locked_at: str | None
+    two_factor: bool
     created: str | None
 
 
@@ -99,6 +106,7 @@ def _list_item(user: User) -> UserListItem:
         deactivated_at=(user.deactivated_at.strftime("%Y-%m-%dT%H:%M:%SZ") if user.deactivated_at else None),
         deactivation_reason=user.deactivation_reason,
         locked_at=(user.locked_at.strftime("%Y-%m-%dT%H:%M:%SZ") if user.locked_at else None),
+        two_factor=TwoFactorService.enabled(user),
         created=_iso(user.creation_date, user.creation_time),
     )
 
@@ -297,6 +305,37 @@ def unlock_user(
         action="user.unlock", target_user_id=target.user_id,
     )
     db.commit()
+    return _list_item(target)
+
+
+@router.post(
+    "/users/{user_id}/reset-2fa",
+    response_model=UserListItem,
+    status_code=status.HTTP_200_OK,
+    summary="Make another account set two-factor up again",
+)
+def reset_two_factor(
+    user_id: int,
+    background_tasks: BackgroundTasks,
+    claims: dict = Depends(require_permission("users.manage")),
+    db: Session = Depends(get_db),
+) -> UserListItem:
+    """Requirement 15.2: for a person who lost their device and codes. Their
+    sessions end and the next sign-in sets 2FA up again; they get an email.
+    409 when 2FA is not set up."""
+    admin_id: int = claims["user_id"]
+    target = _target(db, user_id, admin_id, action="reset-2fa")
+    if not TwoFactorService.enabled(target):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Two-factor authentication is not set up.")
+    TwoFactorService(db).reset(target)
+    set_modification_audit(target, user_id=admin_id)
+    RefreshTokenService(db).revoke_all(target.user_id)
+    AuditService(db).log(
+        admin_id, "UPDATE", target.user_id, commit=False,
+        action="user.reset_2fa", target_user_id=target.user_id,
+    )
+    db.commit()
+    background_tasks.add_task(send_email, two_factor_reset_email(target))
     return _list_item(target)
 
 

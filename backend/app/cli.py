@@ -7,6 +7,7 @@ Usage (from backend/ or inside the backend container), after
     python -m app.cli create-admin --username admin --email admin@example.com
     python -m app.cli promote --username alice
     python -m app.cli verify-email --username alice
+    python -m app.cli reset-2fa --username alice   # also unlocks
     python -m app.cli send-verification-reminders [--dry-run]
     python -m app.cli rotate-fernet-key [--dry-run]
 
@@ -96,6 +97,32 @@ def cmd_verify_email(args: argparse.Namespace) -> None:
         print(f"'{user.username}' email marked as verified; the account is active.")
 
 
+def cmd_reset_two_factor(args: argparse.Namespace) -> None:
+    """Task 37.5: for the Admin who lost their phone and recovery codes (no
+    other Admin can reset it from the app). Ends every session, removes the
+    second factor and unlocks the account; the next sign-in sets it up."""
+    from app.services.audit_service import AuditService
+    from app.services.refresh_token_service import RefreshTokenService
+    from app.services.two_factor import TwoFactorService
+    from app.utils.audit_columns import set_modification_audit
+
+    with SessionLocal() as db:
+        user = db.query(User).filter(User.username == args.username).first()
+        if user is None:
+            sys.exit(f"User '{args.username}' not found.")
+        TwoFactorService(db).reset(user)
+        user.locked_at = None
+        user.failed_attempts = 0
+        set_modification_audit(user, user_id=user.user_id)
+        RefreshTokenService(db).revoke_all(user.user_id)
+        AuditService(db).log(
+            user.user_id, "UPDATE", user.user_id, commit=False,
+            action="user.reset_2fa", target_user_id=user.user_id, detail="cli",
+        )
+        db.commit()
+        print(f"Two-step verification of '{user.username}' was reset; it is set up again at the next sign-in.")
+
+
 def cmd_send_verification_reminders(args: argparse.Namespace) -> None:
     """Email deadline reminders to unverified users (task 34.4). Idempotent."""
     from app.phase2 import email_verification_enabled
@@ -122,7 +149,7 @@ def cmd_rotate_fernet_key(args: argparse.Namespace) -> None:
     """
     from cryptography.fernet import InvalidToken
 
-    from app.models import Credential
+    from app.models import Credential, User
     from app.services.encryptor_service import EncryptorService, load_fernet_keys
 
     if len(load_fernet_keys()) < 2:
@@ -140,12 +167,29 @@ def cmd_rotate_fernet_key(args: argparse.Namespace) -> None:
                 f"Credential {row.credential_id} cannot be decrypted with any key in "
                 "FERNET_KEY. Nothing was changed."
             )
+        # Task 37.5: two-factor secrets use the same key.
+        secrets_done = 0
+        for user in db.query(User).filter(
+            (User.totp_secret.is_not(None)) | (User.totp_pending_secret.is_not(None))
+        ).all():
+            try:
+                if user.totp_secret is not None:
+                    user.totp_secret = encryptor.rotate(user.totp_secret)
+                if user.totp_pending_secret is not None:
+                    user.totp_pending_secret = encryptor.rotate(user.totp_pending_secret)
+            except InvalidToken:
+                db.rollback()
+                sys.exit(f"The two-factor secret of user {user.user_id} cannot be decrypted. Nothing was changed.")
+            secrets_done += 1
         if args.dry_run:
             db.rollback()
-            print(f"Dry run: {len(rows)} credential(s) can be re-encrypted. Nothing was changed.")
+            print(
+                f"Dry run: {len(rows)} credential(s) and {secrets_done} two-factor secret(s) "
+                "can be re-encrypted. Nothing was changed."
+            )
             return
         db.commit()
-    print(f"Re-encrypted {len(rows)} credential(s) with the new key. "
+    print(f"Re-encrypted {len(rows)} credential(s) and {secrets_done} two-factor secret(s) with the new key. "
           'Now set FERNET_KEY="<new>" and restart.')
 
 
@@ -167,6 +211,12 @@ def main(argv: list[str] | None = None) -> None:
     )
     p_verify.add_argument("--username", required=True)
     p_verify.set_defaults(func=cmd_verify_email)
+
+    p_reset = sub.add_parser(
+        "reset-2fa", help="Remove a user's two-step verification and unlock them (lost phone and codes)"
+    )
+    p_reset.add_argument("--username", required=True)
+    p_reset.set_defaults(func=cmd_reset_two_factor)
 
     p_remind = sub.add_parser(
         "send-verification-reminders",

@@ -19,6 +19,13 @@ export interface Preferences {
   has_avatar_image: boolean;
 }
 
+export interface TwoFactorStatus {
+  enabled: boolean;
+  enabled_at: string | null;
+  recovery_codes_left: number;
+  required: boolean;
+}
+
 export interface Me {
   user_id: number;
   user_code: string;
@@ -28,6 +35,8 @@ export interface Me {
   role: "User" | "Admin";
   email_verified: boolean;
   preferences: Preferences;
+  /** Task 37.5. Missing only in old test fixtures. */
+  two_factor?: TwoFactorStatus;
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -57,6 +66,8 @@ interface PreferencesValue {
   setAvatarPreset: (preset: string) => Promise<void>;
   uploadAvatar: (picture: Blob) => Promise<void>;
   clearAvatar: () => Promise<void>;
+  /** Load the account again (after a change made elsewhere, e.g. 2FA). */
+  reloadMe: () => Promise<void>;
 }
 
 const noop = async () => undefined;
@@ -71,6 +82,7 @@ const PreferencesContext = createContext<PreferencesValue>({
   setAvatarPreset: noop,
   uploadAvatar: noop,
   clearAvatar: noop,
+  reloadMe: noop,
 });
 
 /**
@@ -187,6 +199,10 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       clearAvatar: async () => {
         const res = await apiClient.delete<Preferences>("/api/profile/avatar");
         setPrefs(res.data);
+      },
+      reloadMe: async () => {
+        const res = await apiClient.get<Me>("/api/profile/me");
+        if (res?.data?.user_code) setMe(res.data);
       },
     }),
     [me, prefs, avatarUrl, setPrefs]

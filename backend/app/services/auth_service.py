@@ -177,15 +177,56 @@ class AuthService:
         return user
 
     def login(self, payload: dict[str, Any]) -> dict:
-        """Authenticate a user and issue a JWT access token.
+        """Password-only sign-in (no second factor): :meth:`authenticate`,
+        the lock check and an access token. The API's login endpoint adds the
+        second step (task 37.5) on top of :meth:`authenticate`."""
+        user = self.authenticate(payload)
+        if user.locked_at is not None:
+            raise HTTPException(status_code=423, detail=ACCOUNT_LOCKED)
+        self.clear_failures(user)
+        return self.issue_access_token(user)
+
+    def clear_failures(self, user: User) -> None:
+        """A full sign-in resets the count and lifts a lock. Commits."""
+        if user.failed_attempts or user.locked_at is not None:
+            user.failed_attempts = 0
+            user.locked_at = None
+            self._db.commit()
+
+    def issue_challenge(self, user: User, purpose: str) -> str:
+        """Short-lived token for the second step after a right password
+        (task 37.5): ``code`` (enter a code) or ``setup`` (set 2FA up first).
+        It is not an access token: the API refuses it everywhere else."""
+        now = datetime.now(UTC)
+        return encode_token(
+            {"type": "mfa", "purpose": purpose, "user_id": user.user_id, "iat": now, "exp": now + timedelta(minutes=5)}
+        )
+
+    def read_challenge(self, token: str, purpose: str) -> User:
+        """The user of a valid challenge of *purpose*; 401 otherwise."""
+        try:
+            payload = decode_token(token)
+        except (ExpiredSignatureError, InvalidTokenError):
+            raise HTTPException(status_code=401, detail="Sign-in expired. Start again.") from None
+        if payload.get("type") != "mfa" or payload.get("purpose") != purpose:
+            raise HTTPException(status_code=401, detail="Sign-in expired. Start again.")
+        user = self._db.get(User, payload.get("user_id"))
+        if user is None or is_deactivated(user, utc_date_time()[0]):
+            raise HTTPException(status_code=401, detail="Sign-in expired. Start again.")
+        return user
+
+    def authenticate(self, payload: dict[str, Any]) -> User:
+        """Check username and password.
 
         On any failure (wrong username, wrong password, inactive account),
         always returns the same generic error to avoid leaking which field
         was wrong (Requirement 2.3).
 
         :param payload: dict with keys ``username`` and ``password``.
-        :raises HTTPException 401: on any authentication failure.
-        :returns: ``{"access_token": ..., "token_type": "bearer", "expires_in": 900}``
+        :raises HTTPException 401: on any authentication failure (a wrong
+            password is counted, Requirement 16.2); 403 when deactivated.
+        :returns: the user. The caller decides about the lock and the
+            second step.
         """
         _generic = HTTPException(
             status_code=401,
@@ -211,14 +252,7 @@ class AuthService:
         # reveals nothing to someone who does not know the password.
         if is_deactivated(user, utc_date_time()[0]):
             raise HTTPException(status_code=403, detail=ACCOUNT_DEACTIVATED)
-        # Requirement 16.2 — also only after the password matched.
-        if user.locked_at is not None:
-            raise HTTPException(status_code=423, detail=ACCOUNT_LOCKED)
-        if user.failed_attempts:
-            user.failed_attempts = 0
-            self._db.commit()
-
-        return self.issue_access_token(user)
+        return user
 
     def register_failure(self, user: User) -> OutgoingEmail | None:
         """Count a wrong password or code (Requirement 16.2, task 37.5).

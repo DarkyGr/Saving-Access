@@ -217,6 +217,15 @@
       "confirm": "Desbloquear",
       "done": "Se desbloqueó a {{username}}.",
       "conflict": "Esa cuenta no está bloqueada. Recarga la página."
+    },
+    "reset-2fa": {
+      "button": "Reiniciar 2FA",
+      "label": "Reiniciar la verificación en dos pasos de {{username}}",
+      "title": "¿Reiniciar la verificación en dos pasos de {{username}}?",
+      "message": "Para quien perdió su teléfono y sus códigos de recuperación. Sus sesiones terminan y la configura de nuevo al entrar. Recibe un correo.",
+      "confirm": "Reiniciar",
+      "done": "Se reinició la verificación en dos pasos de {{username}}.",
+      "conflict": "Esa cuenta no tiene verificación en dos pasos. Recarga la página."
     }
   },
   "forbidden": {
@@ -400,7 +409,9 @@
         "register": "Se registró",
         "login": "Inició sesión",
         "password": "Cambió su contraseña",
-        "unlock": "Desbloqueó su cuenta"
+        "unlock": "Desbloqueó su cuenta",
+        "2fa_setup": "Configuró la verificación en dos pasos",
+        "recovery_codes": "Creó códigos de recuperación nuevos"
       },
       "credential": {
         "create": "Guardó una credencial",
@@ -412,7 +423,8 @@
         "role": "Cambió un rol",
         "deactivate": "Desactivó una cuenta",
         "reactivate": "Reactivó una cuenta",
-        "unlock": "Desbloqueó una cuenta"
+        "unlock": "Desbloqueó una cuenta",
+        "reset_2fa": "Reinició la verificación en dos pasos"
       },
       "settings": {
         "update": "Cambió parámetros del sistema"
@@ -461,5 +473,50 @@
         "help": "Cuánto más dura una sesión cuando alguien pulsa Extender cerca del máximo."
       }
     }
+  },
+  "twoFactor": {
+    "cardTitle": "Verificación en dos pasos",
+    "setupTitle": "Configura la verificación en dos pasos",
+    "codeTitle": "Verificación en dos pasos",
+    "codesTitle": "Guarda tus códigos de recuperación",
+    "setupRequired": "Todas las cuentas de Save-Pass usan un segundo paso: un código de 6 dígitos de una app de autenticación en tu teléfono. Configúralo ahora; tarda un minuto.",
+    "step1": "Instala una app de autenticación (Google Authenticator, Microsoft Authenticator, Aegis, 2FAS…).",
+    "step2": "Escanea el código con la app o escribe la clave de abajo.",
+    "step3": "Escribe el código de 6 dígitos que muestra la app.",
+    "qrLabel": "Código QR para agregar Save-Pass a tu app de autenticación",
+    "openInApp": "Abrir en la app de autenticación de este dispositivo",
+    "manual": "¿No puedes escanear? Escribe esta clave en la app:",
+    "codeLabel": "Código de 6 dígitos",
+    "codeFormat": "Escribe los 6 dígitos que muestra la app.",
+    "wrongCode": "Ese código no es válido. Revisa la hora de tu teléfono y usa el código más reciente.",
+    "expired": "El inicio de sesión tardó demasiado. Empieza de nuevo.",
+    "confirm": "Confirmar",
+    "verify": "Verificar",
+    "codeIntro": "Abre tu app de autenticación y escribe el código de Save-Pass.",
+    "recoveryIntro": "Escribe uno de tus códigos de recuperación. Cada uno sirve una vez.",
+    "recoveryLabel": "Código de recuperación",
+    "recoveryFormat": "Un código de recuperación tiene 10 letras y números, como ABCDE-23456.",
+    "useRecovery": "Usar un código de recuperación",
+    "useApp": "Usar la app",
+    "startOver": "Empezar de nuevo",
+    "codesIntro": "Si pierdes tu teléfono, cada uno de estos códigos te deja entrar una vez. Guárdalos en un lugar seguro, lejos de este dispositivo. Solo se muestran ahora.",
+    "copy": "Copiar",
+    "copied": "Copiados",
+    "download": "Descargar .txt",
+    "savedThem": "Ya guardé mis códigos de recuperación",
+    "continue": "Continuar",
+    "done": "Listo",
+    "enabledSince": "Activa desde el {{date}}.",
+    "notEnabled": "Aún no está configurada.",
+    "codesLeft_one": "Te queda {{count}} código de recuperación.",
+    "codesLeft_other": "Te quedan {{count}} códigos de recuperación.",
+    "setUp": "Configurar",
+    "newDevice": "Usar otro teléfono",
+    "newCodes": "Códigos de recuperación nuevos",
+    "newDeviceIntro": "Confirma tu contraseña. Tu teléfono actual sigue funcionando hasta que confirmes el nuevo con un código.",
+    "newCodesIntro": "Confirma tu contraseña y un código de la app. Los códigos de recuperación anteriores dejan de servir.",
+    "lowCodes_one": "Solo te queda {{count}} código de recuperación.",
+    "lowCodes_other": "Solo te quedan {{count}} códigos de recuperación.",
+    "lowCodesLink": "Crea nuevos en Configuración"
   }
 }

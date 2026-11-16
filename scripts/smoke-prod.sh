@@ -51,13 +51,27 @@ echo "• SPA served with history fallback"
 "${CURL[@]}" "$BASE/credentials" | grep -qi '<div id="root">'
 
 PW='Str0ngPassw0rd!'
-echo "• register → login → save → reveal → refresh"
+echo "• register → login → set up 2FA → save → reveal → refresh"
 "${CURL[@]}" -H 'Content-Type: application/json' \
   -d "{\"username\":\"smoke\",\"email\":\"smoke@example.com\",\"password\":\"$PW\",\"password_confirmation\":\"$PW\"}" \
   "$BASE/api/auth/register" >/dev/null
-TOKEN=$("${CURL[@]}" -c "$JAR" -H 'Content-Type: application/json' \
+# Task 37.5: production requires two-factor; the first sign-in sets it up.
+MFA=$("${CURL[@]}" -H 'Content-Type: application/json' \
   -d "{\"username\":\"smoke\",\"password\":\"$PW\"}" "$BASE/api/auth/login" \
-  | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
+  | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["mfa"]=="setup" and not d["access_token"]; print(d["mfa_token"])')
+SECRET=$("${CURL[@]}" -H 'Content-Type: application/json' -d "{\"mfa_token\":\"$MFA\"}" "$BASE/api/auth/2fa/setup" \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["secret"])')
+CODE=$(python3 - "$SECRET" <<'PY'
+import base64, hashlib, hmac, struct, sys, time
+key = base64.b32decode(sys.argv[1] + "=" * (-len(sys.argv[1]) % 8))
+digest = hmac.new(key, struct.pack(">Q", int(time.time() // 30)), hashlib.sha1).digest()
+offset = digest[-1] & 15
+print(str((struct.unpack(">I", digest[offset:offset + 4])[0] & 0x7FFFFFFF) % 1000000).zfill(6))
+PY
+)
+TOKEN=$("${CURL[@]}" -c "$JAR" -H 'Content-Type: application/json' \
+  -d "{\"mfa_token\":\"$MFA\",\"code\":\"$CODE\"}" "$BASE/api/auth/2fa/confirm" \
+  | python3 -c 'import json,sys; d=json.load(sys.stdin); assert len(d["recovery_codes"])==10; print(d["access_token"])')
 grep -q sp_refresh "$JAR"
 AUTH=(-H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json')
 CID=$("${CURL[@]}" "${AUTH[@]}" \
@@ -82,7 +96,7 @@ echo "• audit rows written"
 # Task 37.4: every row names its action (failed logins write none).
 "${COMPOSE[@]}" exec -T db psql -U savepass_owner -d savepass -tAc \
   "select string_agg(distinct action, ',' order by action) from audit_log" \
-  | grep -qx 'account.login,account.register,credential.create,credential.reveal'
+  | grep -qx 'account.2fa_setup,account.login,account.register,credential.create,credential.reveal'
 
 echo "• backup, data loss, restore"
 "${COMPOSE[@]}" exec -T backup sh /usr/local/bin/backup.sh once

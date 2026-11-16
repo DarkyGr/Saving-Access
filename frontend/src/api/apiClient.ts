@@ -61,6 +61,7 @@ export function isAccountPasswordError(data: unknown): boolean {
 const baseURL = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
 
 let refreshInFlight: Promise<string | null> | null = null;
+let revoking = false;
 let onTokenRefreshed: ((token: string) => void) | null = null;
 let onSessionExpired: (() => void) | null = null;
 
@@ -79,6 +80,8 @@ export function registerSessionHandlers(handlers: {
  * Resolves to null when there is no valid session.
  */
 export function refreshAccessToken(): Promise<string | null> {
+  // While logging out, a refresh would bring the session straight back.
+  if (revoking) return Promise.resolve(null);
   if (!refreshInFlight) {
     refreshInFlight = axios
       .post<{ access_token: string }>(`${baseURL}/api/auth/refresh`, null, {
@@ -95,10 +98,13 @@ export function refreshAccessToken(): Promise<string | null> {
 
 /** Revoke the refresh cookie server-side. Never throws. */
 export async function revokeSession(): Promise<void> {
+  revoking = true;
   try {
     await axios.post(`${baseURL}/api/auth/logout`, null, { withCredentials: true });
   } catch {
     // Logging out locally is enough if the server is unreachable.
+  } finally {
+    revoking = false;
   }
 }
 

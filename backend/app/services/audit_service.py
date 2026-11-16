@@ -34,10 +34,13 @@ ACTIONS: tuple[str, ...] = (
     "account.login",
     "account.password",
     "account.unlock",
+    "account.2fa_setup",
+    "account.recovery_codes",
     "user.role",
     "user.deactivate",
     "user.reactivate",
     "user.unlock",
+    "user.reset_2fa",
     "settings.update",
 )
 

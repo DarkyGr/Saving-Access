@@ -76,6 +76,9 @@ _PUBLIC = {
     "/api/auth/config",
     "/api/auth/verify-email",
     "/api/auth/unlock",
+    "/api/auth/login/verify",
+    "/api/auth/2fa/setup",
+    "/api/auth/2fa/confirm",
     "/api/health",
 }
 
@@ -142,6 +145,7 @@ def test_credential_and_admin_endpoints_name_their_permission():
         ("POST", "/api/admin/users/{user_id}/reactivate"): "users.manage",
         ("GET", "/api/admin/audit"): "audit.view",
         ("POST", "/api/admin/users/{user_id}/unlock"): "users.manage",
+        ("POST", "/api/admin/users/{user_id}/reset-2fa"): "users.manage",
         ("GET", "/api/admin/settings"): "settings.manage",
         ("PUT", "/api/admin/settings"): "settings.manage",
     }

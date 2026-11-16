@@ -113,6 +113,11 @@ def settings_problems() -> list[str]:
     if bool(site) != bool(secret):
         problems.append("Set both HCAPTCHA_SITE_KEY and HCAPTCHA_SECRET, or neither.")
 
+    # Task 37.5: the second factor is mandatory wherever real people sign in.
+    required = os.environ.get("TWO_FACTOR_REQUIRED", "true").strip().lower()
+    if os.environ.get("ENVIRONMENT", "development") == "production" and required in {"0", "false", "no", "off"}:
+        problems.append("TWO_FACTOR_REQUIRED cannot be false in production.")
+
     if not email_verification_enabled():
         return problems
 

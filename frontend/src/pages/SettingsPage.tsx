@@ -16,6 +16,8 @@ import Avatar, { AVATAR_PRESETS, PresetIcon } from "../components/profile/Avatar
 import PasswordInput from "../components/PasswordInput";
 import HelpTip from "../components/form/HelpTip";
 import ConfirmDialog from "../components/ConfirmDialog";
+import TwoFactorSetup, { type SetupStart } from "../components/auth/TwoFactorSetup";
+import RecoveryCodes from "../components/auth/RecoveryCodes";
 
 // Swatch colours (fixed, so each choice shows its own colour in any theme).
 const SWATCH: Record<Accent, string> = {
@@ -463,6 +465,189 @@ function PasswordCard() {
   );
 }
 
+// ── Two-step verification (task 37.5) ─────────────────────────────────────
+
+type TwoFactorMode = "idle" | "password" | "setup" | "renew" | "codes";
+
+function TwoFactorCard() {
+  const { t, i18n } = useTranslation();
+  const { me, reloadMe } = usePreferences();
+  const status = me?.two_factor;
+  const [mode, setMode] = useState<TwoFactorMode>("idle");
+  const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [setup, setSetup] = useState<SetupStart | null>(null);
+  const [codes, setCodes] = useState<string[]>([]);
+
+  function reset(next: TwoFactorMode = "idle") {
+    setMode(next);
+    setPassword("");
+    setCode("");
+    setError(null);
+  }
+
+  function failure(err: unknown) {
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+    setError(
+      status === 401
+        ? t("passwordConfirmModal.errorWrongPassword")
+        : status === 400
+          ? t("twoFactor.wrongCode")
+          : status === 429
+            ? t("settings.tooManyAttempts")
+            : t("errors.generic")
+    );
+  }
+
+  async function startSetup(e: FormEvent) {
+    e.preventDefault();
+    if (!password) {
+      setError(t("form.required"));
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await apiClient.post<SetupStart>("/api/profile/2fa/setup", { account_password: password });
+      setSetup(res.data);
+      reset("setup");
+    } catch (err: unknown) {
+      failure(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function renew(e: FormEvent) {
+    e.preventDefault();
+    if (!password || !/^\d{6}$/.test(code.replace(/\s/g, ""))) {
+      setError(!password ? t("form.required") : t("twoFactor.codeFormat"));
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await apiClient.post<{ recovery_codes: string[] }>("/api/profile/2fa/recovery-codes", {
+        account_password: password,
+        code: code.replace(/\s/g, ""),
+      });
+      setCodes(res.data.recovery_codes);
+      reset("codes");
+    } catch (err: unknown) {
+      failure(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const since = status?.enabled_at
+    ? new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium" }).format(new Date(status.enabled_at))
+    : null;
+  const low = Boolean(status?.enabled && status.recovery_codes_left <= 3);
+
+  return (
+    <Card id="settings-two-factor" title={t("twoFactor.cardTitle")}>
+      {mode === "idle" && (
+        <div className="space-y-3">
+          <p className="text-sm text-gray-700">
+            {status?.enabled ? t("twoFactor.enabledSince", { date: since }) : t("twoFactor.notEnabled")}
+          </p>
+          {status?.enabled && (
+            <p className={`text-sm ${low ? "font-medium text-amber-700" : "text-gray-600"}`}>
+              {t("twoFactor.codesLeft", { count: status.recovery_codes_left })}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className={secondary} onClick={() => reset("password")}>
+              {status?.enabled ? t("twoFactor.newDevice") : t("twoFactor.setUp")}
+            </button>
+            {status?.enabled && (
+              <button type="button" className={secondary} onClick={() => reset("renew")}>
+                {t("twoFactor.newCodes")}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {(mode === "password" || mode === "renew") && (
+        <form onSubmit={mode === "password" ? startSetup : renew} noValidate className="max-w-md space-y-4">
+          <p className="text-sm text-gray-700">{mode === "password" ? t("twoFactor.newDeviceIntro") : t("twoFactor.newCodesIntro")}</p>
+          <PasswordInput
+            id="two-factor-password"
+            label={`${t("settings.currentPassword")} *`}
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setError(null);
+            }}
+          />
+          {mode === "renew" && (
+            <div>
+              <label htmlFor="two-factor-code" className="block text-sm font-medium text-gray-700">
+                {t("twoFactor.codeLabel")} *
+              </label>
+              <input
+                id="two-factor-code"
+                value={code}
+                onChange={(e) => {
+                  setCode(e.target.value);
+                  setError(null);
+                }}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={7}
+                className={`${input} mt-1 w-40 font-mono tracking-widest`}
+              />
+            </div>
+          )}
+          {error && <Status kind="error" text={error} />}
+          <div className="flex gap-2">
+            <button type="submit" disabled={busy} className={primary}>
+              {t("twoFactor.continue")}
+            </button>
+            <button type="button" className={secondary} onClick={() => reset()}>
+              {t("common.cancel")}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {mode === "setup" && setup && (
+        <div className="max-w-md space-y-4">
+          <TwoFactorSetup
+            start={async () => setup}
+            confirm={async (value) => {
+              const res = await apiClient.post<{ recovery_codes: string[] }>("/api/profile/2fa/confirm", { code: value });
+              setCodes(res.data.recovery_codes);
+              setSetup(null);
+              reset("codes");
+            }}
+          />
+          <button type="button" className={secondary} onClick={() => reset()}>
+            {t("common.cancel")}
+          </button>
+        </div>
+      )}
+
+      {mode === "codes" && (
+        <div className="max-w-md">
+          <RecoveryCodes
+            codes={codes}
+            doneLabel={t("twoFactor.done")}
+            onDone={() => {
+              setCodes([]);
+              reset();
+              void reloadMe();
+            }}
+          />
+        </div>
+      )}
+    </Card>
+  );
+}
+
 // ── Sessions ───────────────────────────────────────────────────────────────
 
 interface SessionItem {
@@ -576,6 +761,7 @@ export default function SettingsPage() {
         <ProfileCard />
         <PreferencesCard />
         <PasswordCard />
+        <TwoFactorCard />
         <SessionsCard />
       </div>
     </main>

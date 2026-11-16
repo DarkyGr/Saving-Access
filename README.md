@@ -373,6 +373,10 @@ Pre-populated form with the existing credential data. The password field is mask
 
 Lists all registered users with their user ID, role (User or Admin) and status (active, deactivated, email not verified), with search by name, email or user ID, filters by role and status, pages and table/cards view. A dropdown per row changes another user's role; your own row is locked so there is always an Admin. **Deactivate** asks for a reason, signs the person out everywhere at once and emails them the reason; their saved passwords are kept. **Reactivate** lets them sign in again (an account closed for not verifying its email gets a new deadline). The Admin never sees other users' passwords.
 
+### Two-step verification
+
+Every account uses a second step: after the password, a 6-digit code from an authenticator app (Google Authenticator, Microsoft Authenticator, Aegis, 2FAS…). The first sign-in asks you to set it up — scan the QR code, type a code — and shows 10 recovery codes once; each lets you in once if you lose your phone, and a banner warns when 3 or fewer remain. In **Settings → Two-step verification** you can move it to a new phone or create new recovery codes (both need your password and send you an email). If someone loses both, the administrator resets it from Manage Users; if the administrator loses theirs: `python -m app.cli reset-2fa --username <name>` on the server.
+
 ### Admin — System parameters (`/admin/settings`) *(Admin only)*
 
 Security values for every account, each with its range and suggested value: failed attempts before an account locks, how often administration asks for the password again, idle time and maximum length of a session and how much "Extend" adds. Nothing is saved if any value is out of range.

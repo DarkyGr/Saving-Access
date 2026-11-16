@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router";
+import { Link, Outlet, useLocation, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../context/AuthContext";
 import { visibleItems } from "../config/navigation";
 import { usePermissions } from "../hooks/usePermissions";
+import { usePreferences } from "../context/PreferencesContext";
 import { readLocal, writeLocal } from "../lib/storage";
 import LanguageToggle from "./LanguageToggle";
 import VerifyEmailModal from "./VerifyEmailModal";
@@ -54,8 +55,9 @@ export default function AppLayout() {
   }
 
   async function handleLogout() {
-    await logout();
-    navigate("/login", { replace: true });
+    // False when someone signed in again while the session was being
+    // revoked: then they stay where that sign-in took them.
+    if (await logout()) navigate("/login", { replace: true });
   }
 
   if (!token || !user) {
@@ -138,12 +140,29 @@ export default function AppLayout() {
             <AccountMenu username={user.username} role={user.role} onLogout={handleLogout} />
           </div>
         </header>
+        <RecoveryCodesWarning />
         <Outlet />
       </div>
 
       {verificationNotice && (
         <VerifyEmailModal deadline={verificationNotice.deadline} onClose={dismissVerificationNotice} />
       )}
+    </div>
+  );
+}
+
+/** Requirement 16.1: warn when 3 or fewer recovery codes remain. */
+function RecoveryCodesWarning() {
+  const { t } = useTranslation();
+  const { me } = usePreferences();
+  const status = me?.two_factor;
+  if (!status?.enabled || status.recovery_codes_left > 3) return null;
+  return (
+    <div role="status" className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+      {t("twoFactor.lowCodes", { count: status.recovery_codes_left })}{" "}
+      <Link to="/settings" className="font-medium underline">
+        {t("twoFactor.lowCodesLink")}
+      </Link>
     </div>
   );
 }

@@ -34,7 +34,8 @@ from app.security import hash_password, verify_password
 from app.services.auth_service import validate_password_strength
 from app.services.refresh_token_service import RefreshTokenService
 from app.services.audit_service import AuditService
-from app.services.security_notice import password_changed_email
+from app.services.security_notice import password_changed_email, recovery_codes_email, two_factor_enabled_email
+from app.services.two_factor import TwoFactorService, two_factor_required
 from app.services.email_sender import send_email
 from app.services.email_verification_service import (
     EmailVerificationService,
@@ -225,6 +226,23 @@ def set_my_list_view(
 # --- Profile (task 37.3, Requirement 14.1) ----------------------------------
 
 
+class TwoFactorStatus(BaseModel):
+    enabled: bool
+    enabled_at: str | None
+    recovery_codes_left: int
+    required: bool
+
+
+def _two_factor_status(db: Session, user: User) -> TwoFactorStatus:
+    service = TwoFactorService(db)
+    return TwoFactorStatus(
+        enabled=service.enabled(user),
+        enabled_at=user.totp_enabled_at.strftime("%Y-%m-%dT%H:%M:%SZ") if user.totp_enabled_at else None,
+        recovery_codes_left=service.recovery_left(user),
+        required=two_factor_required(),
+    )
+
+
 class MeResponse(BaseModel):
     user_id: int
     user_code: str
@@ -234,6 +252,7 @@ class MeResponse(BaseModel):
     role: str
     email_verified: bool
     preferences: PreferencesResponse
+    two_factor: TwoFactorStatus
 
 
 class DisplayNameUpdate(BaseModel):
@@ -252,6 +271,7 @@ def get_me(claims: dict = Depends(get_current_claims), db: Session = Depends(get
         role=user.role,
         email_verified=bool(user.email_verified),
         preferences=_preferences_response(user, _prefs(db, user.user_id)),
+        two_factor=_two_factor_status(db, user),
     )
 
 
@@ -472,3 +492,98 @@ def resend_verification_email(
     db.commit()
     background_tasks.add_task(send_email, build_verification_email(user, raw, language))
     return {"detail": "Verification email sent."}
+
+
+# --- Two-factor authentication (task 37.5, Requirement 16.1) -------------------
+
+
+class TwoFactorSetupRequest(BaseModel):
+    account_password: str = Field(max_length=256)
+
+
+class TwoFactorSetupResponse(BaseModel):
+    secret: str
+    otpauth_uri: str
+
+
+class TwoFactorCodeRequest(BaseModel):
+    code: str = Field(min_length=1, max_length=32)
+
+
+class RecoveryCodesRequest(BaseModel):
+    account_password: str = Field(max_length=256)
+    code: str = Field(min_length=1, max_length=32)
+
+
+class RecoveryCodesResponse(BaseModel):
+    recovery_codes: list[str]
+
+
+def _check_password(user: User, raw: str) -> None:
+    if not verify_password(raw, user.password_hash):
+        raise HTTPException(status_code=401, detail="Account password verification failed.")
+
+
+@router.post("/2fa/setup", response_model=TwoFactorSetupResponse, summary="Start setting up 2FA (new device)")
+@limiter.limit(ACCOUNT_PASSWORD_LIMIT, key_func=user_or_ip_key)
+def two_factor_setup(
+    request: Request,
+    body: TwoFactorSetupRequest,
+    claims: dict = Depends(get_current_claims),
+    db: Session = Depends(get_db),
+) -> TwoFactorSetupResponse:
+    """Needs the account password. The current second factor keeps working
+    until the new one is confirmed with a code."""
+    user = _user(db, claims)
+    _check_password(user, body.account_password)
+    secret, uri = TwoFactorService(db).start_setup(user)
+    db.commit()
+    return TwoFactorSetupResponse(secret=secret, otpauth_uri=uri)
+
+
+@router.post("/2fa/confirm", response_model=RecoveryCodesResponse, summary="Turn the new 2FA device on")
+@limiter.limit(ACCOUNT_PASSWORD_LIMIT, key_func=user_or_ip_key)
+def two_factor_confirm(
+    request: Request,
+    body: TwoFactorCodeRequest,
+    background_tasks: BackgroundTasks,
+    claims: dict = Depends(get_current_claims),
+    db: Session = Depends(get_db),
+) -> RecoveryCodesResponse:
+    """A code from the new device switches to it and issues 10 new recovery
+    codes (shown once); a security notice is emailed (Requirement 16.7)."""
+    user = _user(db, claims)
+    codes = TwoFactorService(db).confirm_setup(user, body.code)
+    if codes is None:
+        raise HTTPException(status_code=400, detail="Invalid code.")
+    set_modification_audit(user, user_id=user.user_id)
+    AuditService(db).log(user.user_id, "UPDATE", user.user_id, commit=False, action="account.2fa_setup")
+    db.commit()
+    background_tasks.add_task(send_email, two_factor_enabled_email(user))
+    return RecoveryCodesResponse(recovery_codes=codes)
+
+
+@router.post("/2fa/recovery-codes", response_model=RecoveryCodesResponse, summary="Replace the recovery codes")
+@limiter.limit(ACCOUNT_PASSWORD_LIMIT, key_func=user_or_ip_key)
+def two_factor_recovery_codes(
+    request: Request,
+    body: RecoveryCodesRequest,
+    background_tasks: BackgroundTasks,
+    claims: dict = Depends(get_current_claims),
+    db: Session = Depends(get_db),
+) -> RecoveryCodesResponse:
+    """Needs the account password and a current code; the old codes stop
+    working. A security notice is emailed (Requirement 16.7)."""
+    user = _user(db, claims)
+    _check_password(user, body.account_password)
+    service = TwoFactorService(db)
+    if not service.enabled(user):
+        raise HTTPException(status_code=409, detail="Two-factor authentication is not set up.")
+    if service.check(user, body.code, allow_recovery=False) is None:
+        raise HTTPException(status_code=400, detail="Invalid code.")
+    codes = service.new_recovery_codes(user)
+    AuditService(db).log(user.user_id, "UPDATE", user.user_id, commit=False, action="account.recovery_codes")
+    db.commit()
+    background_tasks.add_task(send_email, recovery_codes_email(user))
+    return RecoveryCodesResponse(recovery_codes=codes)
+

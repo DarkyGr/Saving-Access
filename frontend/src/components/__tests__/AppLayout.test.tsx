@@ -14,11 +14,15 @@ function makeJwt(payload: Record<string, unknown>): string {
   return `${enc({ alg: "HS256", typ: "JWT" })}.${enc(payload)}.sig`;
 }
 
-// Logs in with the given token once mounted (simulates LoginPage success).
+// Logs in with the given token once per test (simulates LoginPage success).
+let signedInOnce = false;
 function LoginAs({ token }: { token: string | null }) {
   const { login } = useAuth();
   useEffect(() => {
-    if (token) login(token);
+    if (token && !signedInOnce) {
+      signedInOnce = true;
+      login(token);
+    }
   }, [token, login]);
   return <p>page body</p>;
 }
@@ -50,6 +54,7 @@ const adminToken = makeJwt({ user_id: 1, username: "root", role: "Admin", exp: 9
 describe("AppLayout", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    signedInOnce = false;
   });
 
   it("shows the language toggle even when logged out (Req 10.2)", () => {

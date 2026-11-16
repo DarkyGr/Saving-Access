@@ -28,6 +28,26 @@ _TEXTS = {
             "Reason: {reason}\n\n"
             "If you think this is a mistake, contact the administrator.\n"
         ),
+        "two_factor_subject": "Save-Pass: two-step verification was set up",
+        "two_factor_body": (
+            "Hello {name},\n\n"
+            "Two-step verification was set up on a device for your Save-Pass account on {when} (UTC), "
+            "and new recovery codes were issued (the old ones no longer work).\n\n"
+            "If you did not do it, contact the administrator right away.\n"
+        ),
+        "recovery_subject": "Save-Pass: new recovery codes",
+        "recovery_body": (
+            "Hello {name},\n\n"
+            "New recovery codes were issued for your Save-Pass account on {when} (UTC). The old ones no longer work.\n\n"
+            "If you did not do it, contact the administrator right away.\n"
+        ),
+        "two_factor_reset_subject": "Save-Pass: two-step verification was reset",
+        "two_factor_reset_body": (
+            "Hello {name},\n\n"
+            "The administrator reset the two-step verification of your Save-Pass account on {when} (UTC). "
+            "Your sessions were closed; the next time you sign in you will set it up again.\n\n"
+            "If you did not ask for it, contact the administrator.\n"
+        ),
         "locked_subject": "Save-Pass: your account was locked",
         "locked_body": (
             "Hello {name},\n\n"
@@ -58,6 +78,26 @@ _TEXTS = {
             "No puedes iniciar sesión y se cerraron tus sesiones. Tus contraseñas guardadas se conservan.\n\n"
             "Motivo: {reason}\n\n"
             "Si crees que es un error, habla con el administrador.\n"
+        ),
+        "two_factor_subject": "Save-Pass: se configuró la verificación en dos pasos",
+        "two_factor_body": (
+            "Hola {name}:\n\n"
+            "Se configuró la verificación en dos pasos en un dispositivo para tu cuenta de Save-Pass el {when} (UTC) "
+            "y se generaron códigos de recuperación nuevos (los anteriores ya no sirven).\n\n"
+            "Si no fuiste tú, avisa al administrador de inmediato.\n"
+        ),
+        "recovery_subject": "Save-Pass: códigos de recuperación nuevos",
+        "recovery_body": (
+            "Hola {name}:\n\n"
+            "Se generaron códigos de recuperación nuevos para tu cuenta de Save-Pass el {when} (UTC). Los anteriores ya no sirven.\n\n"
+            "Si no fuiste tú, avisa al administrador de inmediato.\n"
+        ),
+        "two_factor_reset_subject": "Save-Pass: se reinició la verificación en dos pasos",
+        "two_factor_reset_body": (
+            "Hola {name}:\n\n"
+            "El administrador reinició la verificación en dos pasos de tu cuenta de Save-Pass el {when} (UTC). "
+            "Se cerraron tus sesiones; la próxima vez que entres la configurarás de nuevo.\n\n"
+            "Si no lo pediste, habla con el administrador.\n"
         ),
         "locked_subject": "Save-Pass: se bloqueó tu cuenta",
         "locked_body": (
@@ -102,6 +142,20 @@ def password_changed_email(user: User) -> OutgoingEmail:
 def account_deactivated_email(user: User, reason: str) -> OutgoingEmail:
     """Task 37.4 (Requirement 15.2): tells the owner why."""
     return _notice(user, "deactivated", reason=reason)
+
+
+def two_factor_enabled_email(user: User) -> OutgoingEmail:
+    """Requirement 16.7: 2FA set up (first time or a new device)."""
+    return _notice(user, "two_factor")
+
+
+def recovery_codes_email(user: User) -> OutgoingEmail:
+    """Requirement 16.7: recovery codes replaced."""
+    return _notice(user, "recovery")
+
+
+def two_factor_reset_email(user: User) -> OutgoingEmail:
+    return _notice(user, "two_factor_reset")
 
 
 def account_locked_email(user: User, link: str) -> OutgoingEmail:

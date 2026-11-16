@@ -244,3 +244,80 @@ describe("LoginPage — spec Phase 2", () => {
     });
   });
 });
+
+describe("LoginPage — two-step verification (task 37.5)", () => {
+  beforeEach(async () => {
+    resetAuthConfigCache();
+    await i18n.changeLanguage("en");
+    vi.mocked(apiClient.get).mockImplementation((url: string) =>
+      url === "/api/auth/config" ? Promise.resolve(config()) : Promise.resolve({ data: { permissions: [] } })
+    );
+  });
+
+  afterEach(() => vi.clearAllMocks());
+
+  it("asks for a code after the password and signs in with it", async () => {
+    vi.mocked(apiClient.post).mockImplementation((url: string) =>
+      Promise.resolve(
+        url === "/api/auth/login"
+          ? { data: { access_token: null, mfa: "code", mfa_token: "challenge" } }
+          : { data: { access_token: TOKEN, token_type: "bearer", expires_in: 900 } }
+      )
+    );
+    const router = renderLogin();
+    await fillAndSubmit();
+    const field = await screen.findByLabelText("6-digit code");
+    const user = userEvent.setup();
+    await user.type(field, "12345");
+    await user.click(screen.getByRole("button", { name: "Verify" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Type the 6 digits");
+    await user.type(field, "6");
+    await user.click(screen.getByRole("button", { name: "Verify" }));
+    expect(apiClient.post).toHaveBeenCalledWith("/api/auth/login/verify", { mfa_token: "challenge", code: "123456" });
+    await waitFor(() => expect(router.state.location.pathname).toBe("/"));
+  });
+
+  it("accepts a recovery code and explains a wrong code", async () => {
+    vi.mocked(apiClient.post).mockImplementation((url: string) =>
+      url === "/api/auth/login"
+        ? Promise.resolve({ data: { access_token: null, mfa: "code", mfa_token: "challenge" } })
+        : Promise.reject(httpError(401, "Invalid code."))
+    );
+    renderLogin();
+    await fillAndSubmit();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Use a recovery code" }));
+    await user.type(screen.getByLabelText("Recovery code"), "ABCDE-23456");
+    await user.click(screen.getByRole("button", { name: "Verify" }));
+    expect(apiClient.post).toHaveBeenCalledWith("/api/auth/login/verify", { mfa_token: "challenge", code: "ABCDE-23456" });
+    expect(await screen.findByRole("alert")).toHaveTextContent("That code is not valid");
+  });
+
+  it("sets two-step verification up and shows the recovery codes before continuing", async () => {
+    const codes = Array.from({ length: 10 }, (_, i) => `ABCDE-2345${i}`);
+    vi.mocked(apiClient.post).mockImplementation((url: string) =>
+      Promise.resolve(
+        url === "/api/auth/login"
+          ? { data: { access_token: null, mfa: "setup", mfa_token: "challenge" } }
+          : url === "/api/auth/2fa/setup"
+            ? { data: { secret: "JBSWY3DPEHPK3PXP", otpauth_uri: "otpauth://totp/Save-Pass:alice?secret=JBSWY3DPEHPK3PXP" } }
+            : { data: { access_token: TOKEN, token_type: "bearer", expires_in: 900, recovery_codes: codes } }
+      )
+    );
+    const router = renderLogin();
+    await fillAndSubmit();
+    expect(await screen.findByRole("img", { name: /QR code/ })).toBeInTheDocument();
+    expect(screen.getByTestId("totp-secret")).toHaveTextContent("JBSW Y3DP EHPK 3PXP");
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("6-digit code"), "654321");
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+    expect(apiClient.post).toHaveBeenCalledWith("/api/auth/2fa/confirm", { mfa_token: "challenge", code: "654321" });
+
+    expect(await screen.findByText("ABCDE-23459")).toBeInTheDocument();
+    const go = screen.getByRole("button", { name: "Continue" });
+    expect(go).toBeDisabled();
+    await user.click(screen.getByLabelText("I saved my recovery codes"));
+    await user.click(go);
+    await waitFor(() => expect(router.state.location.pathname).toBe("/"));
+  });
+});

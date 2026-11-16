@@ -9,6 +9,7 @@ Endpoints:
   POST /api/auth/logout    → 204, revokes the refresh token and clears the cookie
   GET  /api/auth/config    → 200 {captcha_site_key, email_verification}
   POST /api/auth/verify-email → 200, consumes a verification link (spec Phase 2)
+  POST /api/auth/unlock    → 200, consumes an emailed unlock link (task 37.5)
 
 The access token is returned in the body and kept in React memory only. The
 refresh token travels exclusively in an httpOnly cookie scoped to
@@ -28,6 +29,7 @@ import os
 
 from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
+from starlette.background import BackgroundTask
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
@@ -47,6 +49,7 @@ from app.rate_limit import (
     client_ip,
     limiter,
 )
+from app.services.account_token_service import AccountTokenService
 from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
 from app.services.captcha_service import verify_captcha
@@ -179,7 +182,7 @@ def login(
     response: Response,
     body: LoginRequest,
     db: Session = Depends(get_db),
-) -> LoginResponse:
+) -> LoginResponse | JSONResponse:
     """Authenticate with username and password.
 
     Returns a 15-minute access JWT and sets the refresh cookie. Any failure
@@ -192,7 +195,18 @@ def login(
     ):
         raise HTTPException(status_code=400, detail=CAPTCHA_FAILED)
     service = AuthService(db)
-    token_data = service.login(body.model_dump(exclude={"captcha_token"}))
+    try:
+        token_data = service.login(body.model_dump(exclude={"captcha_token"}))
+    except HTTPException as error:
+        notice = getattr(service, "lock_notice", None)
+        if notice is None:
+            raise
+        # The lock email goes out after the (still generic) response.
+        return JSONResponse(
+            status_code=error.status_code,
+            content={"detail": error.detail},
+            background=BackgroundTask(send_email, notice),
+        )
     user_id = service.verify_token(token_data["access_token"])["user_id"]
     sessions = RefreshTokenService(db)
     raw_refresh = sessions.issue(
@@ -291,3 +305,26 @@ def verify_email(
     if result is VerifyResult.INVALID:
         raise HTTPException(status_code=400, detail=INVALID_VERIFICATION_LINK)
     return {"detail": "Email verified."}
+
+
+@router.post(
+    "/unlock",
+    status_code=status.HTTP_200_OK,
+    summary="Consume an emailed unlock link",
+)
+@limiter.limit(VERIFY_EMAIL_LIMIT)
+def unlock_account(
+    request: Request,
+    body: VerifyEmailRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Requirement 16.2: the link from the lock email unlocks the account
+    (once, within 24 hours). 400 for an unknown, used or expired link."""
+    user = AccountTokenService(db).consume(body.token, "unlock")
+    if user is None:
+        raise HTTPException(status_code=400, detail="Invalid or expired link.")
+    user.locked_at = None
+    user.failed_attempts = 0
+    AuditService(db).log(user.user_id, "UPDATE", user.user_id, commit=False, action="account.unlock")
+    db.commit()
+    return {"detail": "Account unlocked."}

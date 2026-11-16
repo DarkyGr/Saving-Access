@@ -337,6 +337,35 @@ test("admin: create via CLI, change a user's role, permissions follow", async ({
   await expect(page.getByRole("cell", { name: "Deactivated an account" })).toHaveCount(1);
   await page.getByLabel("Action").selectOption("user.role");
   await expect(page.getByRole("cell", { name: "Changed a role" })).toHaveCount(2);
+
+  // Task 37.5: lock after 3 wrong passwords (System parameters), Admin unlocks.
+  await page.getByRole("link", { name: "System parameters" }).click();
+  const attempts = page.getByRole("spinbutton", { name: "Failed attempts before locking" });
+  await attempts.fill("3");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("status")).toHaveText("Parameters saved.");
+  await logOut(page);
+
+  for (let i = 0; i < 3; i++) {
+    await page.goto("/login");
+    await page.getByPlaceholder("Enter your username").fill(user);
+    await page.getByPlaceholder("Enter your password").fill("Wr0ngPassword!");
+    await page.getByRole("button", { name: "Log In", exact: true }).click();
+    await expect(page.getByRole("alert")).toBeVisible();
+  }
+  await page.getByPlaceholder("Enter your password").fill(ACCOUNT_PW);
+  await page.getByRole("button", { name: "Log In", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("This account is locked");
+
+  await logIn(page, admin);
+  await page.getByRole("link", { name: "Manage Users" }).click();
+  await page.getByLabel(`Unlock ${user}`).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Unlock" }).click();
+  await expect(page.getByRole("status")).toHaveText(`${user} was unlocked.`);
+  await page.getByRole("link", { name: "System parameters" }).click();
+  await page.getByRole("spinbutton", { name: "Failed attempts before locking" }).fill("5");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("status")).toHaveText("Parameters saved.");
   await logOut(page);
 
   await logIn(page, user, { unverified: true });

@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 
-import { HistoryIcon, HomeIcon, KeyIcon, PlusIcon, UsersIcon } from "../components/icons";
+import { HistoryIcon, HomeIcon, KeyIcon, PlusIcon, SlidersIcon, UsersIcon } from "../components/icons";
 
 /**
  * The side menu, declared in one place (Requirement 13.1, task 37.2).
@@ -30,6 +30,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { labelKey: "nav.saveCredential", to: "/credentials/new", icon: PlusIcon, group: "vault", permission: "credentials.create", end: true },
   { labelKey: "nav.adminUsers", to: "/admin/users", icon: UsersIcon, group: "admin", permission: "users.manage", end: true },
   { labelKey: "nav.adminAudit", to: "/admin/audit", icon: HistoryIcon, group: "admin", permission: "audit.view", end: true },
+  { labelKey: "nav.adminSettings", to: "/admin/settings", icon: SlidersIcon, group: "admin", permission: "settings.manage", end: true },
 ];
 
 export function visibleItems(permissions: readonly string[]): NavItem[] {

@@ -56,6 +56,9 @@ def _make_sqlite_session() -> Session:
     User.__table__.create(bind=engine, checkfirst=True)
     from app.models import RefreshToken as _RT  # noqa: E402
     _RT.__table__.create(bind=engine, checkfirst=True)
+    # Task 37.5: a wrong password reads the lockout parameter.
+    from app.models import SystemSetting as _SS  # noqa: E402
+    _SS.__table__.create(bind=engine, checkfirst=True)
     TestSession = sessionmaker(bind=engine, autocommit=False, autoflush=False)
     return TestSession()
 
@@ -70,6 +73,9 @@ def sqlite_engine():
     User.__table__.create(bind=engine, checkfirst=True)
     from app.models import RefreshToken as _RT  # noqa: E402
     _RT.__table__.create(bind=engine, checkfirst=True)
+    # Task 37.5: a wrong password reads the lockout parameter.
+    from app.models import SystemSetting as _SS  # noqa: E402
+    _SS.__table__.create(bind=engine, checkfirst=True)
     yield engine
     engine.dispose()
 

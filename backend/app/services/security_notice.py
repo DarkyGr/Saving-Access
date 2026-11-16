@@ -28,6 +28,15 @@ _TEXTS = {
             "Reason: {reason}\n\n"
             "If you think this is a mistake, contact the administrator.\n"
         ),
+        "locked_subject": "Save-Pass: your account was locked",
+        "locked_body": (
+            "Hello {name},\n\n"
+            "Your Save-Pass account was locked on {when} (UTC) after too many wrong passwords or codes in a row.\n\n"
+            "If it was you, unlock it with this link (valid for 24 hours, works once):\n\n{link}\n\n"
+            "Signing in with your password and a valid two-factor or recovery code, resetting your password, "
+            "or the administrator can also unlock it.\n\n"
+            "If it was not you, someone is trying your password: change it after unlocking.\n"
+        ),
         "reactivated_subject": "Save-Pass: your account was reactivated",
         "reactivated_body": (
             "Hello {name},\n\n"
@@ -49,6 +58,15 @@ _TEXTS = {
             "No puedes iniciar sesión y se cerraron tus sesiones. Tus contraseñas guardadas se conservan.\n\n"
             "Motivo: {reason}\n\n"
             "Si crees que es un error, habla con el administrador.\n"
+        ),
+        "locked_subject": "Save-Pass: se bloqueó tu cuenta",
+        "locked_body": (
+            "Hola {name}:\n\n"
+            "Tu cuenta de Save-Pass se bloqueó el {when} (UTC) tras demasiadas contraseñas o códigos incorrectos seguidos.\n\n"
+            "Si fuiste tú, desbloquéala con este enlace (vale 24 horas y una sola vez):\n\n{link}\n\n"
+            "También se desbloquea al entrar con tu contraseña y un código de dos pasos o de recuperación válido, "
+            "al restablecer tu contraseña o si lo hace el administrador.\n\n"
+            "Si no fuiste tú, alguien está probando tu contraseña: cámbiala después de desbloquear.\n"
         ),
         "reactivated_subject": "Save-Pass: se reactivó tu cuenta",
         "reactivated_body": (
@@ -84,6 +102,11 @@ def password_changed_email(user: User) -> OutgoingEmail:
 def account_deactivated_email(user: User, reason: str) -> OutgoingEmail:
     """Task 37.4 (Requirement 15.2): tells the owner why."""
     return _notice(user, "deactivated", reason=reason)
+
+
+def account_locked_email(user: User, link: str) -> OutgoingEmail:
+    """Task 37.5 (Requirement 16.2): the lock and how to undo it."""
+    return _notice(user, "locked", link=link)
 
 
 def account_reactivated_email(user: User) -> OutgoingEmail:

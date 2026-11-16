@@ -19,6 +19,11 @@ from app.phase2 import (
     is_deactivated,
     verification_required,
 )
+from app.phase2 import app_base_url
+from app.services.account_token_service import AccountTokenService
+from app.services.email_sender import OutgoingEmail
+from app.services.security_notice import account_locked_email
+from app.services.system_settings import get_int
 from app.utils.audit_columns import utc_date_time
 from app.security import (
     ExpiredSignatureError,
@@ -37,6 +42,7 @@ from app.utils.email_validator import validate_email as _validate_email_format
 # ---------------------------------------------------------------------------
 
 ACCOUNT_DEACTIVATED = "Account deactivated."
+ACCOUNT_LOCKED = "Account locked."
 
 _REQUIRED_SYMBOLS = set("@$!")
 _MIN_LENGTH = 12
@@ -198,14 +204,39 @@ class AuthService:
             raise _generic
 
         if not verify_password(password, user.password_hash):
+            self.lock_notice = self.register_failure(user)
             raise _generic
 
         # Requirement 2.9 — checked only after the password matched, so it
         # reveals nothing to someone who does not know the password.
         if is_deactivated(user, utc_date_time()[0]):
             raise HTTPException(status_code=403, detail=ACCOUNT_DEACTIVATED)
+        # Requirement 16.2 — also only after the password matched.
+        if user.locked_at is not None:
+            raise HTTPException(status_code=423, detail=ACCOUNT_LOCKED)
+        if user.failed_attempts:
+            user.failed_attempts = 0
+            self._db.commit()
 
         return self.issue_access_token(user)
+
+    def register_failure(self, user: User) -> OutgoingEmail | None:
+        """Count a wrong password or code (Requirement 16.2, task 37.5).
+
+        Reaching the configured number in a row locks the account and returns
+        the email (with a one-time unlock link) for the caller to send. A
+        locked account counts nothing more. Commits.
+        """
+        if user.locked_at is not None:
+            return None
+        user.failed_attempts = (user.failed_attempts or 0) + 1
+        notice = None
+        if user.failed_attempts >= get_int(self._db, "lockout_attempts"):
+            user.locked_at = datetime.now(UTC).replace(tzinfo=None, microsecond=0)
+            raw = AccountTokenService(self._db).issue(user, "unlock")
+            notice = account_locked_email(user, f"{app_base_url()}/unlock?token={raw}")
+        self._db.commit()
+        return notice
 
     def issue_access_token(self, user: User, session_id: str | None = None) -> dict:
         """Return the login/refresh response body with a fresh access token.

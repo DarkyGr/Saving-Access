@@ -37,7 +37,7 @@ def test_user_role_has_exactly_the_vault():
 
 
 def test_admin_role_adds_administration_only():
-    assert permissions_for("Admin") == _VAULT | {"users.manage", "audit.view"}
+    assert permissions_for("Admin") == _VAULT | {"users.manage", "audit.view", "settings.manage"}
 
 
 def test_roles_only_grant_known_permissions():
@@ -58,6 +58,7 @@ def test_property_7_unknown_roles_get_nothing(role):
 def test_property_7_no_non_admin_role_manages_users(role):
     assert "users.manage" not in permissions_for(role)
     assert "audit.view" not in permissions_for(role)
+    assert "settings.manage" not in permissions_for(role)
 
 
 def test_unknown_permission_fails_when_declared():
@@ -74,6 +75,7 @@ _PUBLIC = {
     "/api/auth/logout",
     "/api/auth/config",
     "/api/auth/verify-email",
+    "/api/auth/unlock",
     "/api/health",
 }
 
@@ -139,6 +141,9 @@ def test_credential_and_admin_endpoints_name_their_permission():
         ("POST", "/api/admin/users/{user_id}/deactivate"): "users.manage",
         ("POST", "/api/admin/users/{user_id}/reactivate"): "users.manage",
         ("GET", "/api/admin/audit"): "audit.view",
+        ("POST", "/api/admin/users/{user_id}/unlock"): "users.manage",
+        ("GET", "/api/admin/settings"): "settings.manage",
+        ("PUT", "/api/admin/settings"): "settings.manage",
     }
     seen = {}
     for path, route in _api_routes():

@@ -6,10 +6,13 @@ Endpoints:
   PUT  /api/admin/users/{user_id}/role         → change another account's role
   POST /api/admin/users/{user_id}/deactivate   → deactivate another account, with a reason
   POST /api/admin/users/{user_id}/reactivate   → let a deactivated account sign in again
+  POST /api/admin/users/{user_id}/unlock       → clear a lockout (task 37.5)
   GET  /api/admin/audit                        → who did what and when (newest first)
+  GET  /api/admin/settings                     → system parameters (task 37.5)
+  PUT  /api/admin/settings                     → change some of them
 
-Account endpoints need ``users.manage`` and the audit view ``audit.view``;
-only the Admin role grants them. Nothing here returns password hashes or
+Account endpoints need ``users.manage``, the audit view ``audit.view`` and
+the parameters ``settings.manage``; only the Admin role grants them. Nothing here returns password hashes or
 anything stored in a credential, and nobody's vault is touched.
 """
 
@@ -28,12 +31,13 @@ from app.phase2 import deactivation_deadline_for, deadline_passed, verification_
 from app.services.audit_service import ACTIONS, AuditService
 from app.services.email_sender import send_email
 from app.services.refresh_token_service import RefreshTokenService
+from app.services import system_settings
 from app.services.security_notice import account_deactivated_email, account_reactivated_email
 from app.utils.audit_columns import set_modification_audit, utc_date_time
 
 router = APIRouter()
 
-Status = Literal["active", "deactivated", "unverified"]
+Status = Literal["active", "deactivated", "locked", "unverified"]
 
 # The audit view returns at most this many rows (newest first); narrower
 # filters reach older ones.
@@ -50,6 +54,8 @@ def _status_of(user: User) -> Status:
     today = utc_date_time()[0]
     if user.deactivated_at is not None or deadline_passed(user, today):
         return "deactivated"
+    if user.locked_at is not None:
+        return "locked"
     if verification_required(user):
         return "unverified"
     return "active"
@@ -71,6 +77,7 @@ class UserListItem(BaseModel):
     deactivated_by: Literal["admin", "deadline"] | None
     deactivated_at: str | None
     deactivation_reason: str | None
+    locked_at: str | None
     created: str | None
 
 
@@ -91,6 +98,7 @@ def _list_item(user: User) -> UserListItem:
         deactivated_by=by,
         deactivated_at=(user.deactivated_at.strftime("%Y-%m-%dT%H:%M:%SZ") if user.deactivated_at else None),
         deactivation_reason=user.deactivation_reason,
+        locked_at=(user.locked_at.strftime("%Y-%m-%dT%H:%M:%SZ") if user.locked_at else None),
         created=_iso(user.creation_date, user.creation_time),
     )
 
@@ -262,6 +270,94 @@ def reactivate_user(
     db.commit()
     background_tasks.add_task(send_email, account_reactivated_email(target))
     return _list_item(target)
+
+
+@router.post(
+    "/users/{user_id}/unlock",
+    response_model=UserListItem,
+    status_code=status.HTTP_200_OK,
+    summary="Clear another account's lockout",
+)
+def unlock_user(
+    user_id: int,
+    claims: dict = Depends(require_permission("users.manage")),
+    db: Session = Depends(get_db),
+) -> UserListItem:
+    """Requirement 16.2 / 15.2: the Admin unlocks an account locked by wrong
+    passwords or codes. 409 when it is not locked."""
+    admin_id: int = claims["user_id"]
+    target = _target(db, user_id, admin_id, action="unlock")
+    if target.locked_at is None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Account is not locked.")
+    target.locked_at = None
+    target.failed_attempts = 0
+    set_modification_audit(target, user_id=admin_id)
+    AuditService(db).log(
+        admin_id, "UPDATE", target.user_id, commit=False,
+        action="user.unlock", target_user_id=target.user_id,
+    )
+    db.commit()
+    return _list_item(target)
+
+
+class ParameterItem(BaseModel):
+    key: str
+    group: str
+    value: int
+    default: int
+    minimum: int
+    maximum: int
+
+
+def _parameters(db: Session) -> list[ParameterItem]:
+    values = system_settings.all_values(db)
+    return [
+        ParameterItem(
+            key=p.key, group=p.group, value=values[p.key],
+            default=p.default, minimum=p.minimum, maximum=p.maximum,
+        )
+        for p in system_settings.PARAMETERS.values()
+    ]
+
+
+@router.get(
+    "/settings",
+    response_model=list[ParameterItem],
+    status_code=status.HTTP_200_OK,
+    summary="System parameters with their range and suggested value",
+)
+def get_settings(
+    claims: dict = Depends(require_permission("settings.manage")),
+    db: Session = Depends(get_db),
+) -> list[ParameterItem]:
+    return _parameters(db)
+
+
+@router.put(
+    "/settings",
+    response_model=list[ParameterItem],
+    status_code=status.HTTP_200_OK,
+    summary="Change system parameters",
+)
+def put_settings(
+    body: dict[str, int],
+    claims: dict = Depends(require_permission("settings.manage")),
+    db: Session = Depends(get_db),
+) -> list[ParameterItem]:
+    """Requirement 16.8: every value is checked against its range before any
+    is saved (422 otherwise); the change is audited by name, never by value."""
+    admin_id: int = claims["user_id"]
+    try:
+        changed = system_settings.update(db, body, admin_id)
+    except system_settings.SettingError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from None
+    if changed:
+        AuditService(db).log(
+            admin_id, "UPDATE", None, commit=False,
+            action="settings.update", detail=",".join(sorted(changed))[:64],
+        )
+    db.commit()
+    return _parameters(db)
 
 
 @router.get(

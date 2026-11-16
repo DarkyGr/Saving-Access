@@ -148,6 +148,8 @@ export default function LoginPage() {
           setApiError(t("login.genericError"));
         } else if (status === 403) {
           setApiError(t("login.accountDeactivated"));
+        } else if (status === 423) {
+          setApiError(t("login.accountLocked"));
         } else if (status === 400) {
           setApiError(t("login.captchaFailed"));
         } else if (status === 429) {

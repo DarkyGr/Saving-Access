@@ -255,6 +255,51 @@ UPDATE audit_log SET action = CASE operation WHEN 'INSERT' THEN 'credential.crea
 
 UPDATE alembic_version SET version_num='0009_user_admin' WHERE alembic_version.version_num = '0008_settings';
 
+-- Running upgrade 0009_user_admin -> 0010_lockout_settings
+
+ALTER TABLE users ADD COLUMN failed_attempts SMALLINT DEFAULT '0' NOT NULL;
+
+ALTER TABLE users ADD COLUMN locked_at TIMESTAMP WITHOUT TIME ZONE;
+
+CREATE TABLE account_tokens (
+    account_token_id SERIAL NOT NULL, 
+    user_id INTEGER NOT NULL, 
+    purpose VARCHAR(16) NOT NULL, 
+    token_hash VARCHAR(64) NOT NULL, 
+    expires_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
+    used_at TIMESTAMP WITHOUT TIME ZONE, 
+    creation_date DATE NOT NULL, 
+    creation_time TIME WITHOUT TIME ZONE NOT NULL, 
+    creation_user_id INTEGER, 
+    modification_date DATE, 
+    modification_time TIME WITHOUT TIME ZONE, 
+    modification_user_id INTEGER, 
+    PRIMARY KEY (account_token_id), 
+    CONSTRAINT ck_account_tokens_purpose CHECK (purpose IN ('unlock', 'reset')), 
+    FOREIGN KEY(user_id) REFERENCES users (user_id) ON DELETE CASCADE, 
+    UNIQUE (token_hash), 
+    FOREIGN KEY(creation_user_id) REFERENCES users (user_id), 
+    FOREIGN KEY(modification_user_id) REFERENCES users (user_id)
+);
+
+CREATE INDEX idx_account_tokens_user_id ON account_tokens (user_id);
+
+CREATE TABLE system_settings (
+    key VARCHAR(64) NOT NULL, 
+    value VARCHAR(2000) NOT NULL, 
+    creation_date DATE NOT NULL, 
+    creation_time TIME WITHOUT TIME ZONE NOT NULL, 
+    creation_user_id INTEGER, 
+    modification_date DATE, 
+    modification_time TIME WITHOUT TIME ZONE, 
+    modification_user_id INTEGER, 
+    PRIMARY KEY (key), 
+    FOREIGN KEY(creation_user_id) REFERENCES users (user_id), 
+    FOREIGN KEY(modification_user_id) REFERENCES users (user_id)
+);
+
+UPDATE alembic_version SET version_num='0010_lockout_settings' WHERE alembic_version.version_num = '0009_user_admin';
+
 COMMIT;
 
 

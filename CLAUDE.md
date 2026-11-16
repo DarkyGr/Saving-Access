@@ -13,7 +13,7 @@ Reglas:
 - Tareas nuevas que no estaban en Kiro van como secciones nuevas al final de `tasks.md` (numeración 30+), referenciando requisitos.
 - Si un cambio contradice `design.md`, actualiza `design.md` en el mismo commit y explica por qué en el mensaje.
 - `tasks.meta.json` y `.config.kiro` son metadatos de Kiro: no editarlos a mano.
-- Estado (2026-11-16): tareas 1–34 hechas; la 35 es el backlog (35.1 y 35.2 omitidas; 35.5 y 35.6 pasaron a 37.5); la 36 es la instalación local en Windows (instalada; falta la prueba en el celular); la 37 trae lo de Savings Tool en el orden 37.1 → 37.6 (37.1 roles y permisos, 37.2 menú y patrones de pantalla, 37.3 configuración, tema y sesiones, 37.4 desactivar/reactivar cuentas y auditoría: hechas; desbloquear y reiniciar 2FA se hacen en la 37.5). Decisiones del dueño: registro abierto, 2FA obligatorio para todos, la contraseña se pide en cada revelar/editar/borrar, un solo rol por persona (User o Admin). Las funciones nuevas de 35.5–35.8 necesitan requisitos en `requirements.md` y diseño en `design.md` antes de implementarse.
+- Estado (2026-11-16): tareas 1–34 hechas; la 35 es el backlog (35.1 y 35.2 omitidas; 35.5 y 35.6 pasaron a 37.5); la 36 es la instalación local en Windows (instalada; falta la prueba en el celular); la 37 trae lo de Savings Tool en el orden 37.1 → 37.6 (37.1 roles y permisos, 37.2 menú y patrones de pantalla, 37.3 configuración, tema y sesiones, 37.4 desactivar/reactivar cuentas y auditoría: hechas; desbloquear y reiniciar 2FA se hacen en la 37.5; la 37.5 va por partes: 1) bloqueo y parámetros del sistema hecha). Decisiones del dueño: registro abierto, 2FA obligatorio para todos, la contraseña se pide en cada revelar/editar/borrar, un solo rol por persona (User o Admin). Las funciones nuevas de 35.5–35.8 necesitan requisitos en `requirements.md` y diseño en `design.md` antes de implementarse.
 
 ## Stack
 
@@ -79,6 +79,7 @@ make up / make down / make test-backend / make test-frontend / make lint
 - Tema: los colores `gray/red/green/amber/yellow/indigo/white` salen de variables CSS (`src/theme.css`, generado con `node scripts/generate-theme.mjs`); el modo oscuro invierte las paletas, así que no hace falta `dark:` en las páginas; `indigo` es el color de acento.
 - Sesiones: el access token lleva `sid` (familia de refresh tokens); al terminar la sesión deja de valer de inmediato.
 - Auditoría: `AuditService.log(..., action=...)` con una acción de `ACTIONS` (`app/services/audit_service.py`); las rutas de credenciales solo pasan la operación. Nunca guardar en `detail` nada secreto ni contenido de credenciales.
+- Parámetros del sistema: se declaran en `app/services/system_settings.py` (valor por defecto = sugerido, rango, grupo) y se leen con `get_int(db, key)`; la tabla solo guarda lo que cambió el Admin.
 - El JWT vive solo en memoria (nunca localStorage/cookies legibles por JS).
 - Todo texto de UI va por `t()`; cualquier clave nueva se añade a `en.json` y `es.json`.
 - Contratos de API: si el frontend llama a un endpoint, el backend debe tenerlo registrado y con test de integración.

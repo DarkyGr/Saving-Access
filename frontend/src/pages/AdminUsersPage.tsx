@@ -13,7 +13,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import DeactivateDialog from "../components/admin/DeactivateDialog";
 
 type Role = "User" | "Admin";
-type Status = "active" | "deactivated" | "unverified";
+type Status = "active" | "deactivated" | "locked" | "unverified";
 
 export interface AdminUser {
   user_id: number;
@@ -27,21 +27,23 @@ export interface AdminUser {
   deactivated_by: "admin" | "deadline" | null;
   deactivated_at: string | null;
   deactivation_reason: string | null;
+  locked_at: string | null;
   created: string | null;
 }
 
 type RowStatus = { status: "idle" | "saving" | "success" | "error"; message?: string };
 
 const ROLES: Role[] = ["User", "Admin"];
-const STATUSES: Status[] = ["active", "deactivated", "unverified"];
+const STATUSES: Status[] = ["active", "deactivated", "locked", "unverified"];
 
 const STATUS_STYLE: Record<Status, string> = {
   active: "bg-green-50 text-green-700",
   unverified: "bg-amber-50 text-amber-700",
   deactivated: "bg-red-50 text-red-700",
+  locked: "bg-amber-50 text-amber-800",
 };
 
-type Pending = { kind: "deactivate" | "reactivate"; user: AdminUser } | null;
+type Pending = { kind: "deactivate" | "reactivate" | "unlock"; user: AdminUser } | null;
 
 /**
  * AdminUsersPage — /admin/users (permission `users.manage`).
@@ -170,6 +172,23 @@ export default function AdminUsersPage() {
           <span className="max-w-[16rem] whitespace-normal text-xs text-gray-500">{t("admin.deactivatedDeadline")}</span>
         )}
       </div>
+    );
+  }
+
+  function unlockButton(user: AdminUser) {
+    if (me?.user_id === user.user_id || user.status !== "locked") return null;
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setNotice(null);
+          setPending({ kind: "unlock", user });
+        }}
+        aria-label={t("admin.unlock.label", { username: user.username })}
+        className="min-h-[44px] md:min-h-[36px] rounded-md border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+      >
+        {t("admin.unlock.button")}
+      </button>
     );
   }
 
@@ -345,7 +364,12 @@ export default function AdminUsersPage() {
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{mask(user.email)}</td>
                     <td className="px-4 py-3 align-top">{statusCell(user)}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{roleControl(user)}</td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">{actionButton(user)}</td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <div className="flex justify-end gap-2">
+                        {unlockButton(user)}
+                        {actionButton(user)}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -362,7 +386,10 @@ export default function AdminUsersPage() {
                 <div>{statusCell(user)}</div>
                 <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-2">
                   {roleControl(user)}
-                  {actionButton(user)}
+                  <div className="flex gap-2">
+                    {unlockButton(user)}
+                    {actionButton(user)}
+                  </div>
                 </div>
               </li>
             ))}
@@ -378,6 +405,17 @@ export default function AdminUsersPage() {
             onCancel={closeDialog}
             busy={actionBusy}
             error={actionError}
+          />
+        )}
+        {pending?.kind === "unlock" && (
+          <ConfirmDialog
+            title={t("admin.unlock.title", { username: pending.user.username })}
+            message={actionError ?? t("admin.unlock.message")}
+            confirmLabel={t("admin.unlock.confirm")}
+            cancelLabel={t("common.cancel")}
+            onConfirm={() => void runAction()}
+            onCancel={closeDialog}
+            busy={actionBusy}
           />
         )}
         {pending?.kind === "reactivate" && (

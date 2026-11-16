@@ -373,6 +373,12 @@ Pre-populated form with the existing credential data. The password field is mask
 
 Lists all registered users with their user ID, role (User or Admin) and status (active, deactivated, email not verified), with search by name, email or user ID, filters by role and status, pages and table/cards view. A dropdown per row changes another user's role; your own row is locked so there is always an Admin. **Deactivate** asks for a reason, signs the person out everywhere at once and emails them the reason; their saved passwords are kept. **Reactivate** lets them sign in again (an account closed for not verifying its email gets a new deadline). The Admin never sees other users' passwords.
 
+### Admin — System parameters (`/admin/settings`) *(Admin only)*
+
+Security values for every account, each with its range and suggested value: failed attempts before an account locks, how often administration asks for the password again, idle time and maximum length of a session and how much "Extend" adds. Nothing is saved if any value is out of range.
+
+**Locked accounts.** After too many wrong passwords in a row (5 by default) the account locks and its owner gets an email with a one-time unlock link (24 hours). The administrator can also unlock it from Manage Users.
+
 ### Admin — Audit log (`/admin/audit`) *(Admin only)*
 
 Who did what and when, newest first: sign-ups, sign-ins, password changes, saving / editing / deleting / revealing a credential, and role changes, deactivations and reactivations. Filter by action, by person (name, email or user ID of whoever did it or whoever it was done to) and by date. Credentials appear only by number; their site, login and password are never shown.

@@ -264,6 +264,7 @@ erDiagram
 | `0007_user_preferences` | user_preferences (list / cards per listing, saved in the account; task 37.2) |
 | `0008_settings` | users.user_code (backfilled, unique) and display_name; theme, accent, start page, private mode and avatar in user_preferences; user agent and IP on refresh_tokens (task 37.3) |
 | `0009_user_admin` | users.deactivated_at and deactivation_reason; audit_log.action (backfilled for old rows), target_user_id, detail and a date index (task 37.4) |
+| `0010_lockout_settings` | users.failed_attempts and locked_at; account_tokens (one-time unlock / reset links); system_settings (task 37.5) |
 
 - Docker (`migrate` service in production) and the E2E tests run `alembic upgrade head` before the API starts. The app never creates tables.
 - `backend/db/schema.sql` is **generated** from the migrations (`python db/generate_schema_sql.py`) and includes the `app_user` role with SELECT/INSERT/UPDATE/DELETE only (Requirement 9.9).

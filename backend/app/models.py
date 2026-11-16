@@ -97,6 +97,10 @@ class User(AuditColumnsMixin, Base):
     # Task 37.4: set by the Admin (with the reason shown to the user); NULL = active.
     deactivated_at = Column(DateTime, nullable=True)
     deactivation_reason = Column(String(500), nullable=True)
+    # Task 37.5 (Requirement 16.2): wrong passwords / codes in a row, and the
+    # lock they cause (NULL = not locked). Only an unlock clears it.
+    failed_attempts = Column(SmallInteger, nullable=False, default=0, server_default="0")
+    locked_at = Column(DateTime, nullable=True)
 
     __table_args__ = (
         CheckConstraint("role IN ('User', 'Admin')", name="ck_users_role"),
@@ -318,3 +322,52 @@ class EmailVerificationToken(AuditColumnsMixin, Base):
     __table_args__ = (
         Index("idx_email_verification_tokens_user_id", "user_id"),
     )
+
+
+# ---------------------------------------------------------------------------
+# account_tokens  (task 37.5)
+# ---------------------------------------------------------------------------
+
+class AccountToken(AuditColumnsMixin, Base):
+    """
+    One-time emailed link for the account itself (Requirement 16.2–16.3):
+    ``unlock`` after a lockout, ``reset`` for a forgotten password.
+
+    Only the SHA-256 of the token is stored; it works once (``used_at``) and
+    expires at ``expires_at``.
+    """
+
+    __tablename__ = "account_tokens"
+
+    account_token_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    purpose = Column(String(16), nullable=False)
+    token_hash = Column(String(64), nullable=False, unique=True)
+    expires_at = Column(DateTime, nullable=False)
+    used_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        CheckConstraint("purpose IN ('unlock', 'reset')", name="ck_account_tokens_purpose"),
+        Index("idx_account_tokens_user_id", "user_id"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# system_settings  (task 37.5)
+# ---------------------------------------------------------------------------
+
+class SystemSetting(AuditColumnsMixin, Base):
+    """
+    A system parameter set by the Admin (Requirement 16.8). Missing keys use
+    the default declared in ``app/services/system_settings.py``. ``value`` is
+    JSON text; secrets (the SMTP password) are stored Fernet-encrypted.
+    """
+
+    __tablename__ = "system_settings"
+
+    key = Column(String(64), primary_key=True)
+    value = Column(String(2000), nullable=False)

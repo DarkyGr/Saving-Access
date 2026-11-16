@@ -19,6 +19,7 @@ PERMISSIONS: tuple[str, ...] = (
     "credentials.reveal",
     "users.manage",
     "audit.view",
+    "settings.manage",
 )
 
 ROLES: tuple[str, ...] = ("User", "Admin")
@@ -27,7 +28,7 @@ _VAULT = frozenset(p for p in PERMISSIONS if p.startswith("credentials."))
 
 ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
     "User": _VAULT,
-    "Admin": _VAULT | {"users.manage", "audit.view"},
+    "Admin": _VAULT | {"users.manage", "audit.view", "settings.manage"},
 }
 
 

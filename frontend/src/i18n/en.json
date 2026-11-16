@@ -21,7 +21,8 @@
     "openMenu": "Open the menu",
     "closeMenu": "Close the menu",
     "settings": "Settings",
-    "adminAudit": "Audit log"
+    "adminAudit": "Audit log",
+    "adminSettings": "System parameters"
   },
   "language": {
     "toggle": "Language",
@@ -48,7 +49,8 @@
     "captchaRequired": "Please complete the CAPTCHA challenge.",
     "captchaFailed": "The CAPTCHA check failed. Please try again.",
     "captchaUnavailable": "The CAPTCHA could not be loaded. Check your connection or disable blockers for this site.",
-    "tooManyAttempts": "Too many attempts. Please wait a minute and try again."
+    "tooManyAttempts": "Too many attempts. Please wait a minute and try again.",
+    "accountLocked": "This account is locked after too many failed attempts. Use the link we emailed you, or ask the administrator."
   },
   "signup": {
     "title": "Create Account",
@@ -182,7 +184,8 @@
     "status": {
       "active": "Active",
       "deactivated": "Deactivated",
-      "unverified": "Email not verified"
+      "unverified": "Email not verified",
+      "locked": "Locked"
     },
     "deactivatedReason": "Reason: {{reason}}",
     "deactivatedDeadline": "Did not verify the email in time.",
@@ -205,6 +208,15 @@
       "confirm": "Reactivate",
       "done": "{{username}} was reactivated.",
       "conflict": "That account is not deactivated. Reload the page."
+    },
+    "unlock": {
+      "button": "Unlock",
+      "label": "Unlock {{username}}",
+      "title": "Unlock {{username}}?",
+      "message": "The account was locked after too many wrong passwords or codes. Unlock it only if you know the person is trying to sign in.",
+      "confirm": "Unlock",
+      "done": "{{username}} was unlocked.",
+      "conflict": "That account is not locked. Reload the page."
     }
   },
   "forbidden": {
@@ -387,7 +399,8 @@
       "account": {
         "register": "Signed up",
         "login": "Signed in",
-        "password": "Changed their password"
+        "password": "Changed their password",
+        "unlock": "Unlocked their account"
       },
       "credential": {
         "create": "Saved a credential",
@@ -398,7 +411,54 @@
       "user": {
         "role": "Changed a role",
         "deactivate": "Deactivated an account",
-        "reactivate": "Reactivated an account"
+        "reactivate": "Reactivated an account",
+        "unlock": "Unlocked an account"
+      },
+      "settings": {
+        "update": "Changed system parameters"
+      }
+    }
+  },
+  "unlock": {
+    "title": "Unlock your account",
+    "ready": "Press the button to unlock your account. The link works once.",
+    "button": "Unlock my account",
+    "done": "Your account is unlocked. You can sign in again.",
+    "invalid": "This link is not valid: it was already used, it expired or a newer one was sent."
+  },
+  "system": {
+    "title": "System parameters",
+    "intro": "Security values for every account. Changes apply from the next sign-in or request.",
+    "groups": {
+      "security": "Security",
+      "sessions": "Sessions"
+    },
+    "hint": "From {{min}} to {{max}} · suggested {{suggested}}",
+    "range": "Use a whole number from {{min}} to {{max}}.",
+    "useSuggested": "Use the suggested value",
+    "saved": "Parameters saved.",
+    "nothingChanged": "Nothing to save: no value changed.",
+    "invalid": "A value is out of range. Nothing was saved.",
+    "params": {
+      "lockout_attempts": {
+        "label": "Failed attempts before locking",
+        "help": "Wrong passwords or codes in a row that lock an account. The owner gets an email with an unlock link."
+      },
+      "admin_reauth_minutes": {
+        "label": "Minutes before administration asks for the password again",
+        "help": "Administration actions ask for your account password at most once in this time. 0 asks every time. Credentials always ask."
+      },
+      "session_idle_minutes": {
+        "label": "Minutes of inactivity before signing out",
+        "help": "Without activity in any tab for this long, the session ends. A warning appears one minute before."
+      },
+      "session_max_minutes": {
+        "label": "Maximum session length (minutes)",
+        "help": "A session ends after this long even with activity. A warning one minute before lets you extend it."
+      },
+      "session_extend_minutes": {
+        "label": "Minutes added by “Extend”",
+        "help": "How much longer a session lasts when someone presses Extend near the maximum."
       }
     }
   }

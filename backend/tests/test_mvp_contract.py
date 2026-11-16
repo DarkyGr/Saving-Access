@@ -127,7 +127,7 @@ def test_profile_permissions_admin_is_an_explicit_list():
     _make_admin("root")
     r = _client.get("/api/profile/permissions", headers=_login("root"))
     assert r.status_code == 200
-    assert r.json() == {"role": "Admin", "permissions": sorted(_VAULT + ["users.manage", "audit.view"])}
+    assert r.json() == {"role": "Admin", "permissions": sorted(_VAULT + ["users.manage", "audit.view", "settings.manage"])}
 
 
 # ── B3: GET /api/credentials/{id} ────────────────────────────────────────────

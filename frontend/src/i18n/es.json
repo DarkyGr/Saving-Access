@@ -21,7 +21,8 @@
     "openMenu": "Abrir el menú",
     "closeMenu": "Cerrar el menú",
     "settings": "Configuración",
-    "adminAudit": "Auditoría"
+    "adminAudit": "Auditoría",
+    "adminSettings": "Parámetros del sistema"
   },
   "language": {
     "toggle": "Idioma",
@@ -48,7 +49,8 @@
     "captchaRequired": "Completa el desafío CAPTCHA.",
     "captchaFailed": "La comprobación CAPTCHA falló. Inténtalo de nuevo.",
     "captchaUnavailable": "No se pudo cargar el CAPTCHA. Revisa tu conexión o desactiva los bloqueadores para este sitio.",
-    "tooManyAttempts": "Demasiados intentos. Espera un minuto e inténtalo de nuevo."
+    "tooManyAttempts": "Demasiados intentos. Espera un minuto e inténtalo de nuevo.",
+    "accountLocked": "Esta cuenta está bloqueada por demasiados intentos fallidos. Usa el enlace que te enviamos por correo o pide ayuda al administrador."
   },
   "signup": {
     "title": "Crear Cuenta",
@@ -182,7 +184,8 @@
     "status": {
       "active": "Activa",
       "deactivated": "Desactivada",
-      "unverified": "Correo sin verificar"
+      "unverified": "Correo sin verificar",
+      "locked": "Bloqueada"
     },
     "deactivatedReason": "Motivo: {{reason}}",
     "deactivatedDeadline": "No verificó el correo a tiempo.",
@@ -205,6 +208,15 @@
       "confirm": "Reactivar",
       "done": "Se reactivó a {{username}}.",
       "conflict": "Esa cuenta no está desactivada. Recarga la página."
+    },
+    "unlock": {
+      "button": "Desbloquear",
+      "label": "Desbloquear a {{username}}",
+      "title": "¿Desbloquear a {{username}}?",
+      "message": "La cuenta se bloqueó por demasiadas contraseñas o códigos incorrectos. Desbloquéala solo si sabes que es la persona quien intenta entrar.",
+      "confirm": "Desbloquear",
+      "done": "Se desbloqueó a {{username}}.",
+      "conflict": "Esa cuenta no está bloqueada. Recarga la página."
     }
   },
   "forbidden": {
@@ -387,7 +399,8 @@
       "account": {
         "register": "Se registró",
         "login": "Inició sesión",
-        "password": "Cambió su contraseña"
+        "password": "Cambió su contraseña",
+        "unlock": "Desbloqueó su cuenta"
       },
       "credential": {
         "create": "Guardó una credencial",
@@ -398,7 +411,54 @@
       "user": {
         "role": "Cambió un rol",
         "deactivate": "Desactivó una cuenta",
-        "reactivate": "Reactivó una cuenta"
+        "reactivate": "Reactivó una cuenta",
+        "unlock": "Desbloqueó una cuenta"
+      },
+      "settings": {
+        "update": "Cambió parámetros del sistema"
+      }
+    }
+  },
+  "unlock": {
+    "title": "Desbloquear tu cuenta",
+    "ready": "Pulsa el botón para desbloquear tu cuenta. El enlace sirve una sola vez.",
+    "button": "Desbloquear mi cuenta",
+    "done": "Tu cuenta está desbloqueada. Ya puedes iniciar sesión.",
+    "invalid": "Este enlace no es válido: ya se usó, caducó o se envió uno más reciente."
+  },
+  "system": {
+    "title": "Parámetros del sistema",
+    "intro": "Valores de seguridad para todas las cuentas. Los cambios aplican desde el siguiente inicio de sesión o petición.",
+    "groups": {
+      "security": "Seguridad",
+      "sessions": "Sesiones"
+    },
+    "hint": "De {{min}} a {{max}} · sugerido {{suggested}}",
+    "range": "Usa un número entero de {{min}} a {{max}}.",
+    "useSuggested": "Usar el valor sugerido",
+    "saved": "Parámetros guardados.",
+    "nothingChanged": "Nada que guardar: no cambió ningún valor.",
+    "invalid": "Un valor está fuera de rango. No se guardó nada.",
+    "params": {
+      "lockout_attempts": {
+        "label": "Intentos fallidos antes de bloquear",
+        "help": "Contraseñas o códigos incorrectos seguidos que bloquean una cuenta. La persona recibe un correo con un enlace para desbloquear."
+      },
+      "admin_reauth_minutes": {
+        "label": "Minutos antes de que la administración vuelva a pedir la contraseña",
+        "help": "Las acciones de administración piden tu contraseña como mucho una vez en este tiempo. 0 la pide siempre. Las credenciales la piden siempre."
+      },
+      "session_idle_minutes": {
+        "label": "Minutos de inactividad antes de cerrar sesión",
+        "help": "Sin actividad en ninguna pestaña durante este tiempo, la sesión termina. Un minuto antes aparece un aviso."
+      },
+      "session_max_minutes": {
+        "label": "Duración máxima de la sesión (minutos)",
+        "help": "La sesión termina tras este tiempo aunque haya actividad. Un aviso un minuto antes permite extenderla."
+      },
+      "session_extend_minutes": {
+        "label": "Minutos que añade “Extender”",
+        "help": "Cuánto más dura una sesión cuando alguien pulsa Extender cerca del máximo."
       }
     }
   }

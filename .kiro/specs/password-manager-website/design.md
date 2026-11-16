@@ -126,6 +126,8 @@ The `FERNET_KEY` is a 32-byte URL-safe base64 key read from a server-side enviro
 | `/credentials/:id/edit` | `EditCredentialPage` | `credentials.edit` |
 | `/admin/users` | `AdminUsersPage` | `users.manage` (Admin) |
 | `/admin/audit` | `AdminAuditPage` | `audit.view` (Admin, task 37.4) |
+| `/admin/settings` | `SystemSettingsPage` | `settings.manage` (Admin, task 37.5) |
+| `/unlock?token=…` | `UnlockPage` | public (task 37.5) |
 | `/settings` | `SettingsPage` | any signed-in user (task 37.3) |
 
 ### Frontend Shared Components
@@ -467,7 +469,7 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
 ```json
 // Response 200 — any authenticated user
 { "role": "User", "permissions": ["credentials.create", "credentials.delete", "credentials.edit", "credentials.reveal", "credentials.view"] }
-// Admin: the same plus "users.manage" and "audit.view" (explicit list, no "*")
+// Admin: the same plus "users.manage", "audit.view" and "settings.manage" (explicit list, no "*")
 ```
 
 ---
@@ -534,13 +536,31 @@ JWT Configuration:
 
 ---
 
+### Account Security and System Parameters *(task 37.5, Requirement 16)*
+
+Delivered in parts; each part is listed here when it lands.
+
+**Lockout (16.2).** `users.failed_attempts` counts wrong passwords in a row (and, with 2FA, wrong codes); reaching `lockout_attempts` sets `users.locked_at` and emails a one-time unlock link (`account_tokens`, purpose `unlock`, 24 h, only its SHA-256 stored; a new link retires older ones). The response stays the generic 401, so the lock reveals nothing; the right password on a locked account gets 423 `Account locked.` (checked after the password, like deactivation). A locked account counts nothing more. Unlock: the link (`POST /api/auth/unlock`, used only when the person presses the button on `/unlock`, so mail scanners unlock nothing), the Admin (`POST /api/admin/users/{id}/unlock`, status `locked` in the users list), and — with the later parts — a valid second-step code or a password reset. A right password resets the count.
+
+**System parameters (16.8).** `system_settings` (key → JSON value) holds only what the Admin changed; `app/services/system_settings.py` declares each parameter's default (= suggested value), range and group, and readers get the default when no row exists (values are clamped to the range on read). `GET /api/admin/settings` lists them with range and default; `PUT /api/admin/settings` checks every value before saving any (422 otherwise) and audits `settings.update` with the changed names only. Permission `settings.manage` (Admin). Screen `/admin/settings`.
+
+| Parameter | Default | Range |
+|---|---|---|
+| `lockout_attempts` | 5 | 3–20 |
+| `admin_reauth_minutes` | 5 | 0–60 (0 = every time) |
+| `session_idle_minutes` | 15 | 5–240 |
+| `session_max_minutes` | 480 | 60–1440 |
+| `session_extend_minutes` | 30 | 5–240 |
+
+---
+
 ## Role and Permission System
 
 *(Task 37.1 — the owner chose one role per account and only User / Admin. Kiro's profiles, named lists of screens assigned per user, were retired by migration 0006: with two fixed roles they added a second, redundant source of truth.)*
 
 ```
 User   →  credentials.view, credentials.create, credentials.edit, credentials.delete, credentials.reveal
-Admin  →  everything User has + users.manage, audit.view   (later phases add administration permissions here)
+Admin  →  everything User has + users.manage, audit.view, settings.manage
 ```
 
 - Permissions are names defined in `app/permissions.py` (`PERMISSIONS`, `ROLE_PERMISSIONS`). Asking for an unknown name fails when the module loads, so a typo cannot silently deny or allow.

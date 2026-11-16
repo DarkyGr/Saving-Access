@@ -10,6 +10,7 @@ export const AUDIT_ACTIONS = [
   "account.register",
   "account.login",
   "account.password",
+  "account.unlock",
   "credential.create",
   "credential.edit",
   "credential.delete",
@@ -17,6 +18,8 @@ export const AUDIT_ACTIONS = [
   "user.role",
   "user.deactivate",
   "user.reactivate",
+  "user.unlock",
+  "settings.update",
 ] as const;
 
 interface AuditPerson {

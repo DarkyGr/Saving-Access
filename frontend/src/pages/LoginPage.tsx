@@ -3,8 +3,9 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 
-import apiClient from "../api/apiClient";
+import apiClient, { setAuthToken } from "../api/apiClient";
 import { useFocusFirstError } from "../hooks/useFocusFirstError";
+import { START_PATHS, type StartPage } from "../context/PreferencesContext";
 import { useAuth } from "../context/AuthContext";
 import PasswordInput from "../components/PasswordInput";
 import HCaptcha, { type HCaptchaHandle } from "../components/HCaptcha";
@@ -43,6 +44,16 @@ interface FormErrors {
  *  2.7  Unverified email → verification modal after login (AppLayout).
  *  2.9  Deactivated account → explicit message (403).
  */
+/** Where to go after signing in: the start page chosen in Settings (task 37.3). */
+async function startPath(): Promise<string> {
+  try {
+    const res = await apiClient.get<{ start_page?: StartPage }>("/api/profile/preferences");
+    return START_PATHS[res?.data?.start_page ?? "home"] ?? "/";
+  } catch {
+    return "/";
+  }
+}
+
 export default function LoginPage() {
   const { t, i18n } = useTranslation();
   const { login } = useAuth();
@@ -116,13 +127,17 @@ export default function LoginPage() {
         ...(siteKey ? { captcha_token: captchaToken } : {}),
       });
 
+      // Ask for the start page first: login() swaps the layout, which
+      // remounts this page, so navigating after another await would be lost.
+      setAuthToken(data.access_token);
+      const target = await startPath();
       login(
         data.access_token,
         data.email_verification_required
           ? { deadline: data.deactivation_deadline ?? null }
           : null
       );
-      navigate("/", { replace: true });
+      navigate(target, { replace: true });
     } catch (err: unknown) {
       // hCaptcha tokens are single-use: always ask for a new challenge.
       captchaRef.current?.reset();

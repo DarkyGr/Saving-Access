@@ -19,7 +19,8 @@
     "collapse": "Collapse the menu to icons",
     "menu": "Menu",
     "openMenu": "Open the menu",
-    "closeMenu": "Close the menu"
+    "closeMenu": "Close the menu",
+    "settings": "Settings"
   },
   "language": {
     "toggle": "Language",
@@ -174,7 +175,7 @@
       "Admin": "Admin"
     },
     "searchPlaceholder": "Search by name or email",
-    "filterEmail": "Email",
+    "filterEmail": "Verification",
     "verified": "Verified",
     "unverified": "Not verified",
     "noResults": "No users match the search or filters."
@@ -258,6 +259,85 @@
     "credentialPassword": "The password of that site. It is stored encrypted; showing it later asks for your account password.",
     "credentialPasswordEdit": "Type a new password to replace it, or leave the current one. It is stored encrypted.",
     "signupUsername": "Your name in Save-Pass. You sign in with it.",
-    "signupEmail": "Used to verify your account and to send you security notices."
+    "signupEmail": "Used to verify your account and to send you security notices.",
+    "userCode": "Your unique ID. It never changes; give it to the administrator so they find you even if someone has the same name.",
+    "displayName": "How the app greets you and shows you in menus. Leave it empty to use your username.",
+    "startPage": "The screen that opens after you log in.",
+    "privateMode": "Useful in front of other people. The eye in the top bar does the same.",
+    "newPassword": "Changing it closes your sessions on other devices."
+  },
+  "privacy": {
+    "hide": "Hide usernames and emails",
+    "show": "Show usernames and emails"
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "userCode": "User ID",
+    "username": "Username",
+    "email": "Email",
+    "displayName": "Display name",
+    "displayNameInvalid": "Use 2 to 60 letters, numbers, spaces or . , ' - _",
+    "save": "Save",
+    "saved": "Saved.",
+    "avatar": "Picture",
+    "presets": {
+      "key": "Key",
+      "shield": "Shield",
+      "lock": "Lock",
+      "star": "Star",
+      "sun": "Sun",
+      "moon": "Moon",
+      "leaf": "Leaf",
+      "wave": "Wave",
+      "mountain": "Mountain",
+      "rocket": "Rocket",
+      "heart": "Heart",
+      "bolt": "Bolt"
+    },
+    "uploadPicture": "Upload a picture",
+    "useInitials": "Use my initials",
+    "pictureRules": "PNG, JPEG or WebP. It is cropped to a square and reduced before it is sent.",
+    "pictureFailed": "The picture could not be saved. Try another one.",
+    "preferences": "Preferences",
+    "language": "Language",
+    "startPage": "Start page",
+    "startPages": {
+      "home": "Home",
+      "credentials": "My Credentials",
+      "credentials-new": "Save Credential"
+    },
+    "theme": "Theme",
+    "themes": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "Same as the device"
+    },
+    "accent": "Accent colour",
+    "accents": {
+      "indigo": "Indigo",
+      "blue": "Blue",
+      "emerald": "Emerald",
+      "violet": "Violet",
+      "rose": "Rose",
+      "amber": "Amber"
+    },
+    "privateMode": "Private mode: hide usernames and emails in lists",
+    "password": "Password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm the new password",
+    "changePassword": "Change password",
+    "passwordChanged": "Password changed. Your other sessions were closed and you will get an email about it.",
+    "passwordSame": "The new password must be different from the current one.",
+    "tooManyAttempts": "Too many attempts. Wait a minute and try again.",
+    "sessions": "Active sessions",
+    "thisDevice": "This device",
+    "unknownDevice": "Unknown device",
+    "lastActive": "Last active {{when}}",
+    "endSession": "End session",
+    "endWithLogout": "Use Log out to end it",
+    "endSessionTitle": "End this session?",
+    "endSessionMessage": "That device is signed out at once and has to log in again."
   }
 }

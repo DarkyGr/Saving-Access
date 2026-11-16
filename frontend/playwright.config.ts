@@ -47,6 +47,9 @@ const backendEnv = {
   APP_BASE_URL: `http://localhost:${WEB_PORT}`,
   EMAIL_BACKEND: "file",
   EMAIL_OUTBOX_DIR: outboxDir,
+  // Limits stay on, but the whole suite signs in more than 10 times a minute
+  // from one address; the 429 behaviour itself is covered by backend tests.
+  RATE_LIMIT_LOGIN: "100/minute",
 };
 
 export default defineConfig({

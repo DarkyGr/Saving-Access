@@ -373,6 +373,10 @@ Pre-populated form with the existing credential data. The password field is mask
 
 Lists all registered users with their role (User or Admin) and whether their email is verified, with search by name or email, filters by role and verification, pages and table/cards view. A dropdown per row changes another user's role; your own row is locked so there is always an Admin. The Admin never sees other users' passwords.
 
+### Settings (`/settings`)
+
+Opened from your name at the top right. **Profile**: your user ID (`SP-…`, never changes), username, email and role; a display name; a picture (one of 12 icons or your own photo, cropped and reduced before it is sent) or your initials. **Preferences**: language, the screen that opens after logging in, light / dark / same-as-device theme, accent colour, and private mode (hides usernames and emails in lists; the eye in the top bar does the same). **Password**: change it with your current one; your other devices are signed out and you get an email. **Active sessions**: where your account is signed in; end any other device's session and it is signed out at once.
+
 ### 403 Forbidden (`/403`)
 
 Shown when someone opens a screen their role does not allow (for example a User opening the user administration).
@@ -446,7 +450,7 @@ All tasks from the Kiro plan (1–29) and the follow-up phases (30–34) are don
 **Pending** (tasks 35–37)
 
 - Local installation on this laptop: installed on 2026-11-15 (task 36); the phone test is left.
-- Task 37 (decided 2026-11-15): bring Savings Tool's screens and settings — side menu and interface patterns, appearance and personal settings, user administration and audit view, mandatory 2FA and session limits, in-app help. 37.1 (roles and permissions) and 37.2 (menu, Home, lists and form patterns) are done.
+- Task 37 (decided 2026-11-15): bring Savings Tool's screens and settings — side menu and interface patterns, appearance and personal settings, user administration and audit view, mandatory 2FA and session limits, in-app help. 37.1 (roles and permissions), 37.2 (menu, Home, lists and form patterns) and 37.3 (settings, theme, avatar, private mode, password change, active sessions) are done.
 - Monitoring and alerts. (A real server and cloud backups were dropped in favour of the local installation.)
 - GitHub Actions on Node 24.
 - Password reset, two-factor authentication, password generator, export and account deletion — outside the original spec.

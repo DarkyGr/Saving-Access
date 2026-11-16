@@ -380,7 +380,7 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
     - _Requirements: 3.1–3.7_
   - [x] 37.2 Application shell and interface patterns: grouped side menu (collapsible, drawer on the phone), account menu, Home, lists with search / filters / pagination / list-grid, form patterns
     - _Requirements: 13.1–13.5_
-  - [ ] 37.3 Appearance and personal settings: Settings screen (profile, preferences, password, active sessions), light/dark/system theme, accent colors, avatar, private mode, user ID `SP-XXXXXX`
+  - [x] 37.3 Appearance and personal settings: Settings screen (profile, preferences, password, active sessions), light/dark/system theme, accent colors, avatar, private mode, user ID `SP-XXXXXX`
     - _Requirements: 14.1–14.5_
   - [ ] 37.4 User administration and audit view: search and filters, deactivate with reason, reactivate, unlock, reset 2FA, audit view
     - _Requirements: 15.1–15.4_

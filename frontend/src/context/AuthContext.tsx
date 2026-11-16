@@ -31,8 +31,10 @@ export interface AuthContextValue {
   user: JwtUser | null;
   /** Persist a new JWT (called after a successful login). */
   login: (token: string, notice?: VerificationNotice | null) => void;
-  /** Clear all auth state (called on explicit logout or on 401). */
-  logout: () => void;
+  /** Clear all auth state and revoke the session on the server. The promise
+   *  settles once the server answered, so a reload right after cannot
+   *  restore the session with a refresh cookie that is still valid. */
+  logout: () => Promise<void>;
   /** Pending "verify your email" notice, or null. */
   verificationNotice: VerificationNotice | null;
   dismissVerificationNotice: () => void;
@@ -146,7 +148,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // User-initiated logout: also revoke the httpOnly refresh cookie (task 31.5).
   const logout = useCallback(() => {
     clearSession();
-    void revokeSession();
+    return revokeSession();
   }, [clearSession]);
 
   // Let the axios interceptor store silently refreshed tokens / drop the session.

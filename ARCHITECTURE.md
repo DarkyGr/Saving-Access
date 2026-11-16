@@ -52,7 +52,9 @@ graph TD
 | Database | PostgreSQL 15; SQLite in tests | Alembic migrations in `backend/migrations` |
 | Tests | pytest + Hypothesis, Vitest + RTL, Playwright | E2E runs against real uvicorn + Vite |
 
-**Frontend shell (task 37.2).** `AppLayout` renders the grouped side menu (`config/navigation.tsx`, one permission per entry; collapsible to icons on wide screens, a drawer on phones) and the account menu. Lists load once and filter, paginate and switch list / cards in the browser; the list / cards choice is saved in the account (`user_preferences`). Forms share `HelpTip` (ⓘ help) and `useFocusFirstError` (focus the first invalid field after a failed submit). Signing in opens Home (`/`).
+**Frontend shell (task 37.2).** `AppLayout` renders the grouped side menu (`config/navigation.tsx`, one permission per entry; collapsible to icons on wide screens, a drawer on phones) and the account menu. Lists load once and filter, paginate and switch list / cards in the browser; the list / cards choice is saved in the account (`user_preferences`). Forms share `HelpTip` (ⓘ help) and `useFocusFirstError` (focus the first invalid field after a failed submit). Signing in opens Home (`/`), or the start page chosen in Settings.
+
+**Settings and sessions (task 37.3).** `/settings` holds profile (immutable `SP-XXXXXX` user ID, display name, avatar), preferences (language, theme, accent, start page, private mode), password change and active sessions. Theme and accent are CSS variables (`src/theme.css`): dark mode reverses the palettes, so pages need no `dark:` classes; `public/theme-init.js` paints the saved theme first. Each access token carries its session (`sid`); the API rejects it once that session ends, so logout, ending a session from Settings or changing the password cut access at once.
 
 ---
 
@@ -223,6 +225,11 @@ erDiagram
     user_preferences {
         int user_id PK "FK users"
         json list_views
+        varchar theme
+        varchar accent
+        varchar start_page
+        boolean private_mode
+        bytea avatar_image
     }
     refresh_tokens {
         int refresh_token_id PK
@@ -249,6 +256,7 @@ erDiagram
 | `0005_verification_reminders` | `users.preferred_language`, `users.last_verification_reminder_days` |
 | `0006_retire_profiles` | drops profiles and user_profiles (permissions come from the role); its downgrade restores them and links every User to Full |
 | `0007_user_preferences` | user_preferences (list / cards per listing, saved in the account; task 37.2) |
+| `0008_settings` | users.user_code (backfilled, unique) and display_name; theme, accent, start page, private mode and avatar in user_preferences; user agent and IP on refresh_tokens (task 37.3) |
 
 - Docker (`migrate` service in production) and the E2E tests run `alembic upgrade head` before the API starts. The app never creates tables.
 - `backend/db/schema.sql` is **generated** from the migrations (`python db/generate_schema_sql.py`) and includes the `app_user` role with SELECT/INSERT/UPDATE/DELETE only (Requirement 9.9).

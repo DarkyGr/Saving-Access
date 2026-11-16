@@ -19,7 +19,8 @@
     "collapse": "Plegar el menú a íconos",
     "menu": "Menú",
     "openMenu": "Abrir el menú",
-    "closeMenu": "Cerrar el menú"
+    "closeMenu": "Cerrar el menú",
+    "settings": "Configuración"
   },
   "language": {
     "toggle": "Idioma",
@@ -174,7 +175,7 @@
       "Admin": "Administrador"
     },
     "searchPlaceholder": "Buscar por nombre o correo",
-    "filterEmail": "Correo",
+    "filterEmail": "Verificación",
     "verified": "Verificado",
     "unverified": "Sin verificar",
     "noResults": "Ningún usuario coincide con la búsqueda o los filtros."
@@ -258,6 +259,85 @@
     "credentialPassword": "La contraseña de ese sitio. Se guarda cifrada; para verla después se pide la contraseña de tu cuenta.",
     "credentialPasswordEdit": "Escribe una contraseña nueva para reemplazarla o deja la actual. Se guarda cifrada.",
     "signupUsername": "Tu nombre en Save-Pass. Con él inicias sesión.",
-    "signupEmail": "Sirve para verificar tu cuenta y para enviarte avisos de seguridad."
+    "signupEmail": "Sirve para verificar tu cuenta y para enviarte avisos de seguridad.",
+    "userCode": "Tu identificador único. Nunca cambia; dáselo al administrador para que te encuentre aunque otra persona tenga tu mismo nombre.",
+    "displayName": "Cómo te saluda la app y cómo apareces en los menús. Déjalo vacío para usar tu usuario.",
+    "startPage": "La pantalla que se abre al iniciar sesión.",
+    "privateMode": "Útil frente a otras personas. El ojo de la barra superior hace lo mismo.",
+    "newPassword": "Al cambiarla se cierran tus sesiones en otros dispositivos."
+  },
+  "privacy": {
+    "hide": "Ocultar usuarios y correos",
+    "show": "Mostrar usuarios y correos"
+  },
+  "settings": {
+    "title": "Configuración",
+    "profile": "Perfil",
+    "userCode": "ID de usuario",
+    "username": "Usuario",
+    "email": "Correo",
+    "displayName": "Nombre visible",
+    "displayNameInvalid": "Usa de 2 a 60 letras, números, espacios o . , ' - _",
+    "save": "Guardar",
+    "saved": "Guardado.",
+    "avatar": "Imagen",
+    "presets": {
+      "key": "Llave",
+      "shield": "Escudo",
+      "lock": "Candado",
+      "star": "Estrella",
+      "sun": "Sol",
+      "moon": "Luna",
+      "leaf": "Hoja",
+      "wave": "Ola",
+      "mountain": "Montaña",
+      "rocket": "Cohete",
+      "heart": "Corazón",
+      "bolt": "Rayo"
+    },
+    "uploadPicture": "Subir una foto",
+    "useInitials": "Usar mis iniciales",
+    "pictureRules": "PNG, JPEG o WebP. Se recorta en cuadrado y se reduce antes de enviarla.",
+    "pictureFailed": "No se pudo guardar la imagen. Prueba con otra.",
+    "preferences": "Preferencias",
+    "language": "Idioma",
+    "startPage": "Página de inicio",
+    "startPages": {
+      "home": "Inicio",
+      "credentials": "Mis Credenciales",
+      "credentials-new": "Guardar Credencial"
+    },
+    "theme": "Tema",
+    "themes": {
+      "light": "Claro",
+      "dark": "Oscuro",
+      "system": "Igual que el dispositivo"
+    },
+    "accent": "Color de acento",
+    "accents": {
+      "indigo": "Índigo",
+      "blue": "Azul",
+      "emerald": "Esmeralda",
+      "violet": "Violeta",
+      "rose": "Rosa",
+      "amber": "Ámbar"
+    },
+    "privateMode": "Modo privado: ocultar usuarios y correos en las listas",
+    "password": "Contraseña",
+    "currentPassword": "Contraseña actual",
+    "newPassword": "Contraseña nueva",
+    "confirmPassword": "Confirma la contraseña nueva",
+    "changePassword": "Cambiar contraseña",
+    "passwordChanged": "Contraseña cambiada. Se cerraron tus otras sesiones y te llegará un correo de aviso.",
+    "passwordSame": "La contraseña nueva debe ser distinta de la actual.",
+    "tooManyAttempts": "Demasiados intentos. Espera un minuto e inténtalo de nuevo.",
+    "sessions": "Sesiones activas",
+    "thisDevice": "Este dispositivo",
+    "unknownDevice": "Dispositivo desconocido",
+    "lastActive": "Última actividad {{when}}",
+    "endSession": "Cerrar sesión",
+    "endWithLogout": "Usa Cerrar sesión para terminarla",
+    "endSessionTitle": "¿Cerrar esta sesión?",
+    "endSessionMessage": "Ese dispositivo sale de inmediato y tendrá que iniciar sesión otra vez."
   }
 }

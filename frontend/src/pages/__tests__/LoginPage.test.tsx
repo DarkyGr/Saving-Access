@@ -75,6 +75,38 @@ describe("LoginPage — spec Phase 2", () => {
     document.head.querySelectorAll("script[src*='hcaptcha']").forEach((s) => s.remove());
   });
 
+  it("opens the start page chosen in Settings (task 37.3)", async () => {
+    vi.mocked(apiClient.get).mockImplementation((url: string) =>
+      Promise.resolve(
+        url === "/api/auth/config"
+          ? config()
+          : url === "/api/profile/preferences"
+            ? { data: { start_page: "credentials" } }
+            : { data: { permissions: [] } }
+      )
+    );
+    vi.mocked(apiClient.post).mockResolvedValue({ data: { access_token: TOKEN, email_verification_required: false } });
+    const router = createMemoryRouter(
+      [
+        {
+          element: <AppLayout />,
+          children: [
+            { path: "/login", element: <LoginPage /> },
+            { path: "/credentials", element: <p>credentials page</p> },
+          ],
+        },
+      ],
+      { initialEntries: ["/login"] }
+    );
+    render(
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    );
+    await fillAndSubmit();
+    await waitFor(() => expect(router.state.location.pathname).toBe("/credentials"));
+  });
+
   it("logs in without CAPTCHA when it is not configured", async () => {
     vi.mocked(apiClient.post).mockResolvedValue({
       data: { access_token: TOKEN, email_verification_required: false },

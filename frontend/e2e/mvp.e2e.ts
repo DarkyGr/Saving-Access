@@ -165,6 +165,89 @@ test("user lifecycle: sign up, log in, save, search, reveal, edit, delete, logou
   await expect(page).toHaveURL(/\/login$/);
 });
 
+test("settings: profile, theme, private mode, start page, password and sessions", async ({ page, browser }) => {
+  const name = `set_${run}`;
+  const shots = process.env.E2E_SHOTS_DIR;
+  const shot = async (file: string) => {
+    if (shots) await page.screenshot({ path: path.join(shots, file), fullPage: true });
+  };
+  await signUp(page, name);
+  await logIn(page, name, { unverified: true });
+
+  // A second device, to see it in Active sessions and end it.
+  const phone = await browser.newPage();
+  await phone.goto("/login");
+  await phone.getByPlaceholder("Enter your username").fill(name);
+  await phone.getByPlaceholder("Enter your password").fill(ACCOUNT_PW);
+  await phone.getByRole("button", { name: "Log In", exact: true }).click();
+  await expect(phone).toHaveURL(/\/$/);
+
+  await page.getByRole("button", { name: /^Account menu of/ }).click();
+  await page.getByRole("link", { name: "Settings" }).click();
+  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+  await expect(page.getByTestId("user-code")).toHaveText(/^SP-[2-9A-HJ-NP-Z]{6}$/);
+
+  // Display name, avatar.
+  await page.getByLabel("Display name", { exact: true }).fill("Ana Pérez");
+  await page.getByRole("region", { name: "Profile" }).getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("region", { name: "Profile" }).getByRole("status")).toHaveText("Saved.");
+  await page.getByRole("button", { name: "Rocket" }).click();
+  await expect(page.getByRole("button", { name: "Rocket" })).toHaveAttribute("aria-pressed", "true");
+  await shot("settings-light.png");
+
+  // Dark theme and accent apply at once and survive a reload.
+  await page.getByRole("radio", { name: "Dark" }).click();
+  await page.getByRole("radio", { name: "Emerald" }).click();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await expect(page.locator("html")).toHaveAttribute("data-accent", "emerald");
+  await page.reload();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+  await shot("settings-dark.png");
+
+  // Start page.
+  await page.getByLabel("Start page", { exact: true }).selectOption("credentials");
+  await expect(page.getByRole("region", { name: "Preferences" }).getByRole("status")).toHaveText("Saved.");
+
+  // Active sessions: end the phone's; it is signed out at once.
+  const sessions = page.getByRole("region", { name: "Active sessions" });
+  await expect(sessions.getByRole("listitem")).toHaveCount(2);
+  await sessions.getByRole("button", { name: "End session" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "End session" }).click();
+  await expect(sessions.getByRole("listitem")).toHaveCount(1);
+  // Its refresh cookie no longer works: reopening the app asks to log in.
+  await phone.goto("/credentials");
+  await expect(phone).toHaveURL(/\/login$/);
+  await phone.close();
+
+  // Change the password.
+  await page.getByLabel(/^Current password/).fill(ACCOUNT_PW);
+  await page.getByLabel(/^New password/).fill("N3wStr0ngPass!");
+  await page.getByLabel(/^Confirm the new password/).fill("N3wStr0ngPass!");
+  await page.getByRole("button", { name: "Change password" }).click();
+  await expect(page.getByRole("region", { name: "Password" }).getByRole("status")).toContainText("Password changed.");
+
+  // Private mode from the top bar hides emails in lists.
+  await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Save Credential" }).click();
+  await page.getByPlaceholder("e.g. github.com").fill("Notes");
+  await page.getByPlaceholder("your@email.com").fill(`${name}@example.com`);
+  await page.getByPlaceholder("Password for this website").fill("n0tes-secret");
+  await page.getByRole("button", { name: "Save Credential" }).click();
+  await confirmAccountPassword(page, "N3wStr0ngPass!");
+  await expect(page.getByRole("row", { name: /Notes/ })).toContainText(`${name}@example.com`);
+  await page.getByRole("button", { name: "Hide usernames and emails" }).click();
+  await expect(page.getByRole("row", { name: /Notes/ })).not.toContainText(`${name}@example.com`);
+  await shot("credentials-dark-private.png");
+
+  // The new password and the start page apply at the next sign-in.
+  await logOut(page);
+  await page.getByPlaceholder("Enter your username").fill(name);
+  await page.getByPlaceholder("Enter your password").fill("N3wStr0ngPass!");
+  await page.getByRole("button", { name: "Log In", exact: true }).click();
+  await expect(page).toHaveURL(/\/credentials$/);
+  await expect(page.getByTestId("current-user")).toHaveText(name);
+});
+
 test("admin: create via CLI, change a user's role, permissions follow", async ({ page }) => {
   // B5: the first Admin is created with the backend CLI.
   execFileSync(

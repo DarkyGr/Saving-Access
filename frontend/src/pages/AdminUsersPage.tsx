@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { usePaged } from "../hooks/usePaged";
 import { useListView } from "../hooks/useListView";
 import { matchesQuery } from "../lib/text";
+import { usePrivacy } from "../context/PreferencesContext";
 import { FilterSelect, ListToolbar, Pagination, SearchBox, ViewToggle } from "../components/list/ListControls";
 
 type Role = "User" | "Admin";
@@ -35,6 +36,7 @@ const ROLES: Role[] = ["User", "Admin"];
 export default function AdminUsersPage() {
   const { t, i18n } = useTranslation();
   const { user: me } = useAuth();
+  const { mask } = usePrivacy();
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -245,7 +247,7 @@ export default function AdminUsersPage() {
                       {user.username}
                       {me?.user_id === user.user_id && <span className="ml-1 text-gray-500">{t("admin.youBadge")}</span>}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{user.email}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{mask(user.email)}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{verifiedBadge(user)}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{roleControl(user)}</td>
                   </tr>
@@ -263,7 +265,7 @@ export default function AdminUsersPage() {
                   {user.username}
                   {me?.user_id === user.user_id && <span className="ml-1 font-normal text-gray-500">{t("admin.youBadge")}</span>}
                 </p>
-                <p className="truncate text-sm text-gray-600">{user.email}</p>
+                <p className="truncate text-sm text-gray-600">{mask(user.email)}</p>
                 <div>{verifiedBadge(user)}</div>
                 <div className="mt-auto border-t border-gray-100 pt-2">{roleControl(user)}</div>
               </li>

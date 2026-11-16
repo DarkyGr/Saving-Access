@@ -285,14 +285,14 @@ def test_preferences_start_empty_and_save_list_views():
     _register("jack")
     headers = _login("jack")
     assert _client.get("/api/profile/preferences").status_code == 401
-    assert _client.get("/api/profile/preferences", headers=headers).json() == {"list_views": {}}
+    assert _client.get("/api/profile/preferences", headers=headers).json()["list_views"] == {}
 
     r = _client.put("/api/profile/preferences/list-view", headers=headers, json={"key": "credentials", "view": "grid"})
-    assert r.status_code == 200 and r.json() == {"list_views": {"credentials": "grid"}}
+    assert r.status_code == 200 and r.json()["list_views"] == {"credentials": "grid"}
     r = _client.put("/api/profile/preferences/list-view", headers=headers, json={"key": "users", "view": "list"})
-    assert r.json() == {"list_views": {"credentials": "grid", "users": "list"}}
+    assert r.json()["list_views"] == {"credentials": "grid", "users": "list"}
     r = _client.put("/api/profile/preferences/list-view", headers=headers, json={"key": "credentials", "view": "list"})
-    assert r.json() == {"list_views": {"credentials": "list", "users": "list"}}
+    assert r.json()["list_views"] == {"credentials": "list", "users": "list"}
     assert _client.get("/api/profile/preferences", headers=headers).json() == r.json()
 
     for bad in ({"key": "other", "view": "grid"}, {"key": "credentials", "view": "table"}):
@@ -305,4 +305,4 @@ def test_preferences_are_per_account():
     _client.put(
         "/api/profile/preferences/list-view", headers=_login("kate"), json={"key": "credentials", "view": "grid"}
     )
-    assert _client.get("/api/profile/preferences", headers=_login("liam")).json() == {"list_views": {}}
+    assert _client.get("/api/profile/preferences", headers=_login("liam")).json()["list_views"] == {}

@@ -1,7 +1,10 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 
-import { ChevronDownIcon, LogOutIcon } from "../icons";
+import { usePreferences } from "../../context/PreferencesContext";
+import Avatar from "../profile/Avatar";
+import { ChevronDownIcon, LogOutIcon, SettingsIcon } from "../icons";
 
 interface AccountMenuProps {
   username: string;
@@ -9,29 +12,19 @@ interface AccountMenuProps {
   onLogout: () => void;
 }
 
-/** Initials avatar until task 37.3 adds pictures. */
-function Avatar({ name }: { name: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold uppercase text-white"
-    >
-      {name.slice(0, 2)}
-    </span>
-  );
-}
-
 /**
- * The account menu at the top right (Requirement 13.2): who is signed in,
- * their role and Sign out. Closes on Escape, on a click outside and after
- * choosing an option.
+ * The account menu at the top right (Requirements 13.2, 14.1): avatar, the
+ * name shown in the app, the user ID and role, Settings and Log out. Closes
+ * on Escape, on a click outside and after choosing an option.
  */
 export default function AccountMenu({ username, role, onLogout }: AccountMenuProps) {
   const { t } = useTranslation();
+  const { me, prefs, avatarUrl } = usePreferences();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuId = useId();
+  const shown = me?.display_name || username;
 
   useEffect(() => {
     if (!open) return;
@@ -52,6 +45,8 @@ export default function AccountMenu({ username, role, onLogout }: AccountMenuPro
     };
   }, [open]);
 
+  const item = "flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 min-h-[44px]";
+
   return (
     <div ref={rootRef} className="relative">
       <button
@@ -64,7 +59,7 @@ export default function AccountMenu({ username, role, onLogout }: AccountMenuPro
         aria-label={t("account.menuLabel", { username })}
         className="flex min-h-[44px] items-center gap-2 rounded-md px-2 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
       >
-        <Avatar name={username} />
+        <Avatar name={shown} preset={prefs.avatar_preset} imageUrl={avatarUrl} />
         <span className="hidden max-w-[10rem] truncate text-sm font-medium text-gray-700 sm:inline" data-testid="current-user">
           {username}
         </span>
@@ -72,24 +67,28 @@ export default function AccountMenu({ username, role, onLogout }: AccountMenuPro
       </button>
 
       {open && (
-        <div
-          id={menuId}
-          className="absolute right-0 z-30 mt-2 w-60 rounded-md border border-gray-200 bg-white py-2 shadow-lg"
-        >
+        <div id={menuId} className="absolute right-0 z-30 mt-2 w-64 rounded-md border border-gray-200 bg-white py-2 shadow-lg">
           <div className="flex items-center gap-3 border-b border-gray-100 px-4 pb-3 pt-1">
-            <Avatar name={username} />
+            <Avatar name={shown} preset={prefs.avatar_preset} imageUrl={avatarUrl} size="md" />
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-gray-900">{username}</p>
-              <p className="text-xs text-gray-500">{t(`admin.roles.${role}`, { defaultValue: role })}</p>
+              <p className="truncate text-sm font-semibold text-gray-900">{shown}</p>
+              <p className="text-xs text-gray-500">
+                {t(`admin.roles.${role}`, { defaultValue: role })}
+                {me?.user_code ? ` · ${me.user_code}` : ""}
+              </p>
             </div>
           </div>
+          <Link to="/settings" onClick={() => setOpen(false)} className={`mt-1 ${item}`}>
+            <SettingsIcon className="h-4 w-4" />
+            {t("nav.settings")}
+          </Link>
           <button
             type="button"
             onClick={() => {
               setOpen(false);
               onLogout();
             }}
-            className="mt-1 flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 min-h-[44px]"
+            className={item}
           >
             <LogOutIcon className="h-4 w-4" />
             {t("nav.logout")}

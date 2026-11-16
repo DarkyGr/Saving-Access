@@ -28,6 +28,7 @@ from app.database import get_db
 from app.models import User
 from app.permissions import check_known, permissions_for
 from app.services.auth_service import AuthService
+from app.services.refresh_token_service import RefreshTokenService
 
 # ``auto_error=False`` lets us raise our own 401 instead of FastAPI's 403
 # when the header is missing.
@@ -47,7 +48,16 @@ def get_current_claims(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated.",
         )
-    return AuthService(db).verify_token(credentials.credentials)
+    claims = AuthService(db).verify_token(credentials.credentials)
+    # Task 37.3: a token bound to a session dies with it (logout, "end
+    # session", password change), not 15 minutes later.
+    sid = claims.get("sid")
+    if sid and not RefreshTokenService(db).is_active(sid, claims["user_id"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired.",
+        )
+    return claims
 
 
 def require_permission(permission: str) -> Callable:

@@ -8,6 +8,7 @@ import { useVisibilityTimer } from "../hooks/useVisibilityTimer";
 import { usePaged } from "../hooks/usePaged";
 import { useListView } from "../hooks/useListView";
 import { matchesQuery } from "../lib/text";
+import { usePrivacy } from "../context/PreferencesContext";
 import PasswordConfirmModal from "../components/PasswordConfirmModal";
 import AlreadyVisibleModal from "../components/AlreadyVisibleModal";
 import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
@@ -117,6 +118,7 @@ const iconButton = [
  */
 export default function ViewSearchPage() {
   const { t } = useTranslation();
+  const { mask } = usePrivacy();
 
   // ── List state ──────────────────────────────────────────────────────────
 
@@ -418,7 +420,7 @@ export default function ViewSearchPage() {
                   {paged.pageItems.map((cred) => (
                     <tr key={cred.credential_id} className="hover:bg-gray-50 transition-colors duration-100">
                       <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{cred.website_name}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{cred.email_or_username}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{mask(cred.email_or_username)}</td>
                       <td className="px-4 py-3 text-sm whitespace-nowrap">{passwordCell(cred)}</td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">{actions(cred)}</td>
                     </tr>
@@ -438,7 +440,7 @@ export default function ViewSearchPage() {
                   aria-label={cred.website_name}
                 >
                   <p className="truncate text-base font-semibold text-gray-900">{cred.website_name}</p>
-                  <p className="truncate text-sm text-gray-600">{cred.email_or_username}</p>
+                  <p className="truncate text-sm text-gray-600">{mask(cred.email_or_username)}</p>
                   <p className="text-sm">{passwordCell(cred)}</p>
                   <div className="mt-auto flex justify-end border-t border-gray-100 pt-2">{actions(cred)}</div>
                 </li>

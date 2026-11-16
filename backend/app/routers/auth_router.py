@@ -32,13 +32,21 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models import User
 from app.phase2 import (
     captcha_enabled,
     captcha_site_key,
     email_verification_enabled,
     normalize_language,
 )
-from app.rate_limit import LOGIN_LIMIT, REFRESH_LIMIT, REGISTER_LIMIT, VERIFY_EMAIL_LIMIT, limiter
+from app.rate_limit import (
+    LOGIN_LIMIT,
+    REFRESH_LIMIT,
+    REGISTER_LIMIT,
+    VERIFY_EMAIL_LIMIT,
+    client_ip,
+    limiter,
+)
 from app.services.auth_service import AuthService
 from app.services.captcha_service import verify_captcha
 from app.services.email_sender import send_email
@@ -184,10 +192,15 @@ def login(
     service = AuthService(db)
     token_data = service.login(body.model_dump(exclude={"captcha_token"}))
     user_id = service.verify_token(token_data["access_token"])["user_id"]
-    raw_refresh = RefreshTokenService(db).issue(user_id)
+    sessions = RefreshTokenService(db)
+    raw_refresh = sessions.issue(
+        user_id, user_agent=request.headers.get("user-agent"), client_ip=client_ip(request)
+    )
     db.commit()
     _set_refresh_cookie(response, raw_refresh)
-    return LoginResponse(**token_data)
+    user = db.query(User).filter(User.user_id == user_id).one()
+    # Same body, now bound to the new session (sid, task 37.3).
+    return LoginResponse(**service.issue_access_token(user, session_id=sessions.last_family_id))
 
 
 @router.post(
@@ -207,7 +220,12 @@ def refresh(
 
     401 when the cookie is missing, unknown, expired or already used.
     """
-    result = RefreshTokenService(db).rotate(sp_refresh) if sp_refresh else None
+    sessions = RefreshTokenService(db)
+    result = (
+        sessions.rotate(sp_refresh, user_agent=request.headers.get("user-agent"), client_ip=client_ip(request))
+        if sp_refresh
+        else None
+    )
     if result is None:
         expired = JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -217,7 +235,7 @@ def refresh(
         return expired
     user, new_raw = result
     _set_refresh_cookie(response, new_raw)
-    return LoginResponse(**AuthService(db).issue_access_token(user))
+    return LoginResponse(**AuthService(db).issue_access_token(user, session_id=sessions.last_family_id))
 
 
 @router.post(

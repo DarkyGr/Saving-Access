@@ -205,6 +205,36 @@ CREATE TABLE user_preferences (
 
 UPDATE alembic_version SET version_num='0007_user_preferences' WHERE alembic_version.version_num = '0006_retire_profiles';
 
+-- Running upgrade 0007_user_preferences -> 0008_settings
+
+ALTER TABLE users ADD COLUMN user_code VARCHAR(9);
+
+ALTER TABLE users ADD COLUMN display_name VARCHAR(60);
+
+ALTER TABLE users ALTER COLUMN user_code SET NOT NULL;
+
+ALTER TABLE users ADD CONSTRAINT uq_users_user_code UNIQUE (user_code);
+
+ALTER TABLE user_preferences ADD COLUMN theme VARCHAR(8) DEFAULT 'system' NOT NULL;
+
+ALTER TABLE user_preferences ADD COLUMN accent VARCHAR(10) DEFAULT 'indigo' NOT NULL;
+
+ALTER TABLE user_preferences ADD COLUMN start_page VARCHAR(16) DEFAULT 'home' NOT NULL;
+
+ALTER TABLE user_preferences ADD COLUMN private_mode BOOLEAN DEFAULT false NOT NULL;
+
+ALTER TABLE user_preferences ADD COLUMN avatar_preset VARCHAR(16);
+
+ALTER TABLE user_preferences ADD COLUMN avatar_image BYTEA;
+
+ALTER TABLE user_preferences ADD COLUMN avatar_mime VARCHAR(16);
+
+ALTER TABLE refresh_tokens ADD COLUMN user_agent VARCHAR(256);
+
+ALTER TABLE refresh_tokens ADD COLUMN client_ip VARCHAR(45);
+
+UPDATE alembic_version SET version_num='0008_settings' WHERE alembic_version.version_num = '0007_user_preferences';
+
 COMMIT;
 
 

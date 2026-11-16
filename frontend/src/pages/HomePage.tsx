@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import apiClient from "../api/apiClient";
 import { useAuth } from "../context/AuthContext";
+import { usePreferences, usePrivacy } from "../context/PreferencesContext";
 import type { Credential } from "./ViewSearchPage";
 import { KeyIcon, PlusIcon } from "../components/icons";
 
@@ -19,6 +20,8 @@ const RECENT = 5;
 export default function HomePage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
+  const { me } = usePreferences();
+  const { mask } = usePrivacy();
   const [credentials, setCredentials] = useState<Credential[] | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -51,7 +54,7 @@ export default function HomePage() {
     <main className="flex-1 px-4 py-8 sm:py-10">
       <div className="mx-auto w-full max-w-5xl">
         <h1 className="mb-6 text-2xl font-bold text-gray-900">
-          {t("home.title", { username: user?.username ?? "" })}
+          {t("home.title", { username: me?.display_name || user?.username || "" })}
         </h1>
 
         {failed && (
@@ -103,7 +106,7 @@ export default function HomePage() {
                     <li key={c.credential_id} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-gray-900">{c.website_name}</p>
-                        <p className="truncate text-sm text-gray-500">{c.email_or_username}</p>
+                        <p className="truncate text-sm text-gray-500">{mask(c.email_or_username)}</p>
                       </div>
                       {c.last_changed && (
                         <time dateTime={c.last_changed} className="shrink-0 text-xs text-gray-500">

@@ -18,15 +18,19 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    JSON,
     Index,
     Integer,
-    JSON,
     LargeBinary,
     SmallInteger,
     String,
     Time,
+    UniqueConstraint,
 )
+from sqlalchemy import false as sa_false
 from sqlalchemy.orm import DeclarativeBase, relationship
+
+from app.utils.user_code import new_user_code
 
 
 class Base(DeclarativeBase):
@@ -87,9 +91,13 @@ class User(AuditColumnsMixin, Base):
     preferred_language = Column(String(8), nullable=True)
     # Days-before-deadline of the last reminder sent (e.g. 7, then 1).
     last_verification_reminder_days = Column(SmallInteger, nullable=True)
+    # Task 37.3: public immutable ID (SP-XXXXXX) and the name shown in the app.
+    user_code = Column(String(9), nullable=False, default=new_user_code)
+    display_name = Column(String(60), nullable=True)
 
     __table_args__ = (
         CheckConstraint("role IN ('User', 'Admin')", name="ck_users_role"),
+        UniqueConstraint("user_code", name="uq_users_user_code"),
     )
 
     # Relationships
@@ -125,6 +133,15 @@ class UserPreference(AuditColumnsMixin, Base):
     )
     # {"credentials": "grid", "users": "list"} — list or grid per listing.
     list_views = Column(JSON, nullable=False, default=dict)
+    # Task 37.3 (Requirement 14): appearance and behaviour.
+    theme = Column(String(8), nullable=False, default="system", server_default="system")
+    accent = Column(String(10), nullable=False, default="indigo", server_default="indigo")
+    start_page = Column(String(16), nullable=False, default="home", server_default="home")
+    private_mode = Column(Boolean, nullable=False, default=False, server_default=sa_false())
+    # One of the built-in icons, or a picture (validated, at most 256 KB).
+    avatar_preset = Column(String(16), nullable=True)
+    avatar_image = Column(LargeBinary, nullable=True)
+    avatar_mime = Column(String(16), nullable=True)
 
 
 # ---------------------------------------------------------------------------
@@ -254,6 +271,9 @@ class RefreshToken(AuditColumnsMixin, Base):
     family_id = Column(String(32), nullable=False)
     expires_at = Column(DateTime, nullable=False)
     revoked_at = Column(DateTime, nullable=True)
+    # Task 37.3 — shown in "Active sessions" (device and last activity).
+    user_agent = Column(String(256), nullable=True)
+    client_ip = Column(String(45), nullable=True)
 
     __table_args__ = (
         Index("idx_refresh_tokens_user_id", "user_id"),

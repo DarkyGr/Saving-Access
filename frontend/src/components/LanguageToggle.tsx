@@ -1,5 +1,8 @@
 import { useTranslation } from "react-i18next";
 
+import { usePreferences } from "../context/PreferencesContext";
+import { markLanguageChosen } from "../lib/language";
+
 type Lang = "en" | "es";
 
 const LANGUAGES: { code: Lang; labelKey: string }[] = [
@@ -12,18 +15,22 @@ const LANGUAGES: { code: Lang; labelKey: string }[] = [
  *
  * Calls `i18n.changeLanguage()` on click and also writes the chosen
  * language to `sessionStorage` under the key `"i18nextLng"` so the
- * preference persists for the duration of the browser session.
+ * preference persists for the duration of the browser session. Signed in,
+ * the choice is also saved in the account (task 37.3).
  *
  * The active language button is visually distinguished.
  */
 export default function LanguageToggle() {
   const { t, i18n } = useTranslation();
+  const { me, updatePreferences } = usePreferences();
 
   const currentLang = i18n.language?.slice(0, 2) as Lang;
 
   const handleChange = (lang: Lang) => {
     i18n.changeLanguage(lang);
     sessionStorage.setItem("i18nextLng", lang);
+    markLanguageChosen(lang);
+    if (me) void updatePreferences({ language: lang }).catch(() => undefined);
   };
 
   return (

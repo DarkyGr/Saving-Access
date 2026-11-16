@@ -10,6 +10,7 @@ import LanguageToggle from "./LanguageToggle";
 import VerifyEmailModal from "./VerifyEmailModal";
 import SideNav from "./layout/SideNav";
 import AccountMenu from "./layout/AccountMenu";
+import PrivacyToggle from "./layout/PrivacyToggle";
 import { ChevronsLeftIcon, ChevronsRightIcon, CloseIcon, MenuIcon } from "./icons";
 
 const COLLAPSED_KEY = "savepass-sidebar-collapsed";
@@ -52,8 +53,8 @@ export default function AppLayout() {
     });
   }
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     navigate("/login", { replace: true });
   }
 
@@ -132,6 +133,7 @@ export default function AppLayout() {
           </button>
           <span className="text-base font-bold text-gray-900 md:hidden">Save-Pass</span>
           <div className="ml-auto flex items-center gap-2">
+            <PrivacyToggle />
             <LanguageToggle />
             <AccountMenu username={user.username} role={user.role} onLogout={handleLogout} />
           </div>

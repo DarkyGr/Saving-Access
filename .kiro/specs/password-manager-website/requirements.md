@@ -262,11 +262,11 @@ The owner's decisions behind them: sign-up stays **open**; two-factor authentica
 
 #### Acceptance Criteria
 
-1. THE System SHALL provide a Settings screen in the account menu with Profile (display name, avatar from 12 built-in icons or an uploaded picture validated and re-encoded, accent color, read-only immutable user ID `SP-XXXXXX`), Preferences (language, theme, start page, email notices), Password and Active sessions.
+1. THE System SHALL provide a Settings screen in the account menu with Profile (display name, avatar from 12 built-in icons or an uploaded picture validated and re-encoded, read-only immutable user ID `SP-XXXXXX`), Preferences (language, theme, accent color, start page, private mode), Password and Active sessions. *(Implemented in 37.3 without an "email notices" switch: every email Save-Pass sends is a verification or security email, which cannot be turned off — Requirement 16.7.)*
 2. THE Frontend SHALL support light, dark and system themes and six accent colors, saved in the account and applied before the page paints.
 3. THE Frontend SHALL offer a private mode (eye button in the top bar) that hides usernames and emails in lists; the choice is saved in the account.
 4. WHEN a user changes their password, THE Backend SHALL require the current password, apply the password policy, revoke the user's other sessions and send a security notice by email.
-5. THE Settings screen SHALL list the user's active sessions (device, last activity) and let the user end any of them.
+5. THE Settings screen SHALL list the user's active sessions (device, last activity) and let the user end any of them other than the current one (that one ends with Log out). WHEN a session ends (log out, ended from Settings, password change), THE Backend SHALL stop accepting that session's access token at once, not when it expires.
 
 ### Requirement 15: User Administration and Audit View (task 37.4)
 

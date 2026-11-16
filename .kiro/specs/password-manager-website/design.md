@@ -125,6 +125,7 @@ The `FERNET_KEY` is a 32-byte URL-safe base64 key read from a server-side enviro
 | `/credentials/new` | `SaveCredentialPage` | `credentials.create` |
 | `/credentials/:id/edit` | `EditCredentialPage` | `credentials.edit` |
 | `/admin/users` | `AdminUsersPage` | `users.manage` (Admin) |
+| `/settings` | `SettingsPage` | any signed-in user (task 37.3) |
 
 ### Frontend Shared Components
 
@@ -140,6 +141,7 @@ The `FERNET_KEY` is a 32-byte URL-safe base64 key read from a server-side enviro
 | `SideNav`, `AccountMenu` | Grouped side menu and account menu of the shell (task 37.2) |
 | `SearchBox`, `FilterSelect`, `ViewToggle`, `Pagination` | List controls (task 37.2) |
 | `HelpTip` | ⓘ help tooltip next to a label (task 37.2) |
+| `PreferencesProvider`, `Avatar`, `PrivacyToggle`, `ConfirmDialog` | Account preferences applied app-wide, avatar (picture → icon → initials), private-mode eye, generic destructive confirmation (task 37.3) |
 
 ### Application Shell and Interface Patterns *(task 37.2, Requirement 13)*
 
@@ -216,6 +218,8 @@ CREATE TABLE users (
     deactivation_deadline DATE,
     preferred_language   VARCHAR(8),          -- task 34.4: language of later emails
     last_verification_reminder_days SMALLINT, -- task 34.4: last reminder sent (days before deadline)
+    user_code            VARCHAR(9)   NOT NULL UNIQUE, -- task 37.3: SP-XXXXXX, never changes
+    display_name         VARCHAR(60),
     -- Audit columns
     creation_date        DATE         NOT NULL,
     creation_time        TIME         NOT NULL,
@@ -231,6 +235,13 @@ CREATE TABLE users (
 CREATE TABLE user_preferences (
     user_id              INTEGER PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
     list_views           JSON    NOT NULL,          -- {"credentials": "list" | "grid", "users": ...}
+    theme                VARCHAR(8)  NOT NULL DEFAULT 'system',   -- task 37.3 (migration 0008)
+    accent               VARCHAR(10) NOT NULL DEFAULT 'indigo',
+    start_page           VARCHAR(16) NOT NULL DEFAULT 'home',
+    private_mode         BOOLEAN     NOT NULL DEFAULT FALSE,
+    avatar_preset        VARCHAR(16),
+    avatar_image         BYTEA,                      -- ≤ 256 KB, PNG/JPEG/WebP checked by signature
+    avatar_mime          VARCHAR(16),
     creation_date        DATE    NOT NULL,
     creation_time        TIME    NOT NULL,
     creation_user_id     INTEGER REFERENCES users(user_id),
@@ -323,6 +334,25 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
 // PUT body
 { "key": "credentials", "view": "grid" }      // key: credentials | users, view: list | grid → 422 otherwise
 // Response 200: the whole updated object
+```
+
+#### Settings endpoints *(task 37.3; any signed-in user, own account only)*
+```json
+// GET /api/profile/me
+{ "user_id": 42, "user_code": "SP-7K3M9Q", "username": "alice", "display_name": null,
+  "email": "alice@example.com", "role": "User", "email_verified": true,
+  "preferences": { "list_views": {}, "theme": "system", "accent": "indigo", "start_page": "home",
+                   "private_mode": false, "language": "en", "avatar_preset": null, "has_avatar_image": false } }
+// PUT /api/profile/me                { "display_name": "Alicia" }   → 200 MeResponse; 422 invalid name
+// PUT /api/profile/preferences       any of theme, accent, start_page, private_mode, language → 200 preferences; 422 unknown value
+// PUT /api/profile/avatar/preset     { "preset": "rocket" }        → 200 preferences
+// PUT /api/profile/avatar/image      raw PNG/JPEG/WebP body ≤ 256 KB → 200; 413 too big or empty; 415 other format
+// GET /api/profile/avatar/image      → the picture (nosniff, CSP default-src 'none', no-store); 404 none
+// DELETE /api/profile/avatar         → 200 preferences (initials)
+// POST /api/profile/password         { "current_password", "new_password", "new_password_confirmation" }
+//   → 204; 401 Account password verification failed.; 400 mismatch / {"password_errors": [...]} / same password
+// GET /api/profile/sessions          → [{ "session_id", "user_agent", "client_ip", "started", "last_active", "current" }]
+// DELETE /api/profile/sessions/{id}  → 204; 400 for the current one (use logout); 404 unknown or someone else's
 ```
 
 #### `POST /api/credentials`
@@ -447,9 +477,22 @@ JWT Configuration:
 - Expiry: 15 minutes (access token)
 - Transmission: HTTPS only; `Authorization: Bearer` header; token stored in React memory state (not `localStorage` or cookies) to reduce XSS exposure
 - Login / refresh body (task 33): also `email_verification_required` (bool) and `deactivation_deadline` (ISO date or null); the frontend shows the verification modal after a login when the first is true.
-- Claims: `user_id`, `username`, `role`, `exp`. The frontend `AuthContext` rejects a token missing any of the first three (task 30.1).
+- Claims: `user_id`, `username`, `role`, `exp`, and `sid` (task 37.3: the session; the token stops working as soon as that session ends). The frontend `AuthContext` rejects a token missing any of the first three (task 30.1).
 - Refresh (task 31.5): login also sets an opaque refresh token in an `httpOnly; Secure; SameSite=Strict; Path=/api/auth` cookie (`sp_refresh`, lifetime `REFRESH_EXPIRE_HOURS`, default 8 h). Only its SHA-256 is stored in `refresh_tokens`. `POST /api/auth/refresh` rotates it and returns a new access token; reusing a rotated token revokes its whole family. `POST /api/auth/logout` revokes it. The SPA calls refresh once on page load (session restore) and once on an expired-token 401 before retrying the request; if refresh fails it goes to `/login`. The access token itself is still only in memory.
 - A 401 whose detail is `"Account password verification failed."` is a wrong re-entered password, not an expired session: the frontend interceptor shows the inline error instead of redirecting (task 30.6).
+
+---
+
+### Personal Settings *(task 37.3, Requirement 14)*
+
+- **`/settings`** (any signed-in user, from the account menu): Profile (user ID, username, email, role, display name, avatar), Preferences (language, start page, theme, accent, private mode), Password, Active sessions.
+- **User ID** `users.user_code` = `SP-` + 6 characters from `23456789ABCDEFGHJKMNPQRSTUVWXYZ` (no 0/O/1/I/L), unique, assigned at creation (model default; migration 0008 gives existing accounts one) and never changed by any endpoint. `users.display_name` (2–60 letters, digits, spaces, `. , ' - _`; empty = username).
+- **Preferences** live in `user_preferences` (theme `light|dark|system`, accent `indigo|blue|emerald|violet|rose|amber`, start page `home|credentials|credentials-new`, private mode); the language stays in `users.preferred_language` (also used for emails). The frontend `PreferencesProvider` loads `GET /api/profile/me` after sign-in and applies them everywhere. A language picked in this browser session wins over the account copy on load and is then saved to it, so a reload right after switching never reverts it.
+- **Theme**: Tailwind palettes `gray, red, green, amber, yellow, indigo` and `white` read CSS variables (`src/theme.css`, generated by `scripts/generate-theme.mjs`). `html.dark` reverses every palette (50 ↔ 950) and turns `white` into a dark surface, so existing classes work in both themes; `indigo` is the accent (`html[data-accent]`). `public/theme-init.js` (a file, because the CSP forbids inline scripts) applies the theme saved on the device before the first paint.
+- **Avatar**: one of 12 built-in drawings, or a picture re-encoded in the browser to a 256 px WebP square (drops metadata and payloads); the server accepts at most 256 KB, checks PNG/JPEG/WebP from the first bytes (never the declared type) and serves it only to its owner with `nosniff`, `default-src 'none'` and `no-store`. Initials otherwise.
+- **Private mode** (eye in the top bar or Settings): usernames and emails in lists show as dots; saved in the account.
+- **Password change** (`POST /api/profile/password`, rate-limited like the account-password checks): current password, sign-up policy, must differ; ends every other session (this one stays) and emails a security notice (`app/services/security_notice.py`, user's language).
+- **Sessions**: a session is a refresh-token family. Rows keep the device's user agent and IP; the access token carries the family as `sid`, and `get_current_claims` rejects it with 401 `Session expired.` once the family has no live token — so logout, "End session" and a password change cut access immediately instead of after up to 15 minutes. `GET /api/profile/sessions` lists live families (last activity = last refresh); `DELETE /api/profile/sessions/{id}` ends another device's.
 
 ---
 

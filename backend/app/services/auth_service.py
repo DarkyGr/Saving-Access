@@ -207,11 +207,13 @@ class AuthService:
 
         return self.issue_access_token(user)
 
-    def issue_access_token(self, user: User) -> dict:
+    def issue_access_token(self, user: User, session_id: str | None = None) -> dict:
         """Return the login/refresh response body with a fresh access token.
 
         Claims (Requirement 2.4): ``user_id``, ``username`` and ``role`` (all
         required by the frontend AuthContext), ``type="access"`` and ``exp``.
+        ``sid`` (task 37.3) is the session (refresh-token family): when that
+        session ends, the API stops accepting this token too.
         """
         now = datetime.now(UTC)
         token_data = {
@@ -222,6 +224,8 @@ class AuthService:
             "iat": now,
             "exp": now + timedelta(minutes=self._expire_minutes),
         }
+        if session_id:
+            token_data["sid"] = session_id
         return {
             "access_token": encode_token(token_data),
             "token_type": "bearer",

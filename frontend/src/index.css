@@ -1,3 +1,16 @@
+@import "./theme.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+/* Private mode (task 37.3): hidden values keep their width but not their text. */
+.private-mask {
+  letter-spacing: 0.1em;
+}

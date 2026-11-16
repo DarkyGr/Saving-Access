@@ -48,32 +48,27 @@ def test_upgrade_matches_models_and_downgrades(db_url):
 
 
 def test_existing_create_all_database_can_be_adopted(db_url):
-    """A DB created by the old create_all (no refresh_tokens) is stamped at baseline."""
-    from sqlalchemy import create_engine, inspect
+    """A DB created before Alembic (the baseline schema, never stamped) is
+    stamped at baseline and upgraded.
 
-    from app.models import Base
+    The pre-Alembic create_all produced exactly the 0001 baseline schema
+    (users, profiles, user_profiles, credentials, audit_log). It is rebuilt
+    here from that migration with the version table removed, because today's
+    models no longer describe it (task 37.1 dropped profiles, 37.3 added
+    columns to users).
+    """
+    from sqlalchemy import create_engine, inspect, text
 
+    assert _alembic(db_url, "upgrade", "0001_baseline").returncode == 0
     engine = create_engine(db_url)
-    later = {"refresh_tokens", "email_verification_tokens", "user_preferences"}  # 0002 / 0004 / 0007
-    old_tables = [t for name, t in Base.metadata.tables.items() if name not in later]
-    Base.metadata.create_all(bind=engine, tables=old_tables)
-    # The pre-Alembic schema had no trigram indexes (added in 0003).
     with engine.begin() as conn:
-        conn.exec_driver_sql("DROP INDEX idx_credentials_website_name_trgm")
-        conn.exec_driver_sql("DROP INDEX idx_credentials_email_username_trgm")
-        # Nor the reminder columns (added in 0005).
-        conn.exec_driver_sql("ALTER TABLE users DROP COLUMN preferred_language")
-        conn.exec_driver_sql("ALTER TABLE users DROP COLUMN last_verification_reminder_days")
-        # It still had the profile tables (dropped by 0006, task 37.1).
-        conn.exec_driver_sql(
-            "CREATE TABLE profiles (profile_id INTEGER PRIMARY KEY, profile_name VARCHAR(64), "
-            "permitted_screens TEXT, creation_date DATE, creation_time TIME, creation_user_id INTEGER, "
-            "modification_date DATE, modification_time TIME, modification_user_id INTEGER)"
-        )
-        conn.exec_driver_sql(
-            "CREATE TABLE user_profiles (user_profile_id INTEGER PRIMARY KEY, user_id INTEGER, "
-            "profile_id INTEGER, creation_date DATE, creation_time TIME, creation_user_id INTEGER, "
-            "modification_date DATE, modification_time TIME, modification_user_id INTEGER)"
+        conn.execute(text("DROP TABLE alembic_version"))
+        conn.execute(
+            text(
+                "INSERT INTO users (username, email, password_hash, role, email_verified, "
+                "creation_date, creation_time) VALUES ('old', 'old@example.com', 'x', 'User', 1, "
+                "'2026-01-01', '00:00:00')"
+            )
         )
     engine.dispose()
 
@@ -85,6 +80,10 @@ def test_existing_create_all_database_can_be_adopted(db_url):
     tables = inspect(engine).get_table_names()
     assert "refresh_tokens" in tables and "email_verification_tokens" in tables
     assert "profiles" not in tables and "user_profiles" not in tables
+    with engine.connect() as conn:
+        # 0008 gave the existing account its immutable code.
+        code = conn.execute(text("SELECT user_code FROM users WHERE username = 'old'")).scalar_one()
+    assert code.startswith("SP-") and len(code) == 9
     engine.dispose()
 
 
@@ -95,13 +94,14 @@ def test_downgrade_from_0006_restores_profiles_for_existing_users(db_url):
     assert _alembic(db_url, "upgrade", "head").returncode == 0
     engine = create_engine(db_url)
     with engine.begin() as conn:
-        for name, role in (("u1", "User"), ("a1", "Admin")):
+        for name, role, code in (("u1", "User", "SP-AAAAAA"), ("a1", "Admin", "SP-BBBBBB")):
             conn.execute(
                 text(
                     "INSERT INTO users (username, email, password_hash, role, email_verified, "
-                    "creation_date, creation_time) VALUES (:n, :e, 'x', :r, 1, '2026-11-16', '00:00:00')"
+                    "creation_date, creation_time, user_code) "
+                    "VALUES (:n, :e, 'x', :r, 1, '2026-11-16', '00:00:00', :c)"
                 ),
-                {"n": name, "e": f"{name}@example.com", "r": role},
+                {"n": name, "e": f"{name}@example.com", "r": role, "c": code},
             )
     engine.dispose()
 

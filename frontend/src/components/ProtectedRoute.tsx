@@ -45,8 +45,9 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 // ──────────────────────────────────────────────────────────────────────────────
 
 export interface ProtectedRouteProps {
-  /** The permission the route needs, e.g. "credentials.view" (task 37.1) */
-  permission: string;
+  /** The permission the route needs, e.g. "credentials.view" (task 37.1).
+   *  Omitted: any signed-in user (their own Settings, task 37.3). */
+  permission?: string;
   /** The component to render when access is granted */
   children: JSX.Element;
 }
@@ -86,6 +87,11 @@ export default function ProtectedRoute({
 
       if (!decodeJwtPayload(token)) {
         setStatus("unauthenticated");
+        return;
+      }
+
+      if (!permission) {
+        if (!cancelled) setStatus("allowed");
         return;
       }
 

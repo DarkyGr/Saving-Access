@@ -567,6 +567,10 @@ Sign-in: `POST /api/auth/login` checks the password (counting failures) and then
 
 **Clipboard (16.6).** A revealed password has a Copy button; it, and a copy by hand of the shown password, clear the clipboard 30 s later if it still holds that password (`lib/clipboard.ts`: exact where the browser lets the page read the clipboard, otherwise only if nothing else was copied on the page meanwhile).
 
+**Email settings (16.8).** System parameters also holds sign-up email verification on/off and the outgoing SMTP server (host, port, STARTTLS / SSL / none, user, sender, password). They are rows `email_verification` and `smtp` in `system_settings`; code without a database session (background email, Phase 2 checks) reads them from a per-process cache that an app-wide dependency refreshes at most every `SETTINGS_CACHE_SECONDS` (default 10; tests use 0). A value never set falls back to the environment (`EMAIL_VERIFICATION_ENABLED`, `EMAIL_BACKEND`, `SMTP_*`), and an empty SMTP host means "use the environment". The SMTP password is Fernet-encrypted and write-only (`GET /api/admin/settings/email` says only `has_password`; an empty password keeps it, `clear_password` removes it). Verification can be turned on only when `APP_BASE_URL` is set. `POST /api/admin/settings/email/test` sends now (not in the background) to the Admin or a given address and returns the result (`ok`, backend, error class and message). Saving needs the recent password check like the other administration changes.
+
+**Security emails (16.7).** Password changed (in Settings or by a reset link), two-step verification set up, new recovery codes, 2FA reset by the Admin, account locked (with the unlock link), deactivated / reactivated — always in the account's language, never with a secret.
+
 ---
 
 ## Role and Permission System

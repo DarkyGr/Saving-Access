@@ -477,6 +477,35 @@
         "label": "Minutes added by “Extend”",
         "help": "How much longer a session lasts when someone presses Extend near the maximum."
       }
+    },
+    "email": {
+      "title": "Email",
+      "verification": "Ask new accounts to verify their email",
+      "verificationHelp": "New accounts get a link and 30 days to open it; unverified accounts are then deactivated.",
+      "noBaseUrl": "Needs the server's public address (APP_BASE_URL in the installation settings) for the links.",
+      "smtp": "Outgoing email (SMTP)",
+      "smtpHelp": "Leave the server empty to use the installation's setting (now: {{backend}}).",
+      "host": "Server",
+      "port": "Port",
+      "security": "Encryption",
+      "noEncryption": "None (not recommended)",
+      "from": "Sender address",
+      "username": "User",
+      "password": "Password",
+      "passwordSaved": "Saved — leave empty to keep it",
+      "clearPassword": "Remove the saved password",
+      "save": "Save email settings",
+      "incomplete": "With a server, the sender address and a port from 1 to 65535 are required.",
+      "invalid": "Some value is not valid. Nothing was saved.",
+      "testTo": "Send a test email to",
+      "testToHint": "Your own address if empty",
+      "test": "Send a test email",
+      "testSent": {
+        "smtp": "Sent. Check the inbox (and spam).",
+        "console": "Written to the server's console: no SMTP is configured.",
+        "file": "Written to the server's outbox folder: no SMTP is configured."
+      },
+      "testFailed": "Could not send it: {{error}}"
     }
   },
   "twoFactor": {

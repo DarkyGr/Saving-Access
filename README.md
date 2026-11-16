@@ -389,6 +389,8 @@ Every account uses a second step: after the password, a 6-digit code from an aut
 
 Security values for every account, each with its range and suggested value: failed attempts before an account locks, how often administration asks for the password again, idle time and maximum length of a session and how much "Extend" adds. Nothing is saved if any value is out of range.
 
+**Email**: turn sign-up email verification on or off (it needs the server's public address) and set the outgoing SMTP server. The SMTP password is stored encrypted and never shown again — leave it empty to keep it. **Send a test email** tries it right away and shows the result.
+
 **Locked accounts.** After too many wrong passwords in a row (5 by default) the account locks and its owner gets an email with a one-time unlock link (24 hours). The administrator can also unlock it from Manage Users.
 
 ### Admin — Audit log (`/admin/audit`) *(Admin only)*
@@ -472,7 +474,7 @@ All tasks from the Kiro plan (1–29) and the follow-up phases (30–34) are don
 **Pending** (tasks 35–37)
 
 - Local installation on this laptop: installed on 2026-11-15 (task 36); the phone test is left.
-- Task 37 (decided 2026-11-15): bring Savings Tool's screens and settings — side menu and interface patterns, appearance and personal settings, user administration and audit view, mandatory 2FA and session limits, in-app help. 37.1 (roles and permissions), 37.2 (menu, Home, lists and form patterns) 37.3 (settings, theme, avatar, private mode, password change, active sessions) and 37.4 (deactivate / reactivate accounts, audit log) are done.
+- Task 37 (decided 2026-11-15): bring Savings Tool's screens and settings — side menu and interface patterns, appearance and personal settings, user administration and audit view, mandatory 2FA and session limits, in-app help. 37.1 (roles and permissions), 37.2 (menu, Home, lists and form patterns) 37.3 (settings, theme, avatar, private mode, password change, active sessions), 37.4 (deactivate / reactivate accounts, audit log) and 37.5 (two-step verification, lockout, forgot password, session limits, re-authentication, clipboard clearing, System parameters) are done.
 - Monitoring and alerts. (A real server and cloud backups were dropped in favour of the local installation.)
 - GitHub Actions on Node 24.
 - Password reset, two-factor authentication, password generator, export and account deletion — outside the original spec.

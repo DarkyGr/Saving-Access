@@ -199,7 +199,7 @@ test("settings: profile, theme, private mode, start page, password and sessions"
 
   // Display name, avatar.
   await page.getByLabel("Display name", { exact: true }).fill("Ana Pérez");
-  await page.getByRole("region", { name: "Profile" }).getByRole("button", { name: "Save" }).click();
+  await page.getByRole("region", { name: "Profile" }).getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("region", { name: "Profile" }).getByRole("status")).toHaveText("Saved.");
   await page.getByRole("button", { name: "Rocket" }).click();
   await expect(page.getByRole("button", { name: "Rocket" })).toHaveAttribute("aria-pressed", "true");
@@ -352,7 +352,7 @@ test("admin: create via CLI, change a user's role, permissions follow", async ({
   await page.getByRole("link", { name: "System parameters" }).click();
   const attempts = page.getByRole("spinbutton", { name: "Failed attempts before locking" });
   await attempts.fill("3");
-  await page.getByRole("button", { name: "Save" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toHaveText("Parameters saved.");
   await logOut(page);
 
@@ -374,7 +374,7 @@ test("admin: create via CLI, change a user's role, permissions follow", async ({
   await expect(page.getByRole("status")).toHaveText(`${user} was unlocked.`);
   await page.getByRole("link", { name: "System parameters" }).click();
   await page.getByRole("spinbutton", { name: "Failed attempts before locking" }).fill("5");
-  await page.getByRole("button", { name: "Save" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toHaveText("Parameters saved.");
   await logOut(page);
 

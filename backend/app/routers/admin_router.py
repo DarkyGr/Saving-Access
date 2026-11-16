@@ -11,6 +11,9 @@ Endpoints:
   GET  /api/admin/audit                        → who did what and when (newest first)
   GET  /api/admin/settings                     → system parameters (task 37.5)
   PUT  /api/admin/settings                     → change some of them
+  GET  /api/admin/settings/email               → sign-up verification and SMTP (task 37.5)
+  PUT  /api/admin/settings/email               → change them (SMTP password write-only)
+  POST /api/admin/settings/email/test          → send a test email now
 
 Account endpoints need ``users.manage``, the audit view ``audit.view`` and
 the parameters ``settings.manage``; only the Admin role grants them. Nothing here returns password hashes or
@@ -20,12 +23,13 @@ anything stored in a credential, and nobody's vault is touched.
 from datetime import UTC, date, datetime, time
 from typing import Literal
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, aliased
 
 from app.database import get_db
+from app.rate_limit import limiter
 from app.middleware.permissions import require_permission, require_recent_auth
 from app.models import AuditLog, User
 from app.phase2 import deactivation_deadline_for, deadline_passed, verification_required
@@ -473,3 +477,180 @@ def audit_view(
         for log, who, whom in rows[:AUDIT_LIMIT]
     ]
     return AuditResponse(items=items, truncated=len(rows) > AUDIT_LIMIT)
+
+
+# --- Email settings (task 37.5, Requirement 16.8) ------------------------------
+
+
+class SmtpIn(BaseModel):
+    # Empty host = no SMTP here: the server's environment decides.
+    host: str = Field(default="", max_length=253)
+    port: int = Field(default=587, ge=1, le=65535)
+    security: Literal["starttls", "ssl", "none"] = "starttls"
+    username: str = Field(default="", max_length=254)
+    from_address: EmailStr | Literal[""] = ""
+    # Write-only: empty keeps the saved one; clear_password removes it.
+    password: str = Field(default="", max_length=512)
+    clear_password: bool = False
+
+
+class EmailSettingsIn(BaseModel):
+    email_verification: bool | None = None
+    smtp: SmtpIn | None = None
+
+
+class SmtpOut(BaseModel):
+    host: str
+    port: int
+    security: str
+    username: str
+    from_address: str
+    has_password: bool
+    configured: bool
+
+
+class EmailSettingsOut(BaseModel):
+    email_verification: bool
+    smtp: SmtpOut
+    app_base_url_set: bool
+    # What sends email when no SMTP is set here: console, file or smtp.
+    environment_backend: str
+
+
+class TestEmailIn(BaseModel):
+    to: EmailStr | None = None
+
+
+class TestEmailOut(BaseModel):
+    ok: bool
+    backend: str
+    error: str | None = None
+
+
+def _email_settings(db: Session) -> EmailSettingsOut:
+    import os
+
+    from app.phase2 import app_base_url, email_verification_enabled
+
+    smtp = system_settings.get_json(db, "smtp") or {}
+    return EmailSettingsOut(
+        email_verification=email_verification_enabled(),
+        smtp=SmtpOut(
+            host=smtp.get("host", ""),
+            port=int(smtp.get("port") or 587),
+            security=smtp.get("security") or "starttls",
+            username=smtp.get("username", ""),
+            from_address=smtp.get("from_address", ""),
+            has_password=bool(smtp.get("password")),
+            configured=bool(smtp.get("host") and smtp.get("from_address")),
+        ),
+        app_base_url_set=bool(app_base_url()),
+        environment_backend=os.environ.get("EMAIL_BACKEND", "console").strip().lower(),
+    )
+
+
+@router.get(
+    "/settings/email",
+    response_model=EmailSettingsOut,
+    status_code=status.HTTP_200_OK,
+    summary="Sign-up email verification and outgoing email",
+)
+def get_email_settings(
+    claims: dict = Depends(require_permission("settings.manage")),
+    db: Session = Depends(get_db),
+) -> EmailSettingsOut:
+    """The SMTP password is never returned: only whether one is saved."""
+    system_settings.refresh_cache(db, force=True)
+    return _email_settings(db)
+
+
+@router.put(
+    "/settings/email",
+    response_model=EmailSettingsOut,
+    status_code=status.HTTP_200_OK,
+    summary="Change sign-up email verification and outgoing email",
+)
+def put_email_settings(
+    body: EmailSettingsIn,
+    claims: dict = Depends(require_permission("settings.manage")),
+    _recent: None = Depends(require_recent_auth),
+    db: Session = Depends(get_db),
+) -> EmailSettingsOut:
+    """Requirement 16.8. The SMTP password is stored Fernet-encrypted and
+    never shown again. Verification can only be turned on when the server
+    knows its public address (APP_BASE_URL), which the links need."""
+    from app.phase2 import app_base_url
+    from app.services.encryptor_service import EncryptorService
+
+    admin_id: int = claims["user_id"]
+    changed: list[str] = []
+    if body.email_verification is not None:
+        if body.email_verification and not app_base_url():
+            raise HTTPException(status_code=422, detail="APP_BASE_URL is not set on the server.")
+        system_settings.set_json(db, "email_verification", body.email_verification, admin_id)
+        changed.append("email_verification")
+    if body.smtp is not None:
+        new = body.smtp
+        old = system_settings.get_json(db, "smtp") or {}
+        host = new.host.strip()
+        if host and not new.from_address:
+            raise HTTPException(status_code=422, detail="The sender address is required.")
+        password = old.get("password", "")
+        if new.clear_password or not host:
+            password = ""
+        elif new.password:
+            password = EncryptorService().encrypt(new.password).decode("ascii")
+        value = (
+            {
+                "host": host,
+                "port": new.port,
+                "security": new.security,
+                "username": new.username.strip(),
+                "from_address": str(new.from_address),
+                "password": password,
+            }
+            if host
+            else {}
+        )
+        system_settings.set_json(db, "smtp", value, admin_id)
+        changed.append("smtp")
+    if changed:
+        AuditService(db).log(
+            admin_id, "UPDATE", None, commit=False, action="settings.update", detail=",".join(changed)
+        )
+    db.commit()
+    system_settings.refresh_cache(db, force=True)
+    return _email_settings(db)
+
+
+@router.post(
+    "/settings/email/test",
+    response_model=TestEmailOut,
+    status_code=status.HTTP_200_OK,
+    summary="Send a test email with the current settings",
+)
+@limiter.limit("5/minute")
+def test_email(
+    request: Request,
+    body: TestEmailIn,
+    claims: dict = Depends(require_permission("settings.manage")),
+    db: Session = Depends(get_db),
+) -> TestEmailOut:
+    """Sent right away (not in the background) so the result can be shown.
+    Goes to the Admin's own address unless another one is given."""
+    from app.services.email_sender import OutgoingEmail, _backend, deliver
+
+    system_settings.refresh_cache(db, force=True)
+    admin = db.get(User, claims["user_id"])
+    to = str(body.to) if body.to else admin.email
+    message = OutgoingEmail(
+        to=to,
+        subject="Save-Pass: test email",
+        body="This is a test email from Save-Pass System parameters. If you read it, outgoing email works.\n",
+    )
+    try:
+        backend = deliver(message)
+    except Exception as error:  # noqa: BLE001 — the reason is shown to the Admin
+        return TestEmailOut(ok=False, backend=_backend(), error=f"{type(error).__name__}: {str(error)[:200]}")
+    return TestEmailOut(ok=True, backend=backend)
+

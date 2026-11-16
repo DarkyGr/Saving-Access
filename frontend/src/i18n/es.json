@@ -477,6 +477,35 @@
         "label": "Minutos que añade “Extender”",
         "help": "Cuánto más dura una sesión cuando alguien pulsa Extender cerca del máximo."
       }
+    },
+    "email": {
+      "title": "Correo",
+      "verification": "Pedir a las cuentas nuevas que verifiquen su correo",
+      "verificationHelp": "Las cuentas nuevas reciben un enlace y tienen 30 días para abrirlo; después las no verificadas se desactivan.",
+      "noBaseUrl": "Necesita la dirección pública del servidor (APP_BASE_URL en la configuración de la instalación) para los enlaces.",
+      "smtp": "Correo saliente (SMTP)",
+      "smtpHelp": "Deja el servidor vacío para usar lo configurado en la instalación (ahora: {{backend}}).",
+      "host": "Servidor",
+      "port": "Puerto",
+      "security": "Cifrado",
+      "noEncryption": "Ninguno (no recomendado)",
+      "from": "Dirección del remitente",
+      "username": "Usuario",
+      "password": "Contraseña",
+      "passwordSaved": "Guardada — déjala vacía para conservarla",
+      "clearPassword": "Quitar la contraseña guardada",
+      "save": "Guardar la configuración de correo",
+      "incomplete": "Con servidor, hacen falta la dirección del remitente y un puerto del 1 al 65535.",
+      "invalid": "Algún valor no es válido. No se guardó nada.",
+      "testTo": "Enviar un correo de prueba a",
+      "testToHint": "Tu propia dirección si lo dejas vacío",
+      "test": "Enviar correo de prueba",
+      "testSent": {
+        "smtp": "Enviado. Revisa la bandeja de entrada (y el spam).",
+        "console": "Se escribió en la consola del servidor: no hay SMTP configurado.",
+        "file": "Se escribió en la carpeta de salida del servidor: no hay SMTP configurado."
+      },
+      "testFailed": "No se pudo enviar: {{error}}"
     }
   },
   "twoFactor": {

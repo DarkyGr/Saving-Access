@@ -35,7 +35,8 @@ export interface AuthContextValue {
   /** Clear all auth state and revoke the session on the server. The promise
    *  settles once the server answered, so a reload right after cannot
    *  restore the session with a refresh cookie that is still valid. */
-  logout: () => Promise<boolean>;
+  /** Ends the session; pass `revoked` when the server side was already revoked. */
+  logout: (options?: { revoked?: boolean }) => Promise<boolean>;
   /** Pending "verify your email" notice, or null. */
   verificationNotice: VerificationNotice | null;
   dismissVerificationNotice: () => void;
@@ -150,11 +151,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   // User-initiated logout: also revoke the httpOnly refresh cookie (task 31.5).
-  const logout = useCallback(() => {
-    clearSession();
-    // Resolves to false when someone signed in again before the revoke ended.
-    return Promise.resolve(revokeSession()).then(() => !signedIn.current);
-  }, [clearSession]);
+  const logout = useCallback(
+    (options?: { revoked?: boolean }) => {
+      clearSession();
+      if (options?.revoked) return Promise.resolve(true);
+      // Resolves to false when someone signed in again before the revoke ended.
+      return Promise.resolve(revokeSession()).then(() => !signedIn.current);
+    },
+    [clearSession]
+  );
 
   // Let the axios interceptor store silently refreshed tokens / drop the session.
   useEffect(() => {

@@ -16,10 +16,14 @@ import traceback
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
+
+from app.database import get_db
 
 # Load .env file variables before accessing any env vars.
 # This is a no-op when the variables are already present in the environment.
@@ -50,8 +54,24 @@ async def lifespan(_app: FastAPI):
     yield
 
 
+def _load_email_settings(db: Session = Depends(get_db)) -> None:
+    """Keep the System parameters' email settings fresh in this worker (task 37.5)."""
+    from app.services.system_settings import cache_is_fresh, refresh_cache
+
+    if cache_is_fresh():
+        return
+    try:
+        # A savepoint: a failure (schema not migrated yet) undoes only this
+        # read, never the request's own work; the environment then decides.
+        with db.begin_nested():
+            refresh_cache(db)
+    except SQLAlchemyError:
+        pass
+
+
 app = FastAPI(
     lifespan=lifespan,
+    dependencies=[Depends(_load_email_settings)],
     title="Save-Pass Password Manager",
     version="1.0.0",
     # Disable automatic /docs and /redoc in production so internal API

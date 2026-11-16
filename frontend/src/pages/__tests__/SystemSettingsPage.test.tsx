@@ -14,10 +14,19 @@ const PARAMS = [
   { key: "session_idle_minutes", group: "sessions", value: 15, default: 15, minimum: 5, maximum: 240 },
 ];
 
+const EMAIL = {
+  email_verification: false,
+  smtp: { host: "", port: 587, security: "starttls", username: "", from_address: "", has_password: false, configured: false },
+  app_base_url_set: true,
+  environment_backend: "console",
+};
+
 describe("SystemSettingsPage (task 37.5)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(apiClient, "get").mockResolvedValue({ data: PARAMS });
+    vi.spyOn(apiClient, "get").mockImplementation((url: string) =>
+      Promise.resolve({ data: url === "/api/admin/settings/email" ? EMAIL : PARAMS })
+    );
   });
 
   it("shows each value with its range and suggested value, and saves only what changed", async () => {
@@ -46,6 +55,45 @@ describe("SystemSettingsPage (task 37.5)", () => {
     expect(screen.getByText("Use a whole number from 3 to 20.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Use the suggested value" }));
     expect(field).toHaveValue(5);
+  });
+});
+
+describe("Email settings (task 37.5)", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.spyOn(apiClient, "get").mockImplementation((url: string) =>
+      Promise.resolve({ data: url === "/api/admin/settings/email" ? { ...EMAIL, smtp: { ...EMAIL.smtp, has_password: true } } : PARAMS })
+    );
+  });
+
+  it("saves the SMTP server with a write-only password", async () => {
+    const put = vi.spyOn(apiClient, "put").mockResolvedValue({ data: EMAIL });
+    render(<SystemSettingsPage />);
+    expect(await screen.findByPlaceholderText("Saved — leave empty to keep it")).toHaveValue("");
+    await userEvent.type(screen.getByLabelText("Server"), "smtp.example.com");
+    await userEvent.click(screen.getByRole("button", { name: "Save email settings" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("the sender address");
+    await userEvent.type(screen.getByLabelText("Sender address"), "vault@example.com");
+    await userEvent.click(screen.getByRole("button", { name: "Save email settings" }));
+    expect(put).toHaveBeenCalledWith("/api/admin/settings/email", {
+      email_verification: false,
+      smtp: {
+        host: "smtp.example.com",
+        port: 587,
+        security: "starttls",
+        username: "",
+        from_address: "vault@example.com",
+        password: "",
+        clear_password: false,
+      },
+    });
+  });
+
+  it("shows the result of a test email", async () => {
+    vi.spyOn(apiClient, "post").mockResolvedValue({ data: { ok: false, backend: "smtp", error: "SMTPAuthenticationError: bad" } });
+    render(<SystemSettingsPage />);
+    await userEvent.click(await screen.findByRole("button", { name: "Send a test email" }));
+    expect(await screen.findByText("Could not send it: SMTPAuthenticationError: bad")).toBeInTheDocument();
   });
 });
 

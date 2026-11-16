@@ -6,6 +6,7 @@ import apiClient from "../api/apiClient";
 import HelpTip from "../components/form/HelpTip";
 import { useFocusFirstError } from "../hooks/useFocusFirstError";
 import { ReauthCancelled, useReauth } from "../context/ReauthContext";
+import EmailSettingsCard from "../components/admin/EmailSettingsCard";
 
 export interface Parameter {
   key: string;
@@ -171,6 +172,11 @@ export default function SystemSettingsPage() {
               </button>
             </div>
           </form>
+        )}
+        {!loading && (
+          <div className="mt-6">
+            <EmailSettingsCard />
+          </div>
         )}
         {!loading && params.length === 0 && message && (
           <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

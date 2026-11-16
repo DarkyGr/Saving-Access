@@ -150,6 +150,9 @@ def test_credential_and_admin_endpoints_name_their_permission():
         ("POST", "/api/admin/users/{user_id}/reset-2fa"): "users.manage",
         ("GET", "/api/admin/settings"): "settings.manage",
         ("PUT", "/api/admin/settings"): "settings.manage",
+        ("GET", "/api/admin/settings/email"): "settings.manage",
+        ("PUT", "/api/admin/settings/email"): "settings.manage",
+        ("POST", "/api/admin/settings/email/test"): "settings.manage",
     }
     seen = {}
     for path, route in _api_routes():

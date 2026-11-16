@@ -10,7 +10,10 @@ works without any row.
 from __future__ import annotations
 
 import json
+import os
+import time
 from dataclasses import dataclass
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -92,3 +95,58 @@ def update(db: Session, changes: dict[str, object], admin_id: int) -> list[str]:
             set_modification_audit(row, user_id=admin_id)
         changed.append(key)
     return changed
+
+
+# --- Email settings (sign-up verification, SMTP) ------------------------------
+#
+# Read by code that has no database session (sending an email from a
+# background task, the Phase 2 checks), so they live in a process cache that
+# each request refreshes at most every SETTINGS_CACHE_SECONDS (default 10).
+# A key the Admin never set falls back to the environment.
+
+EMAIL_KEYS = ("email_verification", "smtp")
+SMTP_SECURITY = ("starttls", "ssl", "none")
+
+_cache: dict[str, Any] = {}
+_loaded_at: float | None = None
+
+
+def _cache_seconds() -> float:
+    return float(os.environ.get("SETTINGS_CACHE_SECONDS", "10"))
+
+
+def cache_is_fresh() -> bool:
+    return _loaded_at is not None and time.monotonic() - _loaded_at < _cache_seconds()
+
+
+def refresh_cache(db: Session, *, force: bool = False) -> None:
+    global _cache, _loaded_at
+    if not force and cache_is_fresh():
+        return
+    now = time.monotonic()
+    rows = db.query(SystemSetting).filter(SystemSetting.key.in_(EMAIL_KEYS)).all()
+    _cache = {row.key: json.loads(row.value) for row in rows}
+    _loaded_at = now
+
+
+def cached(key: str) -> Any | None:
+    """The Admin's value for *key*, or None when it was never set."""
+    return _cache.get(key)
+
+
+def set_json(db: Session, key: str, value: Any, admin_id: int) -> None:
+    """Store a JSON value (email settings). Caller commits."""
+    row = db.get(SystemSetting, key)
+    if row is None:
+        row = SystemSetting(key=key, value=json.dumps(value))
+        set_creation_audit(row, user_id=admin_id)
+        db.add(row)
+    else:
+        row.value = json.dumps(value)
+        set_modification_audit(row, user_id=admin_id)
+
+
+def get_json(db: Session, key: str) -> Any | None:
+    row = db.get(SystemSetting, key)
+    return json.loads(row.value) if row else None
+

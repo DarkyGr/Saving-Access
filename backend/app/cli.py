@@ -129,6 +129,15 @@ def cmd_send_verification_reminders(args: argparse.Namespace) -> None:
     from app.services.email_verification_service import EmailVerificationService
     from app.utils.audit_columns import utc_date_time
 
+    from app.services.system_settings import refresh_cache
+
+    from sqlalchemy.exc import SQLAlchemyError
+
+    with SessionLocal() as db:
+        try:
+            refresh_cache(db, force=True)
+        except SQLAlchemyError:
+            pass  # not migrated yet: the environment decides
     if not email_verification_enabled():
         print("Email verification is off; nothing to do.")
         return

@@ -65,6 +65,12 @@ previous one stays in `app.old`), syncs `web\` (new files first, `index.html`
 last, stale files removed; the folder is not renamed because IIS watches it)
 and starts the task again.
 
+## After updating to task 37.5
+
+- The first sign-in of every account asks to set up two-step verification: have an authenticator app on the phone (Google Authenticator, Microsoft Authenticator, Aegis, 2FAS…), scan the QR code and keep the 10 recovery codes somewhere safe.
+- If the Admin loses both the phone and the codes, from an administrator terminal: `powershell -ExecutionPolicy Bypass -File ops\windows\with-production.ps1 reset-2fa --username <name>`; the next sign-in sets it up again (it also unlocks the account).
+- Outgoing email and sign-up verification can be set in **Administration → System parameters → Email** (with a test button) instead of `.env.production`.
+
 ## Other tools
 
 | Need | Run |

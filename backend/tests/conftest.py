@@ -20,6 +20,9 @@ os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
 # Most suites sign in with the password only; tests/test_two_factor.py turns
 # the mandatory second step on (task 37.5).
 os.environ.setdefault("TWO_FACTOR_REQUIRED", "false")
+# Each test module has its own database: never reuse email settings cached
+# from another one (task 37.5).
+os.environ.setdefault("SETTINGS_CACHE_SECONDS", "0")
 
 
 

@@ -39,6 +39,13 @@ def _flag(name: str) -> bool:
 
 
 def email_verification_enabled() -> bool:
+    """The Admin's choice in System parameters (task 37.5), else the
+    EMAIL_VERIFICATION_ENABLED environment variable."""
+    from app.services.system_settings import cached  # local: system_settings imports models
+
+    chosen = cached("email_verification")
+    if chosen is not None:
+        return bool(chosen)
     return _flag("EMAIL_VERIFICATION_ENABLED")
 
 

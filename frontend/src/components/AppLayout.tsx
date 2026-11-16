@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../context/AuthContext";
+import { revokeSession } from "../api/apiClient";
 import { visibleItems } from "../config/navigation";
 import { usePermissions } from "../hooks/usePermissions";
 import { usePreferences } from "../context/PreferencesContext";
@@ -56,15 +57,21 @@ export default function AppLayout() {
     });
   }
 
-  async function handleLogout() {
-    // False when someone signed in again while the session was being
-    // revoked: then they stay where that sign-in took them.
-    if (await logout()) navigate("/login", { replace: true });
+  /** Revoke on the server before leaving the signed-in screens, so a reload
+   *  right after can never find the session again. */
+  async function endSession(state?: { sessionEnded: EndReason }) {
+    await revokeSession();
+    await logout({ revoked: true });
+    navigate("/login", { replace: true, state });
+  }
+
+  function handleLogout() {
+    return endSession();
   }
 
   /** Requirement 16.4: idle too long or at the maximum length. */
-  async function handleSessionEnd(reason: EndReason) {
-    if (await logout()) navigate("/login", { replace: true, state: { sessionEnded: reason } });
+  function handleSessionEnd(reason: EndReason) {
+    return endSession({ sessionEnded: reason });
   }
 
   if (!token || !user) {

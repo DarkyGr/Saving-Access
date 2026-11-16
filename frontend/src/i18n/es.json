@@ -50,7 +50,8 @@
     "captchaFailed": "La comprobación CAPTCHA falló. Inténtalo de nuevo.",
     "captchaUnavailable": "No se pudo cargar el CAPTCHA. Revisa tu conexión o desactiva los bloqueadores para este sitio.",
     "tooManyAttempts": "Demasiados intentos. Espera un minuto e inténtalo de nuevo.",
-    "accountLocked": "Esta cuenta está bloqueada por demasiados intentos fallidos. Usa el enlace que te enviamos por correo o pide ayuda al administrador."
+    "accountLocked": "Esta cuenta está bloqueada por demasiados intentos fallidos. Usa el enlace que te enviamos por correo, restablece tu contraseña o pide ayuda al administrador.",
+    "forgotLink": "¿Olvidaste tu contraseña?"
   },
   "signup": {
     "title": "Crear Cuenta",
@@ -411,7 +412,8 @@
         "password": "Cambió su contraseña",
         "unlock": "Desbloqueó su cuenta",
         "2fa_setup": "Configuró la verificación en dos pasos",
-        "recovery_codes": "Creó códigos de recuperación nuevos"
+        "recovery_codes": "Creó códigos de recuperación nuevos",
+        "password_reset": "Restableció su contraseña por correo"
       },
       "credential": {
         "create": "Guardó una credencial",
@@ -518,5 +520,21 @@
     "lowCodes_one": "Solo te queda {{count}} código de recuperación.",
     "lowCodes_other": "Solo te quedan {{count}} códigos de recuperación.",
     "lowCodesLink": "Crea nuevos en Configuración"
+  },
+  "forgot": {
+    "title": "¿Olvidaste tu contraseña?",
+    "intro": "Escribe tu usuario o correo. Si la cuenta existe, te enviamos un enlace para elegir una contraseña nueva (vale 1 hora).",
+    "account": "Usuario o correo",
+    "send": "Enviarme un enlace",
+    "sent": "Si esa cuenta existe, enviamos un enlace a su correo. Revisa tu bandeja de entrada (y el spam). El enlace sirve una vez, durante 1 hora.",
+    "tooMany": "Demasiadas solicitudes. Espera un rato y vuelve a intentarlo."
+  },
+  "reset": {
+    "title": "Elige una contraseña nueva",
+    "submit": "Guardar la contraseña nueva",
+    "note": "Tus contraseñas guardadas se conservan. Se cierran todas las sesiones y al entrar se sigue pidiendo tu código de dos pasos.",
+    "done": "Se cambió tu contraseña. Entra con ella (y tu código de dos pasos).",
+    "invalid": "Este enlace no es válido: ya se usó, caducó o se envió uno más reciente.",
+    "askAgain": "Pide uno nuevo"
   }
 }

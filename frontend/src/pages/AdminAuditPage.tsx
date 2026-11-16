@@ -11,6 +11,7 @@ export const AUDIT_ACTIONS = [
   "account.login",
   "account.password",
   "account.unlock",
+  "account.password_reset",
   "account.2fa_setup",
   "account.recovery_codes",
   "credential.create",

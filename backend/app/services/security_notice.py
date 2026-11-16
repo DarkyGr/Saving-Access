@@ -48,6 +48,14 @@ _TEXTS = {
             "Your sessions were closed; the next time you sign in you will set it up again.\n\n"
             "If you did not ask for it, contact the administrator.\n"
         ),
+        "reset_subject": "Save-Pass: reset your password",
+        "reset_body": (
+            "Hello {name},\n\n"
+            "Someone asked to reset the password of your Save-Pass account on {when} (UTC). "
+            "If it was you, choose a new password with this link (valid for 1 hour, works once):\n\n{link}\n\n"
+            "Your saved passwords are kept, every session is closed, and you will still need your two-step code to sign in.\n\n"
+            "If it was not you, ignore this email: your password does not change.\n"
+        ),
         "locked_subject": "Save-Pass: your account was locked",
         "locked_body": (
             "Hello {name},\n\n"
@@ -98,6 +106,14 @@ _TEXTS = {
             "El administrador reinició la verificación en dos pasos de tu cuenta de Save-Pass el {when} (UTC). "
             "Se cerraron tus sesiones; la próxima vez que entres la configurarás de nuevo.\n\n"
             "Si no lo pediste, habla con el administrador.\n"
+        ),
+        "reset_subject": "Save-Pass: restablece tu contraseña",
+        "reset_body": (
+            "Hola {name}:\n\n"
+            "Alguien pidió restablecer la contraseña de tu cuenta de Save-Pass el {when} (UTC). "
+            "Si fuiste tú, elige una contraseña nueva con este enlace (vale 1 hora y una sola vez):\n\n{link}\n\n"
+            "Tus contraseñas guardadas se conservan, se cierran todas las sesiones y seguirás necesitando tu código de dos pasos para entrar.\n\n"
+            "Si no fuiste tú, ignora este correo: tu contraseña no cambia.\n"
         ),
         "locked_subject": "Save-Pass: se bloqueó tu cuenta",
         "locked_body": (
@@ -156,6 +172,11 @@ def recovery_codes_email(user: User) -> OutgoingEmail:
 
 def two_factor_reset_email(user: User) -> OutgoingEmail:
     return _notice(user, "two_factor_reset")
+
+
+def password_reset_email(user: User, link: str) -> OutgoingEmail:
+    """Task 37.5 (Requirement 16.3): the one-time reset link."""
+    return _notice(user, "reset", link=link)
 
 
 def account_locked_email(user: User, link: str) -> OutgoingEmail:

@@ -128,6 +128,7 @@ The `FERNET_KEY` is a 32-byte URL-safe base64 key read from a server-side enviro
 | `/admin/audit` | `AdminAuditPage` | `audit.view` (Admin, task 37.4) |
 | `/admin/settings` | `SystemSettingsPage` | `settings.manage` (Admin, task 37.5) |
 | `/unlock?token=…` | `UnlockPage` | public (task 37.5) |
+| `/forgot-password`, `/reset-password?token=…` | `ForgotPasswordPage`, `ResetPasswordPage` | public (task 37.5) |
 | `/settings` | `SettingsPage` | any signed-in user (task 37.3) |
 
 ### Frontend Shared Components
@@ -557,6 +558,8 @@ Delivered in parts; each part is listed here when it lands.
 Sign-in: `POST /api/auth/login` checks the password (counting failures) and then answers `{"mfa": "code" | "setup", "mfa_token"}` instead of a session — a 5-minute JWT of type `mfa` that no other endpoint accepts. `code` → `POST /api/auth/login/verify {mfa_token, code}` takes an app code or a recovery code (the response says `recovery_codes_left`); a wrong one counts toward the lockout, a valid one opens the session and lifts a lock (so a locked account with 2FA reaches the code step after the right password). `setup` (account without 2FA while `TWO_FACTOR_REQUIRED` is on) → `POST /api/auth/2fa/setup {mfa_token}` returns the secret and `otpauth://` link (QR drawn in the browser), `POST /api/auth/2fa/confirm {mfa_token, code}` turns it on, returns the 10 codes once, emails a notice and opens the session.
 
 `TWO_FACTOR_REQUIRED` defaults to true and production refuses false at start-up; backend tests and the E2E server turn it off (an account that has 2FA always needs it). Settings → *Two-step verification* (`GET /api/profile/me` → `two_factor`): use a new phone (`POST /api/profile/2fa/setup {account_password}` + `/2fa/confirm {code}`), new recovery codes (`POST /api/profile/2fa/recovery-codes {account_password, code}`, app code only); both email a notice. A banner warns when 3 or fewer codes remain. The Admin resets another account's 2FA (`POST /api/admin/users/{id}/reset-2fa`: sessions end, email, next sign-in sets it up); for the Admin's own lost phone, `python -m app.cli reset-2fa --username <name>` (also unlocks).
+
+**Forgot password (16.3).** `/forgot-password` → `POST /api/auth/forgot-password {account}` (username, or email in any case; `RATE_LIMIT_FORGOT_PASSWORD`, default 5/hour) always answers 202 with the same text, so it reveals nothing; for an existing, not deactivated account it emails a one-time link (`account_tokens`, purpose `reset`, 1 hour; a new link retires older ones). `/reset-password?token=` → `POST /api/auth/reset-password {token, password, password_confirmation}`: sign-up password rules (a failed try keeps the link), then the new password, every session revoked, the lock lifted, `account.password_reset` audited and the "password changed" notice emailed. It opens no session: signing in still asks for the second step.
 
 ---
 

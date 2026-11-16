@@ -55,15 +55,21 @@ async function logOut(page: Page) {
   await page.getByRole("button", { name: "Log Out" }).click();
 }
 
-/** Verification links sent to *email*, oldest first (file email backend). */
-function verificationLinks(email: string): string[] {
+/** Links to *route* emailed to *email*, oldest first (file email backend). */
+function mailLinks(email: string, route: string): string[] {
   const dir = process.env.E2E_OUTBOX_DIR!;
+  const pattern = new RegExp(String.raw`https?://\S+/${route}\?token=[\w-]+`);
   return readdirSync(dir)
     .filter((f) => f.endsWith(".json"))
     .sort()
     .map((f) => JSON.parse(readFileSync(path.join(dir, f), "utf-8")) as { to: string; body: string })
     .filter((m) => m.to === email)
-    .map((m) => /https?:\/\/\S+\/verify-email\?token=[\w-]+/.exec(m.body)![0]);
+    .flatMap((m) => pattern.exec(m.body)?.[0] ?? []);
+}
+
+/** Verification links sent to *email*, oldest first. */
+function verificationLinks(email: string): string[] {
+  return mailLinks(email, "verify-email");
 }
 
 async function confirmAccountPassword(page: Page, password = ACCOUNT_PW) {
@@ -501,6 +507,29 @@ test("two-step verification: set up in Settings, sign in with a code and a recov
   await page.getByRole("button", { name: "Use a recovery code" }).click();
   await page.getByLabel("Recovery code").fill(recovery);
   await page.getByRole("button", { name: "Verify" }).click();
+  await expect(page).toHaveURL(/\/$/);
+});
+
+test("forgot password: emailed link, new password, sign in", async ({ page }) => {
+  const name = `reset_${run}`;
+  const email = `${name}@example.com`;
+  await signUp(page, name);
+  await page.getByRole("link", { name: "Forgot your password?" }).click();
+  await page.getByLabel("Username or email").fill(email.toUpperCase());
+  await page.getByRole("button", { name: "Email me a link" }).click();
+  await expect(page.getByRole("status")).toContainText("If that account exists");
+  await expect.poll(() => mailLinks(email, "reset-password").length).toBe(1);
+
+  await page.goto(mailLinks(email, "reset-password")[0].replace(/^https?:\/\/[^/]+/, ""));
+  await page.getByLabel("New password *", { exact: true }).fill("N3wStr0ngPass!");
+  await page.getByLabel("Confirm the new password *", { exact: true }).fill("N3wStr0ngPass!");
+  await page.getByRole("button", { name: "Save the new password" }).click();
+  await expect(page.getByRole("status")).toContainText("Your password was changed");
+
+  await page.goto("/login");
+  await page.getByPlaceholder("Enter your username").fill(name);
+  await page.getByPlaceholder("Enter your password").fill("N3wStr0ngPass!");
+  await page.getByRole("button", { name: "Log In", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
 });
 

@@ -37,6 +37,8 @@ REFRESH_LIMIT = os.environ.get("RATE_LIMIT_REFRESH", "30/minute")
 ACCOUNT_PASSWORD_LIMIT = os.environ.get("RATE_LIMIT_ACCOUNT_PASSWORD", "10/minute")
 VERIFY_EMAIL_LIMIT = os.environ.get("RATE_LIMIT_VERIFY_EMAIL", "10/minute")
 RESEND_VERIFICATION_LIMIT = os.environ.get("RATE_LIMIT_RESEND_VERIFICATION", "3/hour")
+# Task 37.5: "forgot password" emails per address (IP).
+FORGOT_PASSWORD_LIMIT = os.environ.get("RATE_LIMIT_FORGOT_PASSWORD", "5/hour")
 
 
 def _enabled() -> bool:

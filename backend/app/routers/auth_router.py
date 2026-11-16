@@ -10,6 +10,8 @@ Endpoints:
   GET  /api/auth/config    → 200 {captcha_site_key, email_verification}
   POST /api/auth/verify-email → 200, consumes a verification link (spec Phase 2)
   POST /api/auth/unlock    → 200, consumes an emailed unlock link (task 37.5)
+  POST /api/auth/forgot-password → 202, emails a reset link if the account exists
+  POST /api/auth/reset-password  → 200, sets a new password with that link
 
 The access token is returned in the body and kept in React memory only. The
 refresh token travels exclusively in an httpOnly cookie scoped to
@@ -32,17 +34,21 @@ from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, HTTPException, 
 from fastapi.responses import JSONResponse
 from starlette.background import BackgroundTask
 from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import User
 from app.phase2 import (
+    app_base_url,
+    is_deactivated,
     captcha_enabled,
     captcha_site_key,
     email_verification_enabled,
     normalize_language,
 )
 from app.rate_limit import (
+    FORGOT_PASSWORD_LIMIT,
     LOGIN_LIMIT,
     REFRESH_LIMIT,
     REGISTER_LIMIT,
@@ -52,8 +58,8 @@ from app.rate_limit import (
 )
 from app.services.account_token_service import AccountTokenService
 from app.services.audit_service import AuditService
-from app.services.auth_service import ACCOUNT_LOCKED, AuthService
-from app.services.security_notice import two_factor_enabled_email
+from app.services.auth_service import ACCOUNT_LOCKED, AuthService, validate_password_strength
+from app.services.security_notice import password_changed_email, password_reset_email, two_factor_enabled_email
 from app.services.two_factor import TwoFactorService, two_factor_required
 from app.services.captcha_service import verify_captcha
 from app.services.email_sender import send_email
@@ -63,6 +69,8 @@ from app.services.email_verification_service import (
     build_verification_email,
 )
 from app.services.refresh_token_service import RefreshTokenService, refresh_lifetime
+from app.security import hash_password
+from app.utils.audit_columns import set_modification_audit, utc_date_time
 
 router = APIRouter()
 
@@ -454,3 +462,83 @@ def unlock_account(
     AuditService(db).log(user.user_id, "UPDATE", user.user_id, commit=False, action="account.unlock")
     db.commit()
     return {"detail": "Account unlocked."}
+
+
+# --- Forgot password (task 37.5, Requirement 16.3) ---------------------------
+
+
+class ForgotPasswordRequest(BaseModel):
+    # Username or email: whichever the person remembers.
+    account: str = Field(min_length=1, max_length=254)
+    language: str | None = Field(default=None, max_length=8)
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=256)
+    password: str = Field(max_length=256)
+    password_confirmation: str = Field(max_length=256)
+
+
+@router.post(
+    "/forgot-password",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Email a one-time password reset link",
+)
+@limiter.limit(FORGOT_PASSWORD_LIMIT)
+def forgot_password(
+    request: Request,
+    body: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Always the same answer, so it never reveals whether an account exists.
+    A deactivated account gets nothing (the Admin reactivates it)."""
+    account = body.account.strip()
+    user = (
+        db.query(User)
+        .filter((User.username == account) | (func.lower(User.email) == account.lower()))
+        .first()
+    )
+    if user is not None and not is_deactivated(user, utc_date_time()[0]):
+        raw = AccountTokenService(db).issue(user, "reset")
+        db.commit()
+        background_tasks.add_task(send_email, password_reset_email(user, f"{app_base_url()}/reset-password?token={raw}"))
+    return {"detail": "If the account exists, a link was emailed."}
+
+
+@router.post(
+    "/reset-password",
+    status_code=status.HTTP_200_OK,
+    summary="Set a new password with an emailed link",
+)
+@limiter.limit(VERIFY_EMAIL_LIMIT)
+def reset_password(
+    request: Request,
+    body: ResetPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Requirement 16.3: the link works once within 1 hour. The new password
+    follows the sign-up rules; every session ends and a lock is lifted. No
+    session is opened: signing in still needs the second step."""
+    tokens = AccountTokenService(db)
+    if tokens.peek(body.token, "reset") is None:
+        raise HTTPException(status_code=400, detail="Invalid or expired link.")
+    if body.password != body.password_confirmation:
+        raise HTTPException(status_code=400, detail="Password and password confirmation do not match.")
+    errors = validate_password_strength(body.password)
+    if errors:
+        raise HTTPException(status_code=400, detail={"password_errors": errors})
+    user = tokens.consume(body.token, "reset")
+    if user is None or is_deactivated(user, utc_date_time()[0]):
+        raise HTTPException(status_code=400, detail="Invalid or expired link.")
+    user.password_hash = hash_password(body.password)
+    user.failed_attempts = 0
+    user.locked_at = None
+    set_modification_audit(user, user_id=user.user_id)
+    RefreshTokenService(db).revoke_all(user.user_id)
+    AuditService(db).log(user.user_id, "UPDATE", user.user_id, commit=False, action="account.password_reset")
+    db.commit()
+    background_tasks.add_task(send_email, password_changed_email(user))
+    return {"detail": "Password changed."}
+

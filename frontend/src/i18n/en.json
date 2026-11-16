@@ -50,7 +50,8 @@
     "captchaFailed": "The CAPTCHA check failed. Please try again.",
     "captchaUnavailable": "The CAPTCHA could not be loaded. Check your connection or disable blockers for this site.",
     "tooManyAttempts": "Too many attempts. Please wait a minute and try again.",
-    "accountLocked": "This account is locked after too many failed attempts. Use the link we emailed you, or ask the administrator."
+    "accountLocked": "This account is locked after too many failed attempts. Use the link we emailed you, reset your password, or ask the administrator.",
+    "forgotLink": "Forgot your password?"
   },
   "signup": {
     "title": "Create Account",
@@ -411,7 +412,8 @@
         "password": "Changed their password",
         "unlock": "Unlocked their account",
         "2fa_setup": "Set up two-step verification",
-        "recovery_codes": "Created new recovery codes"
+        "recovery_codes": "Created new recovery codes",
+        "password_reset": "Reset their password by email"
       },
       "credential": {
         "create": "Saved a credential",
@@ -518,5 +520,21 @@
     "lowCodes_one": "Only {{count}} recovery code left.",
     "lowCodes_other": "Only {{count}} recovery codes left.",
     "lowCodesLink": "Create new ones in Settings"
+  },
+  "forgot": {
+    "title": "Forgot your password?",
+    "intro": "Type your username or email. If the account exists, we email a link to choose a new password (valid for 1 hour).",
+    "account": "Username or email",
+    "send": "Email me a link",
+    "sent": "If that account exists, we sent a link to its email. Check your inbox (and spam). The link works once, for 1 hour.",
+    "tooMany": "Too many requests. Wait a while and try again."
+  },
+  "reset": {
+    "title": "Choose a new password",
+    "submit": "Save the new password",
+    "note": "Your saved passwords are kept. Every session is closed, and signing in still asks for your two-step code.",
+    "done": "Your password was changed. Sign in with it (and your two-step code).",
+    "invalid": "This link is not valid: it was already used, it expired or a newer one was sent.",
+    "askAgain": "Ask for a new one"
   }
 }

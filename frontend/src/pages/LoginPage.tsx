@@ -364,8 +364,14 @@ export default function LoginPage() {
             </button>
           </form>
 
+          <p className="mt-4 text-center text-sm">
+            <Link to="/forgot-password" className="font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none focus:underline">
+              {t("login.forgotLink")}
+            </Link>
+          </p>
+
           {/* Sign-up link */}
-          <p className="mt-6 text-center text-sm text-gray-600">
+          <p className="mt-4 text-center text-sm text-gray-600">
             {t("login.noAccount")}{" "}
             <Link
               to="/signup"

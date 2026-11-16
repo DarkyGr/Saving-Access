@@ -13,6 +13,8 @@ import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminAuditPage from "./pages/AdminAuditPage";
 import SystemSettingsPage from "./pages/SystemSettingsPage";
 import UnlockPage from "./pages/UnlockPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import SettingsPage from "./pages/SettingsPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
 
@@ -36,6 +38,8 @@ const ForbiddenPage = React.lazy(() => import("./pages/ForbiddenPage"));
  *  /admin/audit            → ProtectedRoute(permission="audit.view")          → AdminAuditPage
  *  /admin/settings         → ProtectedRoute(permission="settings.manage")     → SystemSettingsPage
  *  /unlock?token=…         → UnlockPage (public, task 37.5)
+ *  /forgot-password        → ForgotPasswordPage (public, task 37.5)
+ *  /reset-password?token=… → ResetPasswordPage (public, task 37.5)
  *  /settings               → ProtectedRoute (any signed-in user)              → SettingsPage (task 37.3)
  *  /403                    → ForbiddenPage (public — shown after redirect)
  *  *                       → redirect to /login
@@ -62,6 +66,14 @@ const router = createBrowserRouter([
       {
         path: "/unlock",
         element: <UnlockPage />,
+      },
+      {
+        path: "/forgot-password",
+        element: <ForgotPasswordPage />,
+      },
+      {
+        path: "/reset-password",
+        element: <ResetPasswordPage />,
       },
       {
         path: "/",

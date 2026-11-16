@@ -79,6 +79,8 @@ _PUBLIC = {
     "/api/auth/login/verify",
     "/api/auth/2fa/setup",
     "/api/auth/2fa/confirm",
+    "/api/auth/forgot-password",
+    "/api/auth/reset-password",
     "/api/health",
 }
 

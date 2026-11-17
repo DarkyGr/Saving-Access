@@ -162,7 +162,7 @@ def _target(db: Session, user_id: int, admin_id: int, *, action: str) -> User:
     if user_id == admin_id:
         detail = "You cannot change your own role." if action == "role" else "You cannot deactivate your own account."
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
-    target: User | None = db.query(User).filter(User.user_id == user_id).first()
+    target: User | None = db.query(User).filter(User.user_id == user_id, User.deleted_at.is_(None)).first()
     if target is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found.")
     return target
@@ -178,7 +178,8 @@ def list_users(
     claims: dict = Depends(require_permission("users.manage")),
     db: Session = Depends(get_db),
 ) -> list[UserListItem]:
-    return [_list_item(u) for u in db.query(User).order_by(User.user_id).all()]
+    # Deleted accounts (task 35.8) are only anonymised rows kept for the audit log.
+    return [_list_item(u) for u in db.query(User).filter(User.deleted_at.is_(None)).order_by(User.user_id).all()]
 
 
 @router.put(

@@ -18,6 +18,7 @@ import HelpTip from "../components/form/HelpTip";
 import ConfirmDialog from "../components/ConfirmDialog";
 import TwoFactorSetup, { type SetupStart } from "../components/auth/TwoFactorSetup";
 import RecoveryCodes from "../components/auth/RecoveryCodes";
+import AccountDataCard from "../components/profile/AccountDataCard";
 
 // Swatch colours (fixed, so each choice shows its own colour in any theme).
 const SWATCH: Record<Accent, string> = {
@@ -763,6 +764,7 @@ export default function SettingsPage() {
         <PasswordCard />
         <TwoFactorCard />
         <SessionsCard />
+        <AccountDataCard card={(title, body) => <Card id="settings-data" title={title}>{body}</Card>} />
       </div>
     </main>
   );

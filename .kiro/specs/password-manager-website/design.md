@@ -593,6 +593,14 @@ Sign-in: `POST /api/auth/login` checks the password (counting failures) and then
 
 ---
 
+### Export My Data and Delete My Account *(task 35.8, Requirement 19)*
+
+- Settings → **Your data** (`AccountDataCard`). Both actions need the account password and, when two-step verification is on, a current app code (not a recovery code); both are rate-limited like other account-password checks.
+- `POST /api/profile/export {account_password, code?, format: csv|json}` returns the file (`Content-Disposition: attachment`, `Cache-Control: no-store`) with site, login, username-login flag, password and last change. CSV quotes every cell and prefixes `= + - @` in names and logins with `'` so a spreadsheet does not run them as formulas; the password is written exactly as saved so another manager imports it unchanged. Audited as `account.export` (detail: count and format, never contents) with a security email.
+- `POST /api/profile/account/delete {account_password, code?, confirm_username}` (204): 400 when the username does not match, 409 for the last Admin. Deletes credentials, preferences and picture, refresh tokens (the access token stops at once), recovery codes and pending links; the `users` row stays anonymised (`deleted-SP-XXXXXX`, `@deleted.invalid` email, random password hash, no 2FA, `deleted_at` set — migration 0013) so `audit_log` keeps its history; the username and email are free again. `is_deactivated` treats it as closed, the Admin list hides it and admin actions answer 404. A confirmation email goes to the old address. The login page says the account was deleted (a sessionStorage flag, since a request in flight may reload the page).
+
+---
+
 ## Role and Permission System
 
 *(Task 37.1 — the owner chose one role per account and only User / Admin. Kiro's profiles, named lists of screens assigned per user, were retired by migration 0006: with two fixed roles they added a second, redundant source of truth.)*

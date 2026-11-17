@@ -341,6 +341,12 @@ ALTER TABLE refresh_tokens ADD COLUMN reauth_at TIMESTAMP WITHOUT TIME ZONE;
 
 UPDATE alembic_version SET version_num='0012_session_limits' WHERE alembic_version.version_num = '0011_two_factor';
 
+-- Running upgrade 0012_session_limits -> 0013_account_deletion
+
+ALTER TABLE users ADD COLUMN deleted_at TIMESTAMP WITHOUT TIME ZONE;
+
+UPDATE alembic_version SET version_num='0013_account_deletion' WHERE alembic_version.version_num = '0012_session_limits';
+
 COMMIT;
 
 

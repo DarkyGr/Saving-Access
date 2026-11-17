@@ -100,7 +100,7 @@ def is_deactivated(user: User, today: date) -> bool:
     Accounts without a deadline (created before the feature was enabled, or
     by the admin CLI) are never deactivated automatically.
     """
-    return user.deactivated_at is not None or deadline_passed(user, today)
+    return user.deactivated_at is not None or user.deleted_at is not None or deadline_passed(user, today)
 
 
 def deadline_passed(user: User, today: date) -> bool:

@@ -418,7 +418,9 @@
         "unlock": "Unlocked their account",
         "2fa_setup": "Set up two-step verification",
         "recovery_codes": "Created new recovery codes",
-        "password_reset": "Reset their password by email"
+        "password_reset": "Reset their password by email",
+        "export": "Exported their passwords",
+        "delete": "Deleted their account"
       },
       "credential": {
         "create": "Saved a credential",
@@ -614,5 +616,23 @@
       "good": "Good · about {{bits}} bits.",
       "strong": "Very strong · about {{bits}} bits."
     }
+  },
+  "accountData": {
+    "title": "Your data",
+    "exportTitle": "Export my passwords",
+    "exportIntro": "Download every saved password to keep a copy or move to another password manager. The file is not encrypted: keep it safe and delete it when done.",
+    "format": "File format",
+    "csv": "CSV (other password managers)",
+    "json": "JSON",
+    "download": "Download",
+    "downloaded": "Downloaded. We sent you an email about it.",
+    "deleteTitle": "Delete my account",
+    "deleteIntro": "Erases every saved password, your settings, picture, sessions and two-step data. It cannot be undone. Export first if you want a copy.",
+    "confirmLabel": "Type your username ({{username}}) to confirm *",
+    "typeUsername": "Type your username exactly to confirm.",
+    "delete": "Delete my account",
+    "deleted": "Your account and its passwords were deleted.",
+    "wrongCodeOrName": "The code or the username is not right.",
+    "lastAdmin": "You are the only administrator: make someone else Admin first."
   }
 }

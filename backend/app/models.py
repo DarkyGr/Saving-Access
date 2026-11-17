@@ -100,6 +100,9 @@ class User(AuditColumnsMixin, Base):
     # Task 37.5 (Requirement 16.2): wrong passwords / codes in a row, and the
     # lock they cause (NULL = not locked). Only an unlock clears it.
     failed_attempts = Column(SmallInteger, nullable=False, default=0, server_default="0")
+    # Task 35.8 (Requirement 19): the owner deleted the account. The row stays
+    # anonymised so the audit log keeps its history; it can never sign in.
+    deleted_at = Column(DateTime, nullable=True)
     locked_at = Column(DateTime, nullable=True)
     # Task 37.5 (Requirement 16.1): TOTP secret (Fernet), a new one waiting
     # for its first code, when it was turned on and the last step accepted.

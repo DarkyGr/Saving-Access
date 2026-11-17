@@ -418,7 +418,9 @@
         "unlock": "Desbloqueó su cuenta",
         "2fa_setup": "Configuró la verificación en dos pasos",
         "recovery_codes": "Creó códigos de recuperación nuevos",
-        "password_reset": "Restableció su contraseña por correo"
+        "password_reset": "Restableció su contraseña por correo",
+        "export": "Exportó sus contraseñas",
+        "delete": "Borró su cuenta"
       },
       "credential": {
         "create": "Guardó una credencial",
@@ -614,5 +616,23 @@
       "good": "Buena · unos {{bits}} bits.",
       "strong": "Muy fuerte · unos {{bits}} bits."
     }
+  },
+  "accountData": {
+    "title": "Tus datos",
+    "exportTitle": "Exportar mis contraseñas",
+    "exportIntro": "Descarga todas tus contraseñas guardadas para tener una copia o pasarlas a otro gestor. El archivo no está cifrado: guárdalo en un lugar seguro y bórralo al terminar.",
+    "format": "Formato del archivo",
+    "csv": "CSV (otros gestores de contraseñas)",
+    "json": "JSON",
+    "download": "Descargar",
+    "downloaded": "Descargado. Te enviamos un correo al respecto.",
+    "deleteTitle": "Borrar mi cuenta",
+    "deleteIntro": "Elimina todas tus contraseñas guardadas, tu configuración, imagen, sesiones y datos del segundo paso. No se puede deshacer. Exporta primero si quieres una copia.",
+    "confirmLabel": "Escribe tu usuario ({{username}}) para confirmar *",
+    "typeUsername": "Escribe tu usuario exactamente para confirmar.",
+    "delete": "Borrar mi cuenta",
+    "deleted": "Se borraron tu cuenta y sus contraseñas.",
+    "wrongCodeOrName": "El código o el usuario no son correctos.",
+    "lastAdmin": "Eres el único administrador: haz Admin a otra persona primero."
   }
 }

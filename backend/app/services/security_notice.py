@@ -56,6 +56,20 @@ _TEXTS = {
             "Your saved passwords are kept, every session is closed, and you will still need your two-step code to sign in.\n\n"
             "If it was not you, ignore this email: your password does not change.\n"
         ),
+        "export_subject": "Save-Pass: your passwords were exported",
+        "export_body": (
+            "Hello {name},\n\n"
+            "All the passwords saved in your Save-Pass account were downloaded on {when} (UTC).\n\n"
+            "The file is not encrypted: keep it safe and delete it when you no longer need it. "
+            "If you did not do it, change your password and contact the administrator right away.\n"
+        ),
+        "deleted_subject": "Save-Pass: your account was deleted",
+        "deleted_body": (
+            "Hello {name},\n\n"
+            "Your Save-Pass account and every password saved in it were deleted on {when} (UTC). "
+            "This cannot be undone.\n\n"
+            "If you did not do it, contact the administrator right away.\n"
+        ),
         "locked_subject": "Save-Pass: your account was locked",
         "locked_body": (
             "Hello {name},\n\n"
@@ -114,6 +128,20 @@ _TEXTS = {
             "Si fuiste tú, elige una contraseña nueva con este enlace (vale 1 hora y una sola vez):\n\n{link}\n\n"
             "Tus contraseñas guardadas se conservan, se cierran todas las sesiones y seguirás necesitando tu código de dos pasos para entrar.\n\n"
             "Si no fuiste tú, ignora este correo: tu contraseña no cambia.\n"
+        ),
+        "export_subject": "Save-Pass: se exportaron tus contraseñas",
+        "export_body": (
+            "Hola {name}:\n\n"
+            "Todas las contraseñas guardadas en tu cuenta de Save-Pass se descargaron el {when} (UTC).\n\n"
+            "El archivo no está cifrado: guárdalo en un lugar seguro y bórralo cuando ya no lo necesites. "
+            "Si no fuiste tú, cambia tu contraseña y avisa al administrador de inmediato.\n"
+        ),
+        "deleted_subject": "Save-Pass: se borró tu cuenta",
+        "deleted_body": (
+            "Hola {name}:\n\n"
+            "Tu cuenta de Save-Pass y todas las contraseñas guardadas en ella se borraron el {when} (UTC). "
+            "No se puede deshacer.\n\n"
+            "Si no fuiste tú, avisa al administrador de inmediato.\n"
         ),
         "locked_subject": "Save-Pass: se bloqueó tu cuenta",
         "locked_body": (
@@ -177,6 +205,16 @@ def two_factor_reset_email(user: User) -> OutgoingEmail:
 def password_reset_email(user: User, link: str) -> OutgoingEmail:
     """Task 37.5 (Requirement 16.3): the one-time reset link."""
     return _notice(user, "reset", link=link)
+
+
+def export_email(user: User) -> OutgoingEmail:
+    """Task 35.8 (Requirement 19.1)."""
+    return _notice(user, "export")
+
+
+def account_deleted_email(user: User) -> OutgoingEmail:
+    """Task 35.8 (Requirement 19.2): built before the row is anonymised."""
+    return _notice(user, "deleted")
 
 
 def account_locked_email(user: User, link: str) -> OutgoingEmail:

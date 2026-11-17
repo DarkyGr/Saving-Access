@@ -118,6 +118,14 @@ export const USER_GUIDE: Guide = {
       ],
     },
     {
+      id: "your-data",
+      title: "Exporting your passwords and deleting your account",
+      blocks: [
+        "Settings → Your data → Export downloads every saved password as CSV (to import into another password manager) or JSON. It asks for your account password and, with two-step verification, a code. The file is not encrypted: keep it safe and delete it when done. You get an email each time.",
+        "Delete my account erases your saved passwords, settings, picture, sessions and two-step data. Type your username to confirm. It cannot be undone; the activity history stays without your name or email. The last administrator cannot delete their account.",
+      ],
+    },
+    {
       id: "emails",
       title: "Emails you may receive",
       blocks: [
@@ -236,6 +244,14 @@ export const USER_GUIDE: Guide = {
         "Por seguridad, la sesión termina tras un rato sin actividad (15 minutos por defecto) y tras un tiempo máximo (8 horas por defecto). La actividad en cualquier pestaña cuenta.",
         "Un minuto antes aparece un aviso con \"Seguir conectado\" o \"Extender\". Si la sesión termina, la página de inicio de sesión te dice por qué.",
         "Cerrar Sesión (en el menú bajo tu nombre) termina la sesión en este dispositivo al momento.",
+      ],
+    },
+    {
+      id: "your-data",
+      title: "Exportar tus contraseñas y borrar tu cuenta",
+      blocks: [
+        "Configuración → Tus datos → Exportar descarga todas tus contraseñas guardadas en CSV (para importarlas en otro gestor) o JSON. Pide la contraseña de tu cuenta y, con verificación en dos pasos, un código. El archivo no está cifrado: guárdalo en un lugar seguro y bórralo al terminar. Recibes un correo cada vez.",
+        "Borrar mi cuenta elimina tus contraseñas guardadas, configuración, imagen, sesiones y datos del segundo paso. Escribe tu usuario para confirmar. No se puede deshacer; el historial de actividad se conserva sin tu nombre ni correo. El último administrador no puede borrar su cuenta.",
       ],
     },
     {

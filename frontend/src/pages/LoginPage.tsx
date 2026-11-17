@@ -11,6 +11,7 @@ import PasswordInput from "../components/PasswordInput";
 import HCaptcha, { type HCaptchaHandle } from "../components/HCaptcha";
 import { getAuthConfig, type AuthConfig } from "../api/authConfig";
 import CodeStep from "../components/auth/CodeStep";
+import { ACCOUNT_DELETED_KEY } from "../components/profile/AccountDataCard";
 import TwoFactorSetup, { type SetupStart } from "../components/auth/TwoFactorSetup";
 import RecoveryCodes from "../components/auth/RecoveryCodes";
 
@@ -73,6 +74,22 @@ export default function LoginPage() {
   );
   // Task 37.5: why the previous session ended, when it ended by itself.
   const sessionEnded = (location.state as { sessionEnded?: "idle" | "max" } | null)?.sessionEnded;
+  // Task 35.8: set by "Delete my account"; shown once.
+  const [accountDeleted] = useState(() => {
+    try {
+      return window.sessionStorage.getItem(ACCOUNT_DELETED_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    // Cleared after it is read (not while reading: StrictMode reads twice).
+    try {
+      window.sessionStorage.removeItem(ACCOUNT_DELETED_KEY);
+    } catch {
+      // Unavailable storage: nothing to clear.
+    }
+  }, []);
 
   const [config, setConfig] = useState<AuthConfig | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -263,6 +280,12 @@ export default function LoginPage() {
                 {config?.email_verification
                   ? t("login.registeredVerify")
                   : t("login.registered")}
+              </div>
+            )}
+
+            {accountDeleted && !apiError && (
+              <div role="status" className="mb-5 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                {t("accountData.deleted")}
               </div>
             )}
 

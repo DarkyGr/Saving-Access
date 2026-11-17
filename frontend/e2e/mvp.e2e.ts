@@ -231,9 +231,10 @@ test("settings: profile, theme, private mode, start page, password and sessions"
   await phone.close();
 
   // Change the password.
-  await page.getByLabel(/^Current password/).fill(ACCOUNT_PW);
-  await page.getByLabel(/^New password/).fill("N3wStr0ngPass!");
-  await page.getByLabel(/^Confirm the new password/).fill("N3wStr0ngPass!");
+  const passwordCard = page.getByRole("region", { name: "Password" });
+  await passwordCard.getByLabel(/^Current password/).fill(ACCOUNT_PW);
+  await passwordCard.getByLabel(/^New password/).fill("N3wStr0ngPass!");
+  await passwordCard.getByLabel(/^Confirm the new password/).fill("N3wStr0ngPass!");
   await page.getByRole("button", { name: "Change password" }).click();
   await expect(page.getByRole("region", { name: "Password" }).getByRole("status")).toContainText("Password changed.");
 
@@ -541,8 +542,8 @@ test("forgot password: emailed link, new password, sign in", async ({ page }) =>
   await page.getByPlaceholder("e.g. github.com").fill("Generated");
   await page.getByPlaceholder("your@email.com").fill(email);
   await page.getByRole("button", { name: "Generate a strong password" }).click();
+  await expect(page.getByTestId("generated-password")).toHaveText(/^\S{20}$/);
   const generated = (await page.getByTestId("generated-password").textContent()) ?? "";
-  expect(generated).toHaveLength(20);
   await page.getByRole("button", { name: "Use this password" }).click();
   await expect(page.getByPlaceholder("Password for this website")).toHaveValue(generated);
   await page.getByRole("button", { name: "Save Credential" }).click();
@@ -551,5 +552,25 @@ test("forgot password: emailed link, new password, sign in", async ({ page }) =>
   await row.getByRole("button", { name: "Show password" }).click();
   await confirmAccountPassword(page, "N3wStr0ngPass!");
   await expect(row.getByText(generated, { exact: true })).toBeVisible();
+
+  // Task 35.8: export my passwords, then delete the account.
+  await page.getByRole("button", { name: /^Account menu of/ }).click();
+  await page.getByRole("link", { name: "Settings" }).click();
+  const data = page.getByRole("region", { name: "Your data" });
+  await data.locator("#export-password").fill("N3wStr0ngPass!");
+  const [download] = await Promise.all([page.waitForEvent("download"), data.getByRole("button", { name: "Download" }).click()]);
+  expect(download.suggestedFilename()).toMatch(/^save-pass-export-\d{8}\.csv$/);
+  const csvText = readFileSync((await download.path())!, "utf-8");
+  expect(csvText).toContain(generated);
+
+  await data.locator("#delete-password").fill("N3wStr0ngPass!");
+  await data.getByLabel(/Type your username/).fill(name);
+  await data.getByRole("button", { name: "Delete my account" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole("status")).toContainText("Your account and its passwords were deleted.");
+  await page.getByPlaceholder("Enter your username").fill(name);
+  await page.getByPlaceholder("Enter your password").fill("N3wStr0ngPass!");
+  await page.getByRole("button", { name: "Log In", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("Invalid");
 });
 

@@ -313,3 +313,14 @@ The owner's decisions behind them: sign-up stays **open**; two-factor authentica
 2. THE generated password SHALL contain at least one character of every kind that is on, and SHALL come from the browser's cryptographic random source without bias; it SHALL NOT be sent to the server until the person saves the form.
 3. THE generator SHALL show the estimated strength in bits, let the person generate again, and fill the password field only when they choose "Use this password".
 4. THE generator's options (never a generated password) SHALL be remembered on the device.
+
+### Requirement 19: Export My Data and Delete My Account (task 35.8)
+
+**User Story:** As a user, I want to take my passwords with me and to close my account, so that my data stays mine.
+
+#### Acceptance Criteria
+
+1. THE Settings screen SHALL let the user download all their saved credentials (site, login, password, last change) as CSV or JSON after entering the account password and, when two-step verification is on, a current code; the export SHALL be recorded in the audit log and a security email SHALL be sent.
+2. THE Settings screen SHALL let the user delete their account after entering the account password, a current two-step code when it is on, and their username to confirm. Their credentials, preferences, picture, sessions, two-step data and pending links SHALL be erased, and an email SHALL confirm it.
+3. THE audit log SHALL keep its history: the account row SHALL remain as an anonymised record (no name, email or password) that can never sign in, and the username and email SHALL become free for new accounts.
+4. THE last Admin SHALL NOT be able to delete their own account.

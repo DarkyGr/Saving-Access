@@ -152,18 +152,18 @@ describe("SettingsPage (task 37.3)", () => {
     const card = await screen.findByRole("region", { name: "Password" });
     await user.click(within(card).getByRole("button", { name: "Change password" }));
     expect(post).not.toHaveBeenCalled();
-    expect(screen.getByLabelText(/Current password/, { selector: "input" })).toHaveFocus();
+    expect(within(card).getByLabelText(/Current password/, { selector: "input" })).toHaveFocus();
 
     post.mockRejectedValueOnce(httpError(401, "Account password verification failed."));
-    await user.type(screen.getByLabelText(/Current password/, { selector: "input" }), "wrong");
-    await user.type(screen.getByLabelText(/^New password/, { selector: "input" }), "N3wStr0ngPass!");
-    await user.type(screen.getByLabelText(/Confirm the new password/, { selector: "input" }), "N3wStr0ngPass!");
+    await user.type(within(card).getByLabelText(/Current password/, { selector: "input" }), "wrong");
+    await user.type(within(card).getByLabelText(/^New password/, { selector: "input" }), "N3wStr0ngPass!");
+    await user.type(within(card).getByLabelText(/Confirm the new password/, { selector: "input" }), "N3wStr0ngPass!");
     await user.click(within(card).getByRole("button", { name: "Change password" }));
     expect(await within(card).findByText("Incorrect account password.")).toBeInTheDocument();
 
     post.mockResolvedValueOnce({ status: 204, data: undefined });
-    await user.clear(screen.getByLabelText(/Current password/, { selector: "input" }));
-    await user.type(screen.getByLabelText(/Current password/, { selector: "input" }), "Str0ngPassw0rd!");
+    await user.clear(within(card).getByLabelText(/Current password/, { selector: "input" }));
+    await user.type(within(card).getByLabelText(/Current password/, { selector: "input" }), "Str0ngPassw0rd!");
     await user.click(within(card).getByRole("button", { name: "Change password" }));
     expect(await within(card).findByRole("status")).toHaveTextContent("Password changed.");
     expect(post).toHaveBeenLastCalledWith("/api/profile/password", {

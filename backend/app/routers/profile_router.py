@@ -28,14 +28,30 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.middleware.permissions import get_current_claims
-from app.models import User, UserPreference
+from app.models import (
+    AccountToken,
+    Credential,
+    EmailVerificationToken,
+    RecoveryCode,
+    RefreshToken,
+    User,
+    UserPreference,
+)
 from app.phase2 import email_verification_enabled, is_deactivated, normalize_language
 from app.rate_limit import ACCOUNT_PASSWORD_LIMIT, RESEND_VERIFICATION_LIMIT, limiter, user_or_ip_key
 from app.security import hash_password, verify_password
 from app.services.auth_service import validate_password_strength
 from app.services.refresh_token_service import RefreshTokenService
 from app.services.audit_service import AuditService
-from app.services.security_notice import password_changed_email, recovery_codes_email, two_factor_enabled_email
+from app.services.security_notice import (
+    account_deleted_email,
+    export_email,
+    password_changed_email,
+    recovery_codes_email,
+    two_factor_enabled_email,
+)
+from app.services.encryptor_service import EncryptorService
+from app.routers.credentials_router import _last_changed
 from app.services.two_factor import TwoFactorService, two_factor_required
 from app.services.system_settings import get_int
 from app.services.email_sender import send_email
@@ -660,5 +676,151 @@ def session_reauth(
     _check_password(user, body.account_password)
     RefreshTokenService(db).mark_reauth(row)
     db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- Export my data and delete my account (task 35.8, Requirement 19) ----------
+
+
+class SensitiveRequest(BaseModel):
+    account_password: str = Field(max_length=256)
+    # Required when two-step verification is on (app code, not a recovery code).
+    code: str | None = Field(default=None, max_length=32)
+
+
+class ExportRequest(SensitiveRequest):
+    format: Literal["csv", "json"] = "csv"
+
+
+class DeleteAccountRequest(SensitiveRequest):
+    confirm_username: str = Field(max_length=64)
+
+
+def _check_sensitive(db: Session, user: User, body: SensitiveRequest) -> None:
+    """Account password, plus a current app code when 2FA is on."""
+    _check_password(user, body.account_password)
+    two_factor = TwoFactorService(db)
+    if two_factor.enabled(user) and (
+        not body.code or two_factor.check(user, body.code, allow_recovery=False) is None
+    ):
+        raise HTTPException(status_code=400, detail="Invalid code.")
+
+
+def _cell(value: str) -> str:
+    """Keep a spreadsheet from running a name or login as a formula."""
+    return "'" + value if value[:1] in ("=", "+", "-", "@", "\t", "\r") else value
+
+
+@router.post("/export", summary="Download all my saved credentials")
+@limiter.limit(ACCOUNT_PASSWORD_LIMIT, key_func=user_or_ip_key)
+def export_credentials(
+    request: Request,
+    body: ExportRequest,
+    background_tasks: BackgroundTasks,
+    claims: dict = Depends(get_current_claims),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Requirement 19.1. The file is plain text by nature: the response is
+    never cached, the export is audited and the owner gets an email."""
+    import csv
+    import io
+    import json
+
+    user = _user(db, claims)
+    _check_sensitive(db, user, body)
+    encryptor = EncryptorService()
+    rows = (
+        db.query(Credential)
+        .filter(Credential.user_id == user.user_id)
+        .order_by(Credential.website_name, Credential.credential_id)
+        .all()
+    )
+    items = [
+        {
+            "website_name": row.website_name,
+            "email_or_username": row.email_or_username,
+            "is_username_login": bool(row.is_username_login),
+            "password": encryptor.decrypt(row.encrypted_password),
+            "last_changed": _last_changed(row),
+        }
+        for row in rows
+    ]
+    day = utc_date_time()[0].strftime("%Y%m%d")
+    if body.format == "json":
+        content = json.dumps({"exported_at": utc_date_time()[0].isoformat(), "credentials": items}, ensure_ascii=False, indent=2)
+        media, name = "application/json", f"save-pass-export-{day}.json"
+    else:
+        out = io.StringIO()
+        writer = csv.writer(out, quoting=csv.QUOTE_ALL, lineterminator="\r\n")
+        writer.writerow(["website_name", "email_or_username", "is_username_login", "password", "last_changed"])
+        for item in items:
+            # The password is written exactly as saved, so another manager imports it unchanged.
+            writer.writerow([
+                _cell(item["website_name"]), _cell(item["email_or_username"]),
+                "yes" if item["is_username_login"] else "no", item["password"], item["last_changed"],
+            ])
+        content = out.getvalue()
+        media, name = "text/csv", f"save-pass-export-{day}.csv"
+    AuditService(db).log(
+        user.user_id, "SELECT", None, commit=False, action="account.export", detail=f"{len(items)} {body.format}"
+    )
+    db.commit()
+    background_tasks.add_task(send_email, export_email(user))
+    return Response(
+        content=content.encode("utf-8"),
+        media_type=f"{media}; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"},
+    )
+
+
+@router.post("/account/delete", status_code=status.HTTP_204_NO_CONTENT, summary="Delete my account")
+@limiter.limit(ACCOUNT_PASSWORD_LIMIT, key_func=user_or_ip_key)
+def delete_account(
+    request: Request,
+    body: DeleteAccountRequest,
+    background_tasks: BackgroundTasks,
+    claims: dict = Depends(get_current_claims),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Requirement 19.2–19.4. Everything personal is erased; the row stays
+    anonymised (no name, email or usable password) so the audit log keeps who
+    did what. The username and email become free. The last Admin cannot."""
+    import secrets as _secrets
+
+    user = _user(db, claims)
+    _check_sensitive(db, user, body)
+    if body.confirm_username.strip() != user.username:
+        raise HTTPException(status_code=400, detail="Type your username to confirm.")
+    if user.role == "Admin":
+        others = (
+            db.query(User)
+            .filter(User.role == "Admin", User.user_id != user.user_id, User.deleted_at.is_(None))
+            .count()
+        )
+        if others == 0:
+            raise HTTPException(status_code=409, detail="The last Admin cannot delete their account.")
+
+    notice = account_deleted_email(user)
+    for model in (Credential, UserPreference, RefreshToken, RecoveryCode, AccountToken, EmailVerificationToken):
+        db.query(model).filter(model.user_id == user.user_id).delete(synchronize_session=False)
+    AuditService(db).log(user.user_id, "DELETE", user.user_id, commit=False, action="account.delete")
+    tag = f"deleted-{user.user_code}"
+    user.username = tag
+    user.email = f"{tag.lower()}@deleted.invalid"
+    user.password_hash = hash_password(_secrets.token_urlsafe(32))
+    user.display_name = None
+    user.role = "User"
+    user.email_verified = False
+    user.preferred_language = None
+    user.totp_secret = None
+    user.totp_pending_secret = None
+    user.totp_enabled_at = None
+    user.totp_last_step = None
+    user.locked_at = None
+    user.failed_attempts = 0
+    user.deleted_at = datetime.now(UTC).replace(tzinfo=None, microsecond=0)
+    set_modification_audit(user, user_id=user.user_id)
+    db.commit()
+    background_tasks.add_task(send_email, notice)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

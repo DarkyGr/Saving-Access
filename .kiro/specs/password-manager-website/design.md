@@ -583,6 +583,16 @@ Sign-in: `POST /api/auth/login` checks the password (counting failures) and then
 
 ---
 
+### Password Generator *(task 35.7, Requirement 18)*
+
+- `PasswordGenerator` (under the password field of Save and Edit) and `lib/passwordGenerator.ts`, frontend only: nothing reaches the server until the form is saved.
+- Pools: lowercase, uppercase, digits, symbols `!@#$%^&*()-_=+[]{};:,.?/~`; "avoid look-alikes" drops `I l 1 O 0 o`. Length 8–64 (default 20).
+- `crypto.getRandomValues` with rejection sampling (uniform, no modulo bias); one character of each chosen kind is placed first and the result is shuffled with Fisher–Yates using the same source.
+- Strength = length × log2(pool size): under 60 bits weak, under 90 good, otherwise very strong.
+- The options (never a password) are remembered in `localStorage` (`savepass-generator-options`).
+
+---
+
 ## Role and Permission System
 
 *(Task 37.1 — the owner chose one role per account and only User / Admin. Kiro's profiles, named lists of screens assigned per user, were retired by migration 0006: with two fixed roles they added a second, redundant source of truth.)*

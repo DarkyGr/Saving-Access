@@ -63,6 +63,14 @@ export const USER_GUIDE: Guide = {
       ],
     },
     {
+      id: "generator",
+      title: "Generating a strong password",
+      blocks: [
+        "On Save Credential and Edit, choose \"Generate a strong password\" under the password field. Pick the length (8 to 64) and the kinds of characters; \"Avoid look-alikes\" leaves out l, 1, O, 0 and similar ones, handy if you ever type it by hand.",
+        "The password is created in your browser with its secure random source and shows its strength. \"Use this password\" puts it in the field; nothing is saved until you save the form. Your choices are remembered on this device.",
+      ],
+    },
+    {
       id: "find",
       title: "Finding and revealing passwords",
       blocks: [
@@ -173,6 +181,14 @@ export const USER_GUIDE: Guide = {
       blocks: [
         "Elige Guardar Credencial en el menú. Escribe el nombre del sitio o la app, el correo o usuario que usas ahí (marca \"Este sitio usa un usuario en lugar de un correo electrónico\" cuando haga falta) y la contraseña.",
         "Save-Pass pide la contraseña de tu cuenta para confirmar. La contraseña se cifra antes de guardarse.",
+      ],
+    },
+    {
+      id: "generator",
+      title: "Generar una contraseña segura",
+      blocks: [
+        "En Guardar Credencial y Editar, elige \"Generar una contraseña segura\" debajo del campo de contraseña. Escoge el largo (8 a 64) y los tipos de caracteres; \"Evitar parecidos\" deja fuera l, 1, O, 0 y similares, útil si alguna vez la escribes a mano.",
+        "La contraseña se crea en tu navegador con su fuente aleatoria segura y muestra qué tan fuerte es. \"Usar esta contraseña\" la pone en el campo; no se guarda nada hasta que guardes el formulario. Tus opciones se recuerdan en este dispositivo.",
       ],
     },
     {

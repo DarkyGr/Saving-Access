@@ -302,3 +302,14 @@ The owner's decisions behind them: sign-up stays **open**; two-factor authentica
 
 1. THE Frontend SHALL include a user guide (English and Spanish) with an index, accent-insensitive search with highlighting and a copyable link per section.
 2. THE Admin SHALL also see a technical guide.
+
+### Requirement 18: Password Generator (task 35.7)
+
+**User Story:** As a user, I want Save-Pass to create strong passwords for me, so that I do not reuse or invent weak ones.
+
+#### Acceptance Criteria
+
+1. THE Save and Edit credential pages SHALL offer a password generator with a length from 8 to 64 characters (default 20), lowercase, uppercase, digits and symbols that can each be turned off (at least one stays on), and an option to avoid look-alike characters (I, l, 1, O, 0, o).
+2. THE generated password SHALL contain at least one character of every kind that is on, and SHALL come from the browser's cryptographic random source without bias; it SHALL NOT be sent to the server until the person saves the form.
+3. THE generator SHALL show the estimated strength in bits, let the person generate again, and fill the password field only when they choose "Use this password".
+4. THE generator's options (never a generated password) SHALL be remembered on the device.

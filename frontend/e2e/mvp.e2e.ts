@@ -534,5 +534,22 @@ test("forgot password: emailed link, new password, sign in", async ({ page }) =>
   await page.getByPlaceholder("Enter your password").fill("N3wStr0ngPass!");
   await page.getByRole("button", { name: "Log In", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
+
+  // Task 35.7: save a credential with a generated password, then reveal it.
+  await page.getByRole("dialog", { name: "Verify your email" }).getByRole("button", { name: "Close" }).click();
+  await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Save Credential" }).click();
+  await page.getByPlaceholder("e.g. github.com").fill("Generated");
+  await page.getByPlaceholder("your@email.com").fill(email);
+  await page.getByRole("button", { name: "Generate a strong password" }).click();
+  const generated = (await page.getByTestId("generated-password").textContent()) ?? "";
+  expect(generated).toHaveLength(20);
+  await page.getByRole("button", { name: "Use this password" }).click();
+  await expect(page.getByPlaceholder("Password for this website")).toHaveValue(generated);
+  await page.getByRole("button", { name: "Save Credential" }).click();
+  await confirmAccountPassword(page, "N3wStr0ngPass!");
+  const row = page.getByRole("row", { name: /Generated/ });
+  await row.getByRole("button", { name: "Show password" }).click();
+  await confirmAccountPassword(page, "N3wStr0ngPass!");
+  await expect(row.getByText(generated, { exact: true })).toBeVisible();
 });
 

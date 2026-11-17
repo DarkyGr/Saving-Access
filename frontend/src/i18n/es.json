@@ -594,5 +594,25 @@
     "link": "Copiar enlace",
     "linkCopied": "Enlace copiado",
     "copyLink": "Copiar un enlace a “{{title}}”"
+  },
+  "generator": {
+    "open": "Generar una contraseña segura",
+    "hide": "Cerrar el generador",
+    "title": "Generador de contraseñas",
+    "generated": "Contraseña generada",
+    "again": "Generar otra",
+    "length": "Largo",
+    "lower": "Minúsculas (a-z)",
+    "upper": "Mayúsculas (A-Z)",
+    "digits": "Números (0-9)",
+    "symbols": "Símbolos (!@#…)",
+    "avoidSimilar": "Evitar parecidos (l 1 O 0)",
+    "use": "Usar esta contraseña",
+    "chooseOne": "Elige al menos un tipo de carácter.",
+    "strength": {
+      "weak": "Débil · unos {{bits}} bits. Hazla más larga o agrega tipos de caracteres.",
+      "good": "Buena · unos {{bits}} bits.",
+      "strong": "Muy fuerte · unos {{bits}} bits."
+    }
   }
 }

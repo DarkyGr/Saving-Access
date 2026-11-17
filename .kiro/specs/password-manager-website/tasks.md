@@ -357,7 +357,7 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - [ ] 35.4 GitHub Actions: move `actions/checkout`, `setup-python`, `setup-node`, `upload-artifact` to releases that run on Node 24 (Node 20 is deprecated on the runners)
   - [ ] 35.5 → moved to 37.5. "Forgot password": email reset link (one-time, short-lived), revokes refresh tokens; works because credentials are encrypted with the server key, not with the account password
   - [ ] 35.6 → moved to 37.5. Two-factor authentication (TOTP) at login, with recovery codes
-  - [ ] 35.7 Password generator on the Save / Edit credential pages
+  - [x] 35.7 Password generator on the Save / Edit credential pages (Requirement 18)
   - [ ] 35.8 Self-service: export my credentials (re-entering the account password, audited) and delete my account
   - [ ] 35.9 Decide the encryption model: today the server decrypts with `FERNET_KEY` (database + key leak exposes every password). Client-side encryption with a key derived from the account password (zero-knowledge) would remove that risk but rules out 35.5 and needs a redesign — decide before real users
   - [ ] 35.10 Lint tooling advisory: drop when `typescript-eslint` moves to `minimatch` 11 (moderate ReDoS, dev-only)

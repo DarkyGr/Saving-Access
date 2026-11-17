@@ -377,6 +377,10 @@ Lists all registered users with their user ID, role (User or Admin) and status (
 
 From the login page: type your username or email and, if the account exists, you get a link valid for 1 hour that works once. The new password follows the sign-up rules; your saved passwords are kept, every session is closed, and signing in still asks for your two-step code. It also unlocks a locked account.
 
+### Password generator
+
+On Save Credential and Edit, **Generate a strong password** opens a generator under the password field: length 8–64, lowercase, uppercase, digits and symbols, and an option to avoid look-alike characters. It shows the strength, can generate again, and **Use this password** fills the field. Passwords are created in the browser with its secure random source; only the options are remembered.
+
 ### Help (`/help`)
 
 The **User guide** (menu → Help) explains every screen in English and Spanish: an index, a search that ignores capitals and accents and highlights what it finds, and a **Copy link** button on each section to share it. The administrator also has the **Technical guide**: accounts, audit log, System parameters, email, updates, backups and command-line tools.

@@ -7,6 +7,7 @@ import apiClient from "../api/apiClient";
 import { useFocusFirstError } from "../hooks/useFocusFirstError";
 import HelpTip from "../components/form/HelpTip";
 import PasswordInput from "../components/PasswordInput";
+import PasswordGenerator from "../components/form/PasswordGenerator";
 import PasswordConfirmModal from "../components/PasswordConfirmModal";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -401,6 +402,12 @@ export default function SaveCredentialPage() {
                     onChange={handleChange("password")}
                     aria-required="true"
                     error={fieldErrors.password}
+                  />
+                  <PasswordGenerator
+                    onUse={(generated) => {
+                      setFields((prev) => ({ ...prev, password: generated }));
+                      setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                    }}
                   />
                 </div>
               </div>

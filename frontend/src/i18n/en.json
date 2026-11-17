@@ -594,5 +594,25 @@
     "link": "Copy link",
     "linkCopied": "Link copied",
     "copyLink": "Copy a link to “{{title}}”"
+  },
+  "generator": {
+    "open": "Generate a strong password",
+    "hide": "Close the generator",
+    "title": "Password generator",
+    "generated": "Generated password",
+    "again": "Generate again",
+    "length": "Length",
+    "lower": "Lowercase (a-z)",
+    "upper": "Uppercase (A-Z)",
+    "digits": "Digits (0-9)",
+    "symbols": "Symbols (!@#…)",
+    "avoidSimilar": "Avoid look-alikes (l 1 O 0)",
+    "use": "Use this password",
+    "chooseOne": "Choose at least one kind of character.",
+    "strength": {
+      "weak": "Weak · about {{bits}} bits. Make it longer or add kinds of characters.",
+      "good": "Good · about {{bits}} bits.",
+      "strong": "Very strong · about {{bits}} bits."
+    }
   }
 }

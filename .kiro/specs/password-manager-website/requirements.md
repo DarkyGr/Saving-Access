@@ -324,3 +324,13 @@ The owner's decisions behind them: sign-up stays **open**; two-factor authentica
 2. THE Settings screen SHALL let the user delete their account after entering the account password, a current two-step code when it is on, and their username to confirm. Their credentials, preferences, picture, sessions, two-step data and pending links SHALL be erased, and an email SHALL confirm it.
 3. THE audit log SHALL keep its history: the account row SHALL remain as an anonymised record (no name, email or password) that can never sign in, and the username and email SHALL become free for new accounts.
 4. THE last Admin SHALL NOT be able to delete their own account.
+
+### Requirement 20: Monitoring and Alerts (task 35.3)
+
+**User Story:** As the Admin, I want to know when the installation stops working or stops backing up, so that I can act before data is lost.
+
+#### Acceptance Criteria
+
+1. THE installation SHALL check every 15 minutes that the API and the HTTPS site answer `/api/health`, that the newest backup is less than 26 hours old and did not fail, that the weekly restore test passed and ran in the last 8 days, that the scheduled tasks ended without error and that the backup disk has at least 2 GB free.
+2. WHEN a problem appears, THE System SHALL email every active Admin in their language; while it lasts it SHALL remind every 24 hours, and it SHALL send one email when everything is fine again.
+3. THE installation SHALL keep its logs bounded: API, jobs and monitor logs rotated at 10 MB (3 kept) and IIS logs older than 30 days deleted.

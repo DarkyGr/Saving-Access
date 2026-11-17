@@ -78,6 +78,15 @@ export const TECHNICAL_GUIDE: Guide = {
       ],
     },
     {
+      id: "monitoring",
+      title: "Automatic checks and alerts",
+      blocks: [
+        "Every 15 minutes the Monitor task checks that the API and the site answer, that the newest backup is under 26 hours old and did not fail, that the weekly restore test passed, that the scheduled tasks ended well and that at least 2 GB are free.",
+        "When something fails every administrator gets an email (outgoing email must be set up in System parameters), again every 24 hours while it lasts and once more when it is solved. Details in the installation's logs\\monitor.log.",
+        "It also keeps the logs small: the API, jobs and monitor logs rotate at 10 MB and IIS logs older than 30 days are deleted.",
+      ],
+    },
+    {
       id: "cli",
       title: "Command-line tools",
       blocks: [
@@ -178,6 +187,15 @@ export const TECHNICAL_GUIDE: Guide = {
       blocks: [
         "Una tarea programada hace cada día un respaldo cifrado de la base de datos en la carpeta Backup de la instalación. Guarda FERNET_KEY y BACKUP_KEY en tu gestor de contraseñas: sin FERNET_KEY las contraseñas guardadas no se pueden recuperar, ni siquiera desde un respaldo.",
         "Cada domingo una tarea programada restaura el respaldo más reciente en una base de datos de prueba y la compara con la real (registro en Backup\\db\\restore-test.log). La restauración real está en docs/local-install.md (\"Restore for real\").",
+      ],
+    },
+    {
+      id: "monitoring",
+      title: "Revisiones automáticas y alertas",
+      blocks: [
+        "Cada 15 minutos la tarea Monitor revisa que la API y el sitio respondan, que el respaldo más reciente tenga menos de 26 horas y no haya fallado, que la prueba de restauración semanal pase, que las tareas programadas terminen bien y que queden al menos 2 GB libres.",
+        "Cuando algo falla, cada administrador recibe un correo (el correo saliente debe estar configurado en Parámetros del sistema), de nuevo cada 24 horas mientras siga y otra vez cuando se resuelva. Detalles en logs\\monitor.log de la instalación.",
+        "También mantiene los logs pequeños: los de la API, tareas y monitor rotan a los 10 MB y los de IIS de más de 30 días se borran.",
       ],
     },
     {

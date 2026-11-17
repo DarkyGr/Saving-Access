@@ -10,6 +10,7 @@ Usage (from backend/ or inside the backend container), after
     python -m app.cli reset-2fa --username alice   # also unlocks
     python -m app.cli send-verification-reminders [--dry-run]
     python -m app.cli rotate-fernet-key [--dry-run]
+    python -m app.cli monitor --backup-dir <dir> --state <file> [--rotate <log> ...] [--iis-logs <dir>]
 
 ``create-admin`` reads the password from the ``ADMIN_PASSWORD`` env var, or
 prompts for it (twice) when the variable is not set.  The password must meet
@@ -123,6 +124,57 @@ def cmd_reset_two_factor(args: argparse.Namespace) -> None:
         print(f"Two-step verification of '{user.username}' was reset; it is set up again at the next sign-in.")
 
 
+def cmd_monitor(args: argparse.Namespace) -> None:
+    """Task 35.3: health, backups, restore test, tasks and disk; emails the
+    Admins when something goes wrong (and when it is fixed); trims logs."""
+    from pathlib import Path
+
+    from sqlalchemy.exc import SQLAlchemyError
+
+    from app.services import monitor
+    from app.services.email_sender import send_email
+    from app.services.system_settings import refresh_cache
+
+    api_url = args.api_url or f"http://127.0.0.1:{os.environ.get('API_PORT', '8010')}/api/health"
+    web_url = args.web_url or f"https://localhost:{os.environ.get('HTTPS_PORT', '8443')}/api/health"
+    problems = monitor.check_health(api_url, "api")
+    if not args.no_web:
+        problems += monitor.check_health(web_url, "web", insecure=True)
+    if args.backup_dir:
+        problems += monitor.check_backups(Path(args.backup_dir))
+        problems += monitor.check_disk(Path(args.backup_dir))
+    if not args.no_tasks:
+        problems += monitor.check_tasks(monitor.task_results())
+
+    for log in args.rotate or []:
+        monitor.rotate(Path(log))
+    if args.iis_logs:
+        monitor.prune(Path(args.iis_logs))
+
+    state_path = Path(args.state)
+    action, state = monitor.decide(problems, monitor.load_state(state_path))
+    sent = 0
+    if action:
+        try:
+            with SessionLocal() as db:
+                refresh_cache(db, force=True)
+                admins = (
+                    db.query(User)
+                    .filter(User.role == "Admin", User.deleted_at.is_(None), User.deactivated_at.is_(None))
+                    .all()
+                )
+                for admin in admins:
+                    sent += bool(send_email(monitor.alert_email(admin, problems, action)))
+        except SQLAlchemyError:
+            # The database itself is down: the API check already reports it;
+            # try again next run instead of losing the alert.
+            state["last_alert"] = None
+            state["problems"] = []
+    monitor.save_state(state_path, state)
+    summary = "OK" if not problems else f"{len(problems)} problem(s): " + ", ".join(p.key for p in problems)
+    print(f"{summary}" + (f" — {action} email sent to {sent} Admin(s)" if action else ""))
+
+
 def cmd_send_verification_reminders(args: argparse.Namespace) -> None:
     """Email deadline reminders to unverified users (task 34.4). Idempotent."""
     from app.phase2 import email_verification_enabled
@@ -220,6 +272,17 @@ def main(argv: list[str] | None = None) -> None:
     )
     p_verify.add_argument("--username", required=True)
     p_verify.set_defaults(func=cmd_verify_email)
+
+    p_monitor = sub.add_parser("monitor", help="Check health, backups and tasks; email the Admins on problems")
+    p_monitor.add_argument("--state", required=True, help="JSON file that remembers the last alert")
+    p_monitor.add_argument("--backup-dir")
+    p_monitor.add_argument("--api-url")
+    p_monitor.add_argument("--web-url")
+    p_monitor.add_argument("--no-web", action="store_true")
+    p_monitor.add_argument("--no-tasks", action="store_true")
+    p_monitor.add_argument("--rotate", action="append", help="A log to keep under 10 MB (repeatable)")
+    p_monitor.add_argument("--iis-logs", help="Folder whose *.log older than 30 days are deleted")
+    p_monitor.set_defaults(func=cmd_monitor)
 
     p_reset = sub.add_parser(
         "reset-2fa", help="Remove a user's two-step verification and unlock them (lost phone and codes)"

@@ -7,6 +7,8 @@
     Restore test  Sundays 03:30: restores the newest backup into a scratch database.
     Reminders     daily 08:05 and at startup: email verification reminders
                   (does nothing while EMAIL_VERIFICATION_ENABLED is off).
+    Monitor       every 15 minutes (task 35.3): health, backups, restore test,
+                  tasks and disk; emails the Admins on problems; trims logs.
   Times are 30 min after Savings Tool's, so both never run at once.
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File ops\windows\05-tasks.ps1
@@ -65,6 +67,17 @@ $reminderArgs = "`"$run`" --env `"$envFile`" --cwd `"$appCode`" app.cli send-ver
 $reminderStartup = New-ScheduledTaskTrigger -AtStartup
 $reminderStartup.Delay = 'PT5M'
 Register-SavePassTask 'Reminders' (New-PythonAction $reminderArgs (Join-Path $logs 'jobs.log')) @((New-ScheduledTaskTrigger -Daily -At '08:05'), $reminderStartup)
+
+$iisLogs = Join-Path $RepoDir 'Backup\logs\iis'
+# The monitor deletes IIS logs older than 30 days.
+if (Test-Path $iisLogs) { & icacls $iisLogs /grant "${ServiceAccount}:(OI)(CI)M" | Out-Null }
+$monitorArgs = "`"$run`" --env `"$envFile`" --cwd `"$appCode`" app.cli monitor" +
+    " --state `"$(Join-Path $logs 'monitor-state.json')`" --backup-dir `"$BackupDir`" --iis-logs `"$iisLogs`"" +
+    " --rotate `"$(Join-Path $logs 'api.log')`" --rotate `"$(Join-Path $logs 'jobs.log')`" --rotate `"$(Join-Path $logs 'monitor.log')`""
+$every15 = New-ScheduledTaskTrigger -Once -At (Get-Date).Date -RepetitionInterval (New-TimeSpan -Minutes 15)
+$monitorStartup = New-ScheduledTaskTrigger -AtStartup
+$monitorStartup.Delay = 'PT3M'
+Register-SavePassTask 'Monitor' (New-PythonAction $monitorArgs (Join-Path $logs 'monitor.log')) @($every15, $monitorStartup)
 
 Write-Step 'Starting the API'
 Start-ScheduledTask -TaskPath $TaskFolder -TaskName 'API'

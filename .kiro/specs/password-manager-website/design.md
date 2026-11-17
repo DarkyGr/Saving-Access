@@ -601,6 +601,14 @@ Sign-in: `POST /api/auth/login` checks the password (counting failures) and then
 
 ---
 
+### Monitoring and Alerts *(task 35.3, Requirement 20)*
+
+- Scheduled task `\Save-Pass\Monitor` (every 15 minutes and 3 minutes after startup, Network Service) runs `python -m app.cli monitor` with the production settings; checks live in `app/services/monitor.py` and only read: `GET /api/health` on the API (`127.0.0.1:API_PORT`) and through IIS (`https://localhost:HTTPS_PORT`, certificate not verified because it is this same machine), the newest `savepass-*.dump.enc` (≤ 26 h) and the last line of `backup.log` and `restore-test.log` (no `FAILED`, restore test ≤ 8 days old), the last result of the Backup, Restore test and Reminders tasks (`Get-ScheduledTaskInfo`; running / not run yet are not failures) and the free space of the backup disk (≥ 2 GB).
+- Alerts: `monitor-state.json` (in the install's `logs`) remembers the open problems and the last alert. New problem → email every active Admin (their language); still failing → again every 24 h; all clear → one "back to normal". If the database itself is down no email can be addressed, so the alert is retried on the next run (the API check already names the cause in the log).
+- Retention: `api.log`, `jobs.log` and `monitor.log` rotate at 10 MB keeping 3 (a log held open by the running API is copied and emptied instead); IIS logs older than 30 days are deleted.
+
+---
+
 ## Role and Permission System
 
 *(Task 37.1 — the owner chose one role per account and only User / Admin. Kiro's profiles, named lists of screens assigned per user, were retired by migration 0006: with two fixed roles they added a second, redundant source of truth.)*

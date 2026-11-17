@@ -22,6 +22,7 @@ real server; this guide is for running it on the Windows laptop itself.
 | Backup | Task `\Save-Pass\Backup` daily 02:30 (or at the next start) | `ops\backup.py`: `pg_dump -Fc` as `savepass_backup`, AES-256-GCM with `BACKUP_KEY` to `Backup\db\savepass-YYYYMMDD-HHmm.dump.enc`; the plain dump never stays; keeps 14 daily + the newest of 12 months. |
 | Restore test | Task `\Save-Pass\Restore test` Sundays 03:30 | `ops\restore_test.py`: decrypts the newest backup, restores it into `savepass_restore_test_*`, compares the rows of every table with the live database, drops the scratch database; log in `Backup\db\restore-test.log`. |
 | Reminders | Task `\Save-Pass\Reminders` daily 08:05 and 5 min after startup | `app.cli send-verification-reminders`; does nothing while email verification is off. |
+| Monitor | Task `\Save-Pass\Monitor` every 15 min and 3 min after startup (task 35.3) | `app.cli monitor`: API and IIS health, newest backup ≤ 26 h and not failed, restore test passed in the last 8 days, tasks without errors, ≥ 2 GB free. Emails the Admins (needs outgoing email set up) when a problem appears, every 24 h while it lasts and when it is solved. Rotates `api.log`, `jobs.log`, `monitor.log` at 10 MB and deletes IIS logs older than 30 days. Log in `logs\monitor.log`. |
 
 Task times are 30 minutes after Savings Tool's, so the two never back up at once.
 

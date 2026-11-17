@@ -1,7 +1,7 @@
 # Production web tier: builds the SPA and serves it with Caddy, which also
 # terminates TLS and proxies /api to the backend (task 32.6).
 # Build context: repository root (see docker-compose.prod.yml).
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci

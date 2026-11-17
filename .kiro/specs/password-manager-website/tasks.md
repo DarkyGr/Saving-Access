@@ -354,7 +354,7 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - [ ] 35.2 ~~Off-site (cloud) backup copies~~ — omitted by the owner (2026-11-14); the local installation keeps encrypted backups in `Backup\db` (task 36.4)
     - _Requirements: 9.9_
   - [ ] 35.3 Monitoring and alerts: external check of `/api/health`, alert when a backup or reminder run fails, log retention
-  - [ ] 35.4 GitHub Actions: move `actions/checkout`, `setup-python`, `setup-node`, `upload-artifact` to releases that run on Node 24 (Node 20 is deprecated on the runners)
+  - [x] 35.4 GitHub Actions: move `actions/checkout`, `setup-python`, `setup-node`, `upload-artifact` to releases that run on Node 24 (Node 20 is deprecated on the runners) — all on v7; the frontend also builds with Node 24 in CI and in both Dockerfiles
   - [ ] 35.5 → moved to 37.5. "Forgot password": email reset link (one-time, short-lived), revokes refresh tokens; works because credentials are encrypted with the server key, not with the account password
   - [ ] 35.6 → moved to 37.5. Two-factor authentication (TOTP) at login, with recovery codes
   - [x] 35.7 Password generator on the Save / Edit credential pages (Requirement 18)

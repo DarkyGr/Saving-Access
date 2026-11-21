@@ -70,6 +70,13 @@ _TEXTS = {
             "This cannot be undone.\n\n"
             "If you did not do it, contact the administrator right away.\n"
         ),
+        "trusted_subject": "Save-Pass: a device will skip the two-step code",
+        "trusted_body": (
+            "Hello {name},\n\n"
+            "On {when} (UTC) a device was set to skip the two-step code for {days} days: {device}.\n\n"
+            "The password is still asked there. If it was not you, open Settings → Two-step verification, "
+            "forget every device and change your password.\n"
+        ),
         "locked_subject": "Save-Pass: your account was locked",
         "locked_body": (
             "Hello {name},\n\n"
@@ -143,6 +150,13 @@ _TEXTS = {
             "No se puede deshacer.\n\n"
             "Si no fuiste tú, avisa al administrador de inmediato.\n"
         ),
+        "trusted_subject": "Save-Pass: un dispositivo dejará de pedir el código de dos pasos",
+        "trusted_body": (
+            "Hola {name}:\n\n"
+            "El {when} (UTC) se configuró un dispositivo para no pedir el código de dos pasos durante {days} días: {device}.\n\n"
+            "Ahí se sigue pidiendo la contraseña. Si no fuiste tú, abre Configuración → Verificación en dos pasos, "
+            "olvida todos los dispositivos y cambia tu contraseña.\n"
+        ),
         "locked_subject": "Save-Pass: se bloqueó tu cuenta",
         "locked_body": (
             "Hola {name}:\n\n"
@@ -215,6 +229,11 @@ def export_email(user: User) -> OutgoingEmail:
 def account_deleted_email(user: User) -> OutgoingEmail:
     """Task 35.8 (Requirement 19.2): built before the row is anonymised."""
     return _notice(user, "deleted")
+
+
+def device_trusted_email(user: User, device: str, days: int) -> OutgoingEmail:
+    """Requirement 21.5."""
+    return _notice(user, "trusted", device=device or "?", days=str(days))
 
 
 def account_locked_email(user: User, link: str) -> OutgoingEmail:

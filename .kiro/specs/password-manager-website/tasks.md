@@ -389,6 +389,11 @@ Full-stack implementation of a secure password manager using FastAPI (Python) on
   - [x] 37.6 In-app help: user guide with search, technical guide for the Admin
     - _Requirements: 17.1–17.2_
 
+- [ ] 38. Owner's requests of 2026-11-21
+  - [x] 38.1 Save-Pass icon in the browser tab (favicon.svg, .ico and apple-touch-icon)
+  - [x] 38.2 "Don't ask for a code on this device for N days" at the two-step code (Requirement 21)
+  - [ ] 38.3 Review of the encryption layers for the most sensitive data, keeping the current server-side model (decision of 35.9): analysis and recommendation for the owner before any change
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for a faster MVP

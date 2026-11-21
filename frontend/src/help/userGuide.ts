@@ -26,6 +26,7 @@ export const USER_GUIDE: Guide = {
           "Each code changes every 30 seconds and works once. If one is refused, wait for the next one and check that your phone's time is automatic.",
         ],
         "To move it to a new phone, open Settings → Two-step verification → Use a new phone. Your current phone keeps working until the new one is confirmed.",
+        "On your own computer you can tick \"Don't ask for a code on this device\" (30 days unless the administrator changed it): the password is still asked every time. Never tick it on a shared computer. Settings → Two-step verification lists those devices so you can forget them; they are all forgotten when you change your password or your phone.",
       ],
     },
     {
@@ -155,6 +156,7 @@ export const USER_GUIDE: Guide = {
           "Cada código cambia cada 30 segundos y sirve una vez. Si uno no se acepta, espera al siguiente y revisa que la hora del teléfono sea automática.",
         ],
         "Para pasarla a otro teléfono, abre Configuración → Verificación en dos pasos → Usar otro teléfono. El teléfono actual sigue funcionando hasta que confirmes el nuevo.",
+        "En tu propia computadora puedes marcar \"No pedir el código en este dispositivo\" (30 días salvo que el administrador lo cambie): la contraseña se sigue pidiendo siempre. Nunca lo marques en una computadora compartida. Configuración → Verificación en dos pasos muestra esos dispositivos para que los olvides; se olvidan todos al cambiar tu contraseña o tu teléfono.",
       ],
     },
     {

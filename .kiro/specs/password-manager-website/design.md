@@ -609,6 +609,15 @@ Sign-in: `POST /api/auth/login` checks the password (counting failures) and then
 
 ---
 
+### Trusted Devices *(Requirement 21)*
+
+- Parameter `trusted_device_days` (System parameters, default 30, 0–90; 0 hides the option). The code step's login response carries `trusted_device_days`.
+- `POST /api/auth/login/verify {…, remember_device: true}` with a valid code (app or recovery) issues a 32-byte random token in cookie `sp_device` (httpOnly, Secure, SameSite=Strict, Path=/api/auth, Max-Age = days) and stores `trusted_devices` (SHA-256 of the token, user agent, trusted / expires / last used; migration 0014). Audited `account.trust_device` and announced by a security email.
+- `POST /api/auth/login`: after the password, a live token of **that** account skips the code (`account.login` detail `trusted-device`); never while the account is locked, never instead of the password, ignored for any other account and when the parameter is 0.
+- Forgotten all at once on password change or reset, a new 2FA phone, the Admin's or the CLI's 2FA reset and account deletion. Settings → Two-step verification lists them (`GET /api/profile/trusted-devices`) and forgets one or all (`DELETE /api/profile/trusted-devices[/{id}]`, audited `account.forget_devices`).
+
+---
+
 ## Role and Permission System
 
 *(Task 37.1 — the owner chose one role per account and only User / Admin. Kiro's profiles, named lists of screens assigned per user, were retired by migration 0006: with two fixed roles they added a second, redundant source of truth.)*

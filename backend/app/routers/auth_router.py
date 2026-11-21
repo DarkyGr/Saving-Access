@@ -59,8 +59,15 @@ from app.rate_limit import (
 from app.services.account_token_service import AccountTokenService
 from app.services.audit_service import AuditService
 from app.services.auth_service import ACCOUNT_LOCKED, AuthService, validate_password_strength
-from app.services.security_notice import password_changed_email, password_reset_email, two_factor_enabled_email
+from app.services.security_notice import (
+    device_trusted_email,
+    password_changed_email,
+    password_reset_email,
+    two_factor_enabled_email,
+)
 from app.services.two_factor import TwoFactorService, two_factor_required
+from app.services.trusted_devices import COOKIE as DEVICE_COOKIE
+from app.services.trusted_devices import TrustedDeviceService, trust_days
 from app.services.captcha_service import verify_captcha
 from app.services.email_sender import send_email
 from app.services.email_verification_service import (
@@ -132,11 +139,15 @@ class LoginResponse(BaseModel):
     recovery_codes: list[str] | None = None
     # When signing in with a recovery code: how many are left.
     recovery_codes_left: int | None = None
+    # With mfa="code": days "don't ask on this device" lasts (0 = not offered).
+    trusted_device_days: int | None = None
 
 
 class SecondStepRequest(BaseModel):
     mfa_token: str = Field(min_length=1, max_length=2048)
     code: str = Field(min_length=1, max_length=32)
+    # Requirement 21: do not ask for a code on this browser for a while.
+    remember_device: bool = False
 
 
 class SetupStartRequest(BaseModel):
@@ -162,6 +173,19 @@ def _set_refresh_cookie(response: Response, raw_token: str) -> None:
         httponly=True,
         secure=os.environ.get("COOKIE_SECURE", "true").lower() != "false",
         samesite=os.environ.get("COOKIE_SAMESITE", "strict").lower(),
+    )
+
+
+def _set_device_cookie(response: Response, raw_token: str, max_age: int) -> None:
+    """Requirement 21: same protections as the refresh cookie."""
+    response.set_cookie(
+        key=DEVICE_COOKIE,
+        value=raw_token,
+        max_age=max_age,
+        path=_COOKIE_PATH,
+        httponly=True,
+        secure=os.environ.get("COOKIE_SECURE", "true").lower() != "false",
+        samesite="strict",
     )
 
 
@@ -216,6 +240,7 @@ def login(
     request: Request,
     response: Response,
     body: LoginRequest,
+    sp_device: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
 ) -> LoginResponse | JSONResponse:
     """Authenticate with username and password.
@@ -238,7 +263,14 @@ def login(
     # Task 37.5: with 2FA on, the password only opens the second step — also
     # for a locked account, which a valid code unlocks (Requirement 16.2).
     if TwoFactorService.enabled(user):
-        return LoginResponse(mfa="code", mfa_token=service.issue_challenge(user, "code"))
+        # Requirement 21: a trusted browser skips the code, never the
+        # password, and not while the account is locked.
+        devices = TrustedDeviceService(db)
+        if user.locked_at is None and devices.is_trusted(sp_device, user):
+            return _open_session(request, response, db, user, detail="trusted-device")
+        return LoginResponse(
+            mfa="code", mfa_token=service.issue_challenge(user, "code"), trusted_device_days=trust_days(db)
+        )
     if user.locked_at is not None:
         raise HTTPException(status_code=423, detail=ACCOUNT_LOCKED)
     if two_factor_required():
@@ -294,10 +326,13 @@ def login_verify(
     request: Request,
     response: Response,
     body: SecondStepRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> LoginResponse | JSONResponse:
     """Requirement 16.1–16.2. A wrong code counts like a wrong password and
-    can lock the account; a valid one opens the session and unlocks it."""
+    can lock the account; a valid one opens the session and unlocks it.
+    With ``remember_device`` this browser skips the code from now on
+    (Requirement 21)."""
     service = AuthService(db)
     user = service.read_challenge(body.mfa_token, "code")
     two_factor = TwoFactorService(db)
@@ -308,6 +343,12 @@ def login_verify(
     extra = {}
     if kind == "recovery":
         extra["recovery_codes_left"] = two_factor.recovery_left(user)
+    if body.remember_device and trust_days(db) > 0:
+        agent = request.headers.get("user-agent")
+        raw, max_age = TrustedDeviceService(db).issue(user, agent)
+        AuditService(db).log(user.user_id, "INSERT", user.user_id, commit=False, action="account.trust_device")
+        _set_device_cookie(response, raw, max_age)
+        background_tasks.add_task(send_email, device_trusted_email(user, (agent or "")[:120], trust_days(db)))
     return _open_session(request, response, db, user, detail=kind, extra=extra)
 
 
@@ -537,6 +578,7 @@ def reset_password(
     user.locked_at = None
     set_modification_audit(user, user_id=user.user_id)
     RefreshTokenService(db).revoke_all(user.user_id)
+    TrustedDeviceService(db).forget_all(user.user_id)
     AuditService(db).log(user.user_id, "UPDATE", user.user_id, commit=False, action="account.password_reset")
     db.commit()
     background_tasks.add_task(send_email, password_changed_email(user))

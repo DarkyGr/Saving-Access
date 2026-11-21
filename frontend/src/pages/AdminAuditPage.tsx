@@ -16,6 +16,8 @@ export const AUDIT_ACTIONS = [
   "account.delete",
   "account.2fa_setup",
   "account.recovery_codes",
+  "account.trust_device",
+  "account.forget_devices",
   "credential.create",
   "credential.edit",
   "credential.delete",

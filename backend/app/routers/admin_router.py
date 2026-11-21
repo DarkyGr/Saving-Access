@@ -43,6 +43,7 @@ from app.services.security_notice import (
     two_factor_reset_email,
 )
 from app.services.two_factor import TwoFactorService
+from app.services.trusted_devices import TrustedDeviceService
 from app.utils.audit_columns import set_modification_audit, utc_date_time
 
 router = APIRouter()
@@ -338,6 +339,7 @@ def reset_two_factor(
     if not TwoFactorService.enabled(target):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Two-factor authentication is not set up.")
     TwoFactorService(db).reset(target)
+    TrustedDeviceService(db).forget_all(target.user_id)  # Requirement 21.4
     set_modification_audit(target, user_id=admin_id)
     RefreshTokenService(db).revoke_all(target.user_id)
     AuditService(db).log(

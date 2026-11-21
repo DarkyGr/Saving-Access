@@ -268,6 +268,7 @@ erDiagram
 | `0011_two_factor` | users.totp_secret / totp_pending_secret (Fernet), totp_enabled_at, totp_last_step; recovery_codes (SHA-256) (task 37.5) |
 | `0012_session_limits` | refresh_tokens.session_expires_at, last_activity_at, reauth_at (task 37.5) |
 | `0013_account_deletion` | users.deleted_at: a deleted account stays as an anonymised row for the audit log (task 35.8) |
+| `0014_trusted_devices` | trusted_devices: browsers that may skip the two-step code (SHA-256 of the cookie token) (task 38.2) |
 
 - Docker (`migrate` service in production) and the E2E tests run `alembic upgrade head` before the API starts. The app never creates tables.
 - `backend/db/schema.sql` is **generated** from the migrations (`python db/generate_schema_sql.py`) and includes the `app_user` role with SELECT/INSERT/UPDATE/DELETE only (Requirement 9.9).

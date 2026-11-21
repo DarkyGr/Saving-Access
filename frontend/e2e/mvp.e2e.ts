@@ -510,8 +510,18 @@ test("two-step verification: set up in Settings, sign in with a code and a recov
   await page.getByRole("button", { name: "Log In", exact: true }).click();
   await page.getByRole("button", { name: "Use a recovery code" }).click();
   await page.getByLabel("Recovery code").fill(recovery);
+  // Requirement 21: trust this browser; next time only the password is asked.
+  await page.getByRole("checkbox", { name: /Don't ask for a code on this device for 30 days/ }).check();
   await page.getByRole("button", { name: "Verify" }).click();
   await expect(page).toHaveURL(/\/$/);
+  await page.getByRole("dialog", { name: "Verify your email" }).getByRole("button", { name: "Close" }).click();
+  await logOut(page);
+
+  await page.getByPlaceholder("Enter your username").fill(name);
+  await page.getByPlaceholder("Enter your password").fill(ACCOUNT_PW);
+  await page.getByRole("button", { name: "Log In", exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByLabel("6-digit code")).toHaveCount(0);
 });
 
 test("forgot password: emailed link, new password, sign in", async ({ page }) => {

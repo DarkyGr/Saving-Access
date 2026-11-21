@@ -27,9 +27,10 @@ interface LoginResponse {
   mfa?: "code" | "setup" | null;
   mfa_token?: string | null;
   recovery_codes?: string[] | null;
+  trusted_device_days?: number | null;
 }
 
-type SecondStep = { kind: "code" | "setup"; token: string } | null;
+type SecondStep = { kind: "code" | "setup"; token: string; trustDays: number } | null;
 
 interface FormErrors {
   username?: string;
@@ -179,7 +180,7 @@ export default function LoginPage() {
       });
 
       if (data.mfa && data.mfa_token) {
-        setStep({ kind: data.mfa, token: data.mfa_token });
+        setStep({ kind: data.mfa, token: data.mfa_token, trustDays: data.trusted_device_days ?? 0 });
         return;
       }
       await finish(data);
@@ -248,10 +249,12 @@ export default function LoginPage() {
           ) : (
             <CodeStep
               onCancel={startOver}
-              verify={async (code) => {
+              trustDays={step.trustDays}
+              verify={async (code, rememberDevice) => {
                 const { data } = await apiClient.post<LoginResponse>("/api/auth/login/verify", {
                   mfa_token: step.token,
                   code,
+                  remember_device: rememberDevice,
                 });
                 await finish(data);
               }}

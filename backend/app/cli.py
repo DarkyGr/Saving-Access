@@ -112,6 +112,9 @@ def cmd_reset_two_factor(args: argparse.Namespace) -> None:
         if user is None:
             sys.exit(f"User '{args.username}' not found.")
         TwoFactorService(db).reset(user)
+        from app.services.trusted_devices import TrustedDeviceService
+
+        TrustedDeviceService(db).forget_all(user.user_id)
         user.locked_at = None
         user.failed_attempts = 0
         set_modification_audit(user, user_id=user.user_id)

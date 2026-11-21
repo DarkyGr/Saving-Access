@@ -397,6 +397,8 @@ A session ends after 15 minutes without activity in any tab, and after 8 hours a
 
 Every account uses a second step: after the password, a 6-digit code from an authenticator app (Google Authenticator, Microsoft Authenticator, Aegis, 2FAS…). The first sign-in asks you to set it up — scan the QR code, type a code — and shows 10 recovery codes once; each lets you in once if you lose your phone, and a banner warns when 3 or fewer remain. In **Settings → Two-step verification** you can move it to a new phone or create new recovery codes (both need your password and send you an email). If someone loses both, the administrator resets it from Manage Users; if the administrator loses theirs: `python -m app.cli reset-2fa --username <name>` on the server.
 
+**Trusted devices.** On your own computer, tick "Don't ask for a code on this device for 30 days" at the code step: that browser then asks only for the password (never on a shared computer). Settings → Two-step verification lists those devices and forgets them; all are forgotten when the password or the phone changes. The administrator sets the days (0 turns it off).
+
 ### Admin — System parameters (`/admin/settings`) *(Admin only)*
 
 Security values for every account, each with its range and suggested value: failed attempts before an account locks, how often administration asks for the password again, idle time and maximum length of a session and how much "Extend" adds. Nothing is saved if any value is out of range.

@@ -347,6 +347,33 @@ ALTER TABLE users ADD COLUMN deleted_at TIMESTAMP WITHOUT TIME ZONE;
 
 UPDATE alembic_version SET version_num='0013_account_deletion' WHERE alembic_version.version_num = '0012_session_limits';
 
+-- Running upgrade 0013_account_deletion -> 0014_trusted_devices
+
+CREATE TABLE trusted_devices (
+    trusted_device_id SERIAL NOT NULL, 
+    user_id INTEGER NOT NULL, 
+    token_hash VARCHAR(64) NOT NULL, 
+    user_agent VARCHAR(256), 
+    trusted_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
+    expires_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
+    last_used_at TIMESTAMP WITHOUT TIME ZONE, 
+    creation_date DATE NOT NULL, 
+    creation_time TIME WITHOUT TIME ZONE NOT NULL, 
+    creation_user_id INTEGER, 
+    modification_date DATE, 
+    modification_time TIME WITHOUT TIME ZONE, 
+    modification_user_id INTEGER, 
+    PRIMARY KEY (trusted_device_id), 
+    FOREIGN KEY(user_id) REFERENCES users (user_id) ON DELETE CASCADE, 
+    UNIQUE (token_hash), 
+    FOREIGN KEY(creation_user_id) REFERENCES users (user_id), 
+    FOREIGN KEY(modification_user_id) REFERENCES users (user_id)
+);
+
+CREATE INDEX idx_trusted_devices_user_id ON trusted_devices (user_id);
+
+UPDATE alembic_version SET version_num='0014_trusted_devices' WHERE alembic_version.version_num = '0013_account_deletion';
+
 COMMIT;
 
 

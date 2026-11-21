@@ -40,6 +40,8 @@ PARAMETERS: dict[str, IntParameter] = {
         IntParameter("session_max_minutes", 480, 60, 1440, "sessions"),
         IntParameter("session_extend_minutes", 30, 5, 240, "sessions"),
         IntParameter("admin_reauth_minutes", 5, 0, 60, "security"),
+        # Requirement 21: days a browser may skip the two-step code (0 = never).
+        IntParameter("trusted_device_days", 30, 0, 90, "security"),
     )
 }
 

@@ -34,9 +34,11 @@ from app.models import (
     EmailVerificationToken,
     RecoveryCode,
     RefreshToken,
+    TrustedDevice,
     User,
     UserPreference,
 )
+from app.services.trusted_devices import TrustedDeviceService
 from app.phase2 import email_verification_enabled, is_deactivated, normalize_language
 from app.rate_limit import ACCOUNT_PASSWORD_LIMIT, RESEND_VERIFICATION_LIMIT, limiter, user_or_ip_key
 from app.security import hash_password, verify_password
@@ -418,6 +420,7 @@ def change_password(
     user.password_hash = hash_password(body.new_password)
     set_modification_audit(user, user_id=user.user_id)
     RefreshTokenService(db).revoke_all(user.user_id, keep_family=claims.get("sid"))
+    TrustedDeviceService(db).forget_all(user.user_id)  # Requirement 21.4
     AuditService(db).log(user.user_id, "UPDATE", user.user_id, commit=False, action="account.password")
     db.commit()
     background_tasks.add_task(send_email, password_changed_email(user))
@@ -574,6 +577,7 @@ def two_factor_confirm(
     codes = TwoFactorService(db).confirm_setup(user, body.code)
     if codes is None:
         raise HTTPException(status_code=400, detail="Invalid code.")
+    TrustedDeviceService(db).forget_all(user.user_id)  # Requirement 21.4: new phone
     set_modification_audit(user, user_id=user.user_id)
     AuditService(db).log(user.user_id, "UPDATE", user.user_id, commit=False, action="account.2fa_setup")
     db.commit()
@@ -801,7 +805,7 @@ def delete_account(
             raise HTTPException(status_code=409, detail="The last Admin cannot delete their account.")
 
     notice = account_deleted_email(user)
-    for model in (Credential, UserPreference, RefreshToken, RecoveryCode, AccountToken, EmailVerificationToken):
+    for model in (Credential, UserPreference, RefreshToken, RecoveryCode, AccountToken, EmailVerificationToken, TrustedDevice):
         db.query(model).filter(model.user_id == user.user_id).delete(synchronize_session=False)
     AuditService(db).log(user.user_id, "DELETE", user.user_id, commit=False, action="account.delete")
     tag = f"deleted-{user.user_code}"
@@ -822,5 +826,51 @@ def delete_account(
     set_modification_audit(user, user_id=user.user_id)
     db.commit()
     background_tasks.add_task(send_email, notice)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- Trusted devices (Requirement 21) -----------------------------------------
+
+
+class TrustedDeviceItem(BaseModel):
+    device_id: int
+    user_agent: str | None
+    trusted_at: str
+    expires_at: str
+    last_used_at: str | None
+
+
+def _iso_z(value) -> str | None:
+    return value.strftime("%Y-%m-%dT%H:%M:%SZ") if value else None
+
+
+@router.get("/trusted-devices", response_model=list[TrustedDeviceItem], summary="Browsers that skip the two-step code")
+def trusted_devices(claims: dict = Depends(get_current_claims), db: Session = Depends(get_db)) -> list[TrustedDeviceItem]:
+    return [
+        TrustedDeviceItem(
+            device_id=row.trusted_device_id,
+            user_agent=row.user_agent,
+            trusted_at=_iso_z(row.trusted_at),
+            expires_at=_iso_z(row.expires_at),
+            last_used_at=_iso_z(row.last_used_at),
+        )
+        for row in TrustedDeviceService(db).list(claims["user_id"])
+    ]
+
+
+@router.delete("/trusted-devices/{device_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Forget one trusted device")
+def forget_trusted_device(device_id: int, claims: dict = Depends(get_current_claims), db: Session = Depends(get_db)) -> Response:
+    if not TrustedDeviceService(db).forget(device_id, claims["user_id"]):
+        raise HTTPException(status_code=404, detail="Not found.")
+    AuditService(db).log(claims["user_id"], "DELETE", device_id, commit=False, action="account.forget_devices", detail="1")
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete("/trusted-devices", status_code=status.HTTP_204_NO_CONTENT, summary="Forget every trusted device")
+def forget_all_trusted_devices(claims: dict = Depends(get_current_claims), db: Session = Depends(get_db)) -> Response:
+    count = TrustedDeviceService(db).forget_all(claims["user_id"])
+    AuditService(db).log(claims["user_id"], "DELETE", None, commit=False, action="account.forget_devices", detail=str(count))
+    db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

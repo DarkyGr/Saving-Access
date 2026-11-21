@@ -273,7 +273,7 @@ describe("LoginPage — two-step verification (task 37.5)", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Type the 6 digits");
     await user.type(field, "6");
     await user.click(screen.getByRole("button", { name: "Verify" }));
-    expect(apiClient.post).toHaveBeenCalledWith("/api/auth/login/verify", { mfa_token: "challenge", code: "123456" });
+    expect(apiClient.post).toHaveBeenCalledWith("/api/auth/login/verify", { mfa_token: "challenge", code: "123456", remember_device: false });
     await waitFor(() => expect(router.state.location.pathname).toBe("/"));
   });
 
@@ -289,8 +289,29 @@ describe("LoginPage — two-step verification (task 37.5)", () => {
     await user.click(await screen.findByRole("button", { name: "Use a recovery code" }));
     await user.type(screen.getByLabelText("Recovery code"), "ABCDE-23456");
     await user.click(screen.getByRole("button", { name: "Verify" }));
-    expect(apiClient.post).toHaveBeenCalledWith("/api/auth/login/verify", { mfa_token: "challenge", code: "ABCDE-23456" });
+    expect(apiClient.post).toHaveBeenCalledWith("/api/auth/login/verify", { mfa_token: "challenge", code: "ABCDE-23456", remember_device: false });
     expect(await screen.findByRole("alert")).toHaveTextContent("That code is not valid");
+  });
+
+  it("offers to trust this device and sends the choice (Requirement 21)", async () => {
+    vi.mocked(apiClient.post).mockImplementation((url: string) =>
+      Promise.resolve(
+        url === "/api/auth/login"
+          ? { data: { access_token: null, mfa: "code", mfa_token: "challenge", trusted_device_days: 30 } }
+          : { data: { access_token: TOKEN, token_type: "bearer", expires_in: 900 } }
+      )
+    );
+    renderLogin();
+    await fillAndSubmit();
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("6-digit code"), "123456");
+    await user.click(screen.getByRole("checkbox", { name: /Don't ask for a code on this device for 30 days/ }));
+    await user.click(screen.getByRole("button", { name: "Verify" }));
+    expect(apiClient.post).toHaveBeenCalledWith("/api/auth/login/verify", {
+      mfa_token: "challenge",
+      code: "123456",
+      remember_device: true,
+    });
   });
 
   it("sets two-step verification up and shows the recovery codes before continuing", async () => {

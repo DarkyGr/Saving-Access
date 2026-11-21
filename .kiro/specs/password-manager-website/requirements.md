@@ -334,3 +334,15 @@ The owner's decisions behind them: sign-up stays **open**; two-factor authentica
 1. THE installation SHALL check every 15 minutes that the API and the HTTPS site answer `/api/health`, that the newest backup is less than 26 hours old and did not fail, that the weekly restore test passed and ran in the last 8 days, that the scheduled tasks ended without error and that the backup disk has at least 2 GB free.
 2. WHEN a problem appears, THE System SHALL email every active Admin in their language; while it lasts it SHALL remind every 24 hours, and it SHALL send one email when everything is fine again.
 3. THE installation SHALL keep its logs bounded: API, jobs and monitor logs rotated at 10 MB (3 kept) and IIS logs older than 30 days deleted.
+
+### Requirement 21: Trusted Devices for Two-Step Verification
+
+**User Story:** As a user, I want my own computer to stop asking for the two-step code for a while, so that signing in every day is quicker without giving up the second factor elsewhere.
+
+#### Acceptance Criteria
+
+1. THE code step SHALL offer "Don't ask for a code on this device for N days" (N from System parameters, default 30, 0–90; 0 hides the option).
+2. WHEN chosen with a valid code, THE Backend SHALL give that browser a random device token in an httpOnly, Secure, SameSite=Strict cookie and store only its SHA-256, with its expiry and device.
+3. WHILE the token is valid and belongs to the account, THE sign-in SHALL skip the code step but SHALL still require the password; a locked account SHALL still ask for a code.
+4. THE System SHALL forget every trusted device of the account when its password changes or is reset, when two-step verification is set up again or reset, and when the account is deleted; the user SHALL see and forget trusted devices in Settings.
+5. THE System SHALL email a security notice each time a device is trusted, and SHALL record it in the audit log.

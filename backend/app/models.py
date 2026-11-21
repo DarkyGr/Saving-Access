@@ -411,3 +411,33 @@ class RecoveryCode(AuditColumnsMixin, Base):
     __table_args__ = (
         Index("idx_recovery_codes_user_id", "user_id"),
     )
+
+
+# ---------------------------------------------------------------------------
+# trusted_devices  (Requirement 21)
+# ---------------------------------------------------------------------------
+
+class TrustedDevice(AuditColumnsMixin, Base):
+    """
+    A browser that may skip the two-step code until ``expires_at``. Only the
+    SHA-256 of its cookie token is stored.
+    """
+
+    __tablename__ = "trusted_devices"
+
+    trusted_device_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    token_hash = Column(String(64), nullable=False, unique=True)
+    user_agent = Column(String(256), nullable=True)
+    trusted_at = Column(DateTime, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    last_used_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        Index("idx_trusted_devices_user_id", "user_id"),
+    )
+

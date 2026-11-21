@@ -420,7 +420,9 @@
         "recovery_codes": "Created new recovery codes",
         "password_reset": "Reset their password by email",
         "export": "Exported their passwords",
-        "delete": "Deleted their account"
+        "delete": "Deleted their account",
+        "trust_device": "Trusted a device for the code",
+        "forget_devices": "Forgot trusted devices"
       },
       "credential": {
         "create": "Saved a credential",
@@ -480,6 +482,10 @@
       "session_extend_minutes": {
         "label": "Minutes added by “Extend”",
         "help": "How much longer a session lasts when someone presses Extend near the maximum."
+      },
+      "trusted_device_days": {
+        "label": "Days a device may skip the two-step code",
+        "help": "When someone ticks “Don't ask for a code on this device”. The password is always asked. 0 turns the option off."
       }
     },
     "email": {
@@ -634,5 +640,16 @@
     "deleted": "Your account and its passwords were deleted.",
     "wrongCodeOrName": "The code or the username is not right.",
     "lastAdmin": "You are the only administrator: make someone else Admin first."
+  },
+  "trusted": {
+    "remember_one": "Don't ask for a code on this device for {{count}} day",
+    "remember_other": "Don't ask for a code on this device for {{count}} days",
+    "rememberHelp": "Only on your own computer or phone. The password is still asked.",
+    "title": "Devices that skip the code",
+    "none": "None. Tick “Don't ask for a code on this device” when signing in on your own computer.",
+    "until": "Until {{date}}",
+    "forget": "Forget",
+    "forgetAll": "Forget every device",
+    "unknown": "Unknown device"
   }
 }

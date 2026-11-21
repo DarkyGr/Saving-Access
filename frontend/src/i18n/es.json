@@ -420,7 +420,9 @@
         "recovery_codes": "Creó códigos de recuperación nuevos",
         "password_reset": "Restableció su contraseña por correo",
         "export": "Exportó sus contraseñas",
-        "delete": "Borró su cuenta"
+        "delete": "Borró su cuenta",
+        "trust_device": "Confió en un dispositivo para el código",
+        "forget_devices": "Olvidó dispositivos de confianza"
       },
       "credential": {
         "create": "Guardó una credencial",
@@ -480,6 +482,10 @@
       "session_extend_minutes": {
         "label": "Minutos que añade “Extender”",
         "help": "Cuánto más dura una sesión cuando alguien pulsa Extender cerca del máximo."
+      },
+      "trusted_device_days": {
+        "label": "Días que un dispositivo puede omitir el código de dos pasos",
+        "help": "Cuando alguien marca “No pedir el código en este dispositivo”. La contraseña se pide siempre. 0 apaga la opción."
       }
     },
     "email": {
@@ -634,5 +640,16 @@
     "deleted": "Se borraron tu cuenta y sus contraseñas.",
     "wrongCodeOrName": "El código o el usuario no son correctos.",
     "lastAdmin": "Eres el único administrador: haz Admin a otra persona primero."
+  },
+  "trusted": {
+    "remember_one": "No pedir el código en este dispositivo durante {{count}} día",
+    "remember_other": "No pedir el código en este dispositivo durante {{count}} días",
+    "rememberHelp": "Solo en tu propia computadora o teléfono. La contraseña se sigue pidiendo.",
+    "title": "Dispositivos que no piden el código",
+    "none": "Ninguno. Marca “No pedir el código en este dispositivo” al entrar desde tu propia computadora.",
+    "until": "Hasta el {{date}}",
+    "forget": "Olvidar",
+    "forgetAll": "Olvidar todos los dispositivos",
+    "unknown": "Dispositivo desconocido"
   }
 }

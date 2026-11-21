@@ -6,9 +6,19 @@ import axios from "axios";
  * Second sign-in step (Requirement 16.1): a 6-digit code from the app, or
  * one of the recovery codes.
  */
-export default function CodeStep({ verify, onCancel }: { verify: (code: string) => Promise<void>; onCancel: () => void }) {
+export default function CodeStep({
+  verify,
+  onCancel,
+  trustDays = 0,
+}: {
+  verify: (code: string, rememberDevice: boolean) => Promise<void>;
+  onCancel: () => void;
+  /** Requirement 21: days "don't ask on this device" lasts; 0 hides it. */
+  trustDays?: number;
+}) {
   const { t } = useTranslation();
   const [recovery, setRecovery] = useState(false);
+  const [remember, setRemember] = useState(false);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -26,7 +36,7 @@ export default function CodeStep({ verify, onCancel }: { verify: (code: string) 
     setBusy(true);
     setError(null);
     try {
-      await verify(recovery ? clean : clean.replace(/\s/g, ""));
+      await verify(recovery ? clean : clean.replace(/\s/g, ""), remember && trustDays > 0);
     } catch (err: unknown) {
       const status = axios.isAxiosError(err) ? err.response?.status : undefined;
       const detail = axios.isAxiosError(err) ? (err.response?.data as { detail?: string } | undefined)?.detail : undefined;
@@ -69,6 +79,15 @@ export default function CodeStep({ verify, onCancel }: { verify: (code: string) 
         <p id={errorId} role="alert" className="text-sm text-red-600">
           {error}
         </p>
+      )}
+      {trustDays > 0 && (
+        <label className="flex items-start gap-2 text-sm text-gray-700">
+          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="mt-0.5 h-4 w-4" />
+          <span>
+            {t("trusted.remember", { count: trustDays })}
+            <span className="block text-xs text-gray-500">{t("trusted.rememberHelp")}</span>
+          </span>
+        </label>
       )}
       <button
         type="submit"

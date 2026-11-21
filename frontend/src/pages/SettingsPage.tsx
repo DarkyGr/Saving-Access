@@ -18,6 +18,7 @@ import HelpTip from "../components/form/HelpTip";
 import ConfirmDialog from "../components/ConfirmDialog";
 import TwoFactorSetup, { type SetupStart } from "../components/auth/TwoFactorSetup";
 import RecoveryCodes from "../components/auth/RecoveryCodes";
+import TrustedDevices from "../components/auth/TrustedDevices";
 import AccountDataCard from "../components/profile/AccountDataCard";
 
 // Swatch colours (fixed, so each choice shows its own colour in any theme).
@@ -568,6 +569,7 @@ function TwoFactorCard() {
               </button>
             )}
           </div>
+          {status?.enabled && <TrustedDevices />}
         </div>
       )}
 

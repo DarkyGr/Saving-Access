@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Save-Pass</title>
+  <rect width="64" height="64" rx="14" fill="#4f46e5"/>
+  <path d="M32 9 50 16v14c0 12-7.6 21.2-18 25-10.4-3.8-18-13-18-25V16z" fill="#ffffff"/>
+  <circle cx="32" cy="29" r="5.5" fill="#4f46e5"/>
+  <path d="M29.5 32.5h5l1.6 10.5h-8.2z" fill="#4f46e5"/>
+</svg>
